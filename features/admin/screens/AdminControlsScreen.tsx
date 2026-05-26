@@ -2,7 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { OwnerRoute } from '@/features/admin/components/OwnerRoute';
+import { OwnerRoute } from '@/features/admin';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { testIds } from '@/constants/testIds';

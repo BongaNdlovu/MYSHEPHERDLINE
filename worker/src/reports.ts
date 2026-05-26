@@ -29,6 +29,13 @@ function scopeMembers(members: MemberRow[], context: AuthContext) {
   return members.filter((member) => member.assigned_to === context.userId);
 }
 
+function scopeVisits(visits: VisitRow[], context: AuthContext, assignedMemberIds: Set<string>) {
+  if (hasGlobalScope(context)) return visits;
+  return visits.filter(
+    (visit) => visit.logged_by === context.userId || assignedMemberIds.has(visit.member_id),
+  );
+}
+
 export async function buildSummary(
   supabase: SupabaseClient,
   env: WorkerEnv,
@@ -47,10 +54,7 @@ export async function buildSummary(
   const members = scopeMembers((membersResult.data ?? []) as MemberRow[], context);
   const assignedMemberIds = new Set(members.map((member) => member.id));
 
-  const visits = ((visitsResult.data ?? []) as VisitRow[]).filter((visit) => {
-    if (hasGlobalScope(context)) return true;
-    return assignedMemberIds.has(visit.member_id);
-  });
+  const visits = scopeVisits((visitsResult.data ?? []) as VisitRow[], context, assignedMemberIds);
   const tasks = ((tasksResult.data ?? []) as TaskRow[]).filter(
     (task) => task.status === 'open' && (hasGlobalScope(context) || task.assignee_id === context.userId),
   );

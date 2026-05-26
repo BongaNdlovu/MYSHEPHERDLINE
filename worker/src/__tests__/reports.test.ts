@@ -50,8 +50,55 @@ describe('worker report aggregation', () => {
     });
 
     expect(summary.membersNeedingAttention).toBe(1);
-    expect(summary.visitsCompleted).toBe(1);
+    expect(summary.visitsCompleted).toBe(2);
     expect(summary.tasksOpen).toBe(1);
+  });
+
+  it('keeps self-logged visits after member reassignment', async () => {
+    const supabase = {
+      from(table: string) {
+        if (table === 'members') {
+          return {
+            select: async () => ({
+              data: [
+                { id: 'm1', risk_level: 'low', status: 'active', assigned_to: 'user-2' },
+              ],
+            }),
+          };
+        }
+        if (table === 'visits') {
+          return {
+            select: () => ({
+              gte: async () => ({
+                data: [
+                  {
+                    visit_type: 'visit',
+                    visited_at: new Date().toISOString(),
+                    logged_by: 'user-1',
+                    member_id: 'm1',
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+        return {
+          select: async () => ({
+            data: [{ status: 'open', assignee_id: 'user-1' }],
+          }),
+        };
+      },
+    };
+
+    const summary = await buildSummary(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never, {
+      userId: 'user-1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
+
+    expect(summary.membersNeedingAttention).toBe(0);
+    expect(summary.visitsCompleted).toBe(1);
   });
 
   it('returns global summaries for admin and owner', async () => {
