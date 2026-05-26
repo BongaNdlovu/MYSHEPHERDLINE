@@ -22,7 +22,7 @@ export function isAppAdmin(profile: Profile | null | undefined): boolean {
 
 export function isProfileActive(profile: Profile | null | undefined): boolean {
   if (!profile) return false;
-  return profile.is_active !== false;
+  return profile.is_active === true;
 }
 
 export function isOwnerRole(role: UserRole): boolean {

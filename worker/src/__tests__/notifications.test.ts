@@ -1,4 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const mockSummary = vi.hoisted(() => ({
+  membersNeedingAttention: 2,
+  visitsCompleted: 5,
+  tasksOpen: 3,
+  recentActivityDays: 7,
+  visitBreakdown: { visits: 1, calls: 1, bibleStudies: 1, newConverts: 0 },
+}));
+
+vi.mock('../reports', () => ({
+  buildSummary: vi.fn().mockResolvedValue(mockSummary),
+}));
 
 import {
   listDigestOrganizationIds,
@@ -9,15 +21,9 @@ import {
   sendExpoPushBatch,
 } from '../notifications';
 
-vi.mock('../reports', () => ({
-  buildSummary: vi.fn().mockResolvedValue({
-    membersNeedingAttention: 2,
-    visitsCompleted: 5,
-    tasksOpen: 3,
-    recentActivityDays: 7,
-    visitBreakdown: { visits: 1, calls: 1, bibleStudies: 1, newConverts: 0 },
-  }),
-}));
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('notification payload validation', () => {
   it('rejects malformed bodies', () => {
@@ -73,7 +79,6 @@ describe('expo push batching', () => {
 
     expect(result).toEqual({ requested: 150, sent: 150, failed: 0, batches: 2 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    vi.unstubAllGlobals();
   });
 
   it('returns an error when Expo responds with non-2xx', async () => {
@@ -88,8 +93,62 @@ describe('expo push batching', () => {
       visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
     });
 
-    expect(result).toEqual({ error: 'Expo push API returned 429' });
-    vi.unstubAllGlobals();
+    expect(result).toEqual({
+      requested: 1,
+      sent: 0,
+      failed: 1,
+      batches: 0,
+      error: 'Expo push API returned 429',
+    });
+  });
+
+  it('preserves partial delivery when a later chunk fails', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: Array.from({ length: 100 }, () => ({ status: 'ok' })) }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const tokens = Array.from({ length: 150 }, (_, index) => `ExpoPushToken[${index}]`);
+    const result = await sendExpoPushBatch(tokens, {
+      membersNeedingAttention: 1,
+      visitsCompleted: 1,
+      tasksOpen: 1,
+      recentActivityDays: 7,
+      visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
+    });
+
+    expect(result).toEqual({
+      requested: 150,
+      sent: 100,
+      failed: 50,
+      batches: 1,
+      error: 'Expo push API returned 503',
+    });
+  });
+
+  it('returns structured errors for network failures', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await sendExpoPushBatch(['ExpoPushToken[a]'], {
+      membersNeedingAttention: 1,
+      visitsCompleted: 1,
+      tasksOpen: 1,
+      recentActivityDays: 7,
+      visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
+    });
+
+    expect(result).toEqual({
+      requested: 1,
+      sent: 0,
+      failed: 1,
+      batches: 0,
+      error: 'Expo push network failure',
+    });
   });
 });
 
@@ -136,9 +195,26 @@ describe('per-organization digest', () => {
             }),
           };
         }
+        if (table === 'profiles') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { id: 'owner-1', email: 'owner@test.local', role: 'owner', is_active: true },
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
         return { select: () => ({ eq: async () => ({ data: [] }) }) };
       },
-      rpc: async () => ({ data: {}, error: null }),
+      rpc: async () => ({ data: mockSummary, error: null }),
     };
 
     const result = await sendDigest(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never);
@@ -150,8 +226,64 @@ describe('per-organization digest', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(result.results[0].pushDelivery).toEqual({ requested: 1, sent: 1, failed: 0, batches: 1 });
     }
+  });
 
-    vi.unstubAllGlobals();
+  it('continues processing later organizations when one summary fails', async () => {
+    const { buildSummary } = await import('../reports');
+    const buildSummaryMock = vi.mocked(buildSummary);
+    buildSummaryMock
+      .mockRejectedValueOnce(new Error('org-1 summary failed'))
+      .mockResolvedValueOnce(mockSummary);
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ status: 'ok' }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const supabase = {
+      from(table: string) {
+        if (table === 'push_tokens') {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [
+                  { organization_id: 'org-1', expo_push_token: 'ExpoPushToken[a]' },
+                  { organization_id: 'org-2', expo_push_token: 'ExpoPushToken[b]' },
+                ],
+              }),
+            }),
+          };
+        }
+        if (table === 'profiles') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { id: 'owner-1', email: 'owner@test.local', role: 'owner', is_active: true },
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        return { select: () => ({ eq: async () => ({ data: [] }) }) };
+      },
+      rpc: async () => ({ data: mockSummary, error: null }),
+    };
+
+    const result = await sendDigest(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never);
+    expect('error' in result).toBe(false);
+    if (!('error' in result)) {
+      expect(result.results[0].summaryError).toBe('org-1 summary failed');
+      expect(result.results[1].pushDelivery?.sent).toBe(1);
+      expect(result.sent).toBe(1);
+    }
   });
 
   it('skips expo call when an organization has no tokens', async () => {
@@ -159,7 +291,24 @@ describe('per-organization digest', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await sendDigestForOrganization(
-      { rpc: async () => ({ data: {}, error: null }) } as never,
+      {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  limit: () => ({
+                    maybeSingle: async () => ({
+                      data: { id: 'owner-1', email: 'owner@test.local', role: 'owner', is_active: true },
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+        rpc: async () => ({ data: mockSummary, error: null }),
+      } as never,
       { RECENT_ACTIVITY_DAYS: '7' } as never,
       'org-empty',
       [],
@@ -167,6 +316,5 @@ describe('per-organization digest', () => {
 
     expect(result.tokenCount).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
   });
 });

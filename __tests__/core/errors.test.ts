@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AppException,
   createAppError,
   fromAuthError,
   fromHttpStatus,
@@ -55,5 +56,18 @@ describe('errors', () => {
     const original = createAppError('validation', 'Email is required.', { field: 'email' });
     expect(toAppError(original)).toBe(original);
     expect(isAppError(original)).toBe(true);
+  });
+
+  it('handles malformed supabase and auth error objects', () => {
+    expect(fromSupabaseError(null).category).toBe('server');
+    expect(fromSupabaseError({ message: 123 }).category).toBe('server');
+    expect(fromAuthError({ message: null })?.category).toBe('auth');
+  });
+
+  it('unwraps AppException instances', () => {
+    const appError = createAppError('validation', 'Missing field');
+    const thrown = new AppException(appError);
+    expect(thrown).toBeInstanceOf(Error);
+    expect(toAppError(thrown)).toEqual(appError);
   });
 });

@@ -3,7 +3,6 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const authMocks = vi.hoisted(() => ({
   resolveAuth: vi.fn(),
   createServiceClient: vi.fn(),
-  isOwner: vi.fn(),
   isInternalDigestRequest: vi.fn(),
 }));
 
@@ -17,7 +16,15 @@ const notificationMocks = vi.hoisted(() => ({
   sendDigest: vi.fn(),
 }));
 
-vi.mock('../auth', () => authMocks);
+vi.mock('../auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../auth')>();
+  return {
+    ...actual,
+    resolveAuth: authMocks.resolveAuth,
+    createServiceClient: authMocks.createServiceClient,
+    isInternalDigestRequest: authMocks.isInternalDigestRequest,
+  };
+});
 vi.mock('../reports', () => reportMocks);
 vi.mock('../notifications', () => notificationMocks);
 
@@ -26,6 +33,7 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
   RECENT_ACTIVITY_DAYS: '7',
   DIGEST_CRON_SECRET: 'cron-secret',
+  ALLOWED_ORIGINS: 'https://app.test',
 } as const;
 
 describe('worker routes', () => {
@@ -44,14 +52,14 @@ describe('worker routes', () => {
       deviceName: 'Pixel',
     });
     notificationMocks.registerToken.mockResolvedValue({ ok: true });
-    notificationMocks.sendDigest.mockResolvedValue({ sent: 1 });
-    authMocks.isOwner.mockReturnValue(false);
+    notificationMocks.sendDigest.mockResolvedValue({ sent: 1, organizations: 1, results: [] });
     authMocks.isInternalDigestRequest.mockReturnValue(false);
   });
 
   it('returns health without auth', async () => {
     const response = await worker.fetch(new Request('https://worker.test/health'), env);
     expect(response.status).toBe(200);
+    expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
   });
 
   it('returns health for HEAD without auth', async () => {
@@ -79,28 +87,77 @@ describe('worker routes', () => {
   it('returns summary for authenticated users', async () => {
     authMocks.resolveAuth.mockResolvedValue({
       userId: 'u1',
+      organizationId: 'org-1',
       role: 'shepherd',
       email: 's@test.local',
       isActive: true,
     });
     const response = await worker.fetch(
       new Request('https://worker.test/reports/summary', {
-        headers: { Authorization: 'Bearer token' },
+        headers: { Authorization: 'Bearer token', Origin: 'https://app.test' },
       }),
       env,
     );
     expect(response.status).toBe(200);
+    expect(response.headers.get('Vary')).toBe('Origin');
     expect(reportMocks.buildSummary).toHaveBeenCalled();
   });
 
-  it('rejects digest send for non-owner users', async () => {
+  it('returns sanitized JSON when buildSummary throws', async () => {
     authMocks.resolveAuth.mockResolvedValue({
       userId: 'u1',
+      organizationId: 'org-1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
+    reportMocks.buildSummary.mockRejectedValue(new Error('summary exploded'));
+
+    const response = await worker.fetch(
+      new Request('https://worker.test/reports/summary', {
+        headers: { Authorization: 'Bearer token', Origin: 'https://app.test' },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://app.test');
+    expect(response.headers.get('X-Request-Id')).toBeTruthy();
+    await expect(response.json()).resolves.toEqual({ error: 'Internal server error' });
+  });
+
+  it('returns sanitized JSON when sendDigest throws', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org-1',
+      role: 'owner',
+      email: 'o@test.local',
+      isActive: true,
+    });
+    notificationMocks.sendDigest.mockRejectedValue(new Error('digest exploded'));
+
+    const response = await worker.fetch(
+      new Request('https://worker.test/notifications/send-digest', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token', Origin: 'https://app.test' },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://app.test');
+    expect(response.headers.get('X-Request-Id')).toBeTruthy();
+    await expect(response.json()).resolves.toEqual({ error: 'Internal server error' });
+  });
+
+  it('rejects digest send for non-owner users using real isOwner logic', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org-1',
       role: 'admin',
       email: 'a@test.local',
       isActive: true,
     });
-    authMocks.isOwner.mockReturnValue(false);
     const response = await worker.fetch(
       new Request('https://worker.test/notifications/send-digest', {
         method: 'POST',
@@ -109,16 +166,17 @@ describe('worker routes', () => {
       env,
     );
     expect(response.status).toBe(403);
+    expect(notificationMocks.sendDigest).not.toHaveBeenCalled();
   });
 
-  it('allows digest send for owner users', async () => {
+  it('allows digest send for owner users using real isOwner logic', async () => {
     authMocks.resolveAuth.mockResolvedValue({
       userId: 'u1',
+      organizationId: 'org-1',
       role: 'owner',
       email: 'o@test.local',
       isActive: true,
     });
-    authMocks.isOwner.mockReturnValue(true);
     const response = await worker.fetch(
       new Request('https://worker.test/notifications/send-digest', {
         method: 'POST',
@@ -146,6 +204,7 @@ describe('worker routes', () => {
   it('rejects invalid register payloads', async () => {
     authMocks.resolveAuth.mockResolvedValue({
       userId: 'u1',
+      organizationId: 'org-1',
       role: 'shepherd',
       email: 's@test.local',
       isActive: true,
@@ -160,5 +219,29 @@ describe('worker routes', () => {
       env,
     );
     expect(response.status).toBe(400);
+  });
+
+  it('rejects oversized register payloads', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org-1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
+    const response = await worker.fetch(
+      new Request('https://worker.test/notifications/register', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer token',
+          'Content-Type': 'application/json',
+          'Content-Length': String(17 * 1024),
+        },
+        body: JSON.stringify({ expoPushToken: 'ExpoPushToken[abc]' }),
+      }),
+      env,
+    );
+    expect(response.status).toBe(413);
+    expect(notificationMocks.registerToken).not.toHaveBeenCalled();
   });
 });

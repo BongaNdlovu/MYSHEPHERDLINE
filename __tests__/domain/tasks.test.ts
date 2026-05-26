@@ -45,4 +45,9 @@ describe('name helpers', () => {
     expect(getInitials('  John   Doe  ')).toBe('JD');
     expect(getInitials('  ')).toBe('');
   });
+
+  it('handles nullish runtime input safely', () => {
+    expect(getInitials(null)).toBe('');
+    expect(getInitials(undefined)).toBe('');
+  });
 });

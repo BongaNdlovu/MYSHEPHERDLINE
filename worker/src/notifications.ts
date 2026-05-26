@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { AuthContext } from './auth';
 import { isValidExpoPushToken } from './auth';
 import { buildSummary, type ReportSummary } from './reports';
 import type { WorkerEnv } from './env';
@@ -14,6 +15,7 @@ export type PushDeliveryResult = {
   sent: number;
   failed: number;
   batches: number;
+  error?: string;
 };
 
 export type DigestSendResult =
@@ -23,7 +25,8 @@ export type DigestSendResult =
 export type DigestOrgResult = {
   organizationId: string;
   tokenCount: number;
-  summary: ReportSummary;
+  summary?: ReportSummary;
+  summaryError?: string;
   pushDelivery?: PushDeliveryResult;
   pushError?: string;
 };
@@ -115,7 +118,7 @@ function countSuccessfulTickets(payload: unknown, requested: number) {
 export async function sendExpoPushBatch(
   expoPushTokens: string[],
   summary: ReportSummary,
-): Promise<PushDeliveryResult | { error: string }> {
+): Promise<PushDeliveryResult> {
   if (!expoPushTokens.length) {
     return { requested: 0, sent: 0, failed: 0, batches: 0 };
   }
@@ -124,6 +127,7 @@ export async function sendExpoPushBatch(
   let requested = 0;
   let sent = 0;
   let failed = 0;
+  let batches = 0;
 
   for (const chunk of chunks) {
     requested += chunk.length;
@@ -134,29 +138,79 @@ export async function sendExpoPushBatch(
       body: digestBody(summary),
     }));
 
-    const response = await fetch(EXPO_PUSH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(messages),
-    });
-
-    if (!response.ok) {
-      return { error: `Expo push API returned ${response.status}` };
-    }
-
-    let payload: unknown;
     try {
-      payload = await response.json();
-    } catch {
-      return { error: 'Expo push API returned invalid JSON' };
-    }
+      const response = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messages),
+      });
 
-    const counts = countSuccessfulTickets(payload, chunk.length);
-    sent += counts.sent;
-    failed += counts.failed;
+      if (!response.ok) {
+        failed += chunk.length;
+        return {
+          requested,
+          sent,
+          failed,
+          batches,
+          error: `Expo push API returned ${response.status}`,
+        };
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        failed += chunk.length;
+        return {
+          requested,
+          sent,
+          failed,
+          batches,
+          error: 'Expo push API returned invalid JSON',
+        };
+      }
+
+      const counts = countSuccessfulTickets(payload, chunk.length);
+      sent += counts.sent;
+      failed += counts.failed;
+      batches += 1;
+    } catch {
+      failed += chunk.length;
+      return {
+        requested,
+        sent,
+        failed,
+        batches,
+        error: 'Expo push network failure',
+      };
+    }
   }
 
-  return { requested, sent, failed, batches: chunks.length };
+  return { requested, sent, failed, batches };
+}
+
+async function resolveDigestReportContext(
+  supabase: SupabaseClient,
+  organizationId: string,
+): Promise<AuthContext | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, role, is_active')
+    .eq('organization_id', organizationId)
+    .eq('role', 'owner')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.id) return null;
+
+  return {
+    userId: data.id as string,
+    organizationId,
+    role: 'owner',
+    email: (data.email as string | null) ?? '',
+    isActive: true,
+  };
 }
 
 export async function sendDigestForOrganization(
@@ -165,29 +219,32 @@ export async function sendDigestForOrganization(
   organizationId: string,
   expoPushTokens: string[],
 ): Promise<DigestOrgResult> {
-  const summary = await buildSummary(supabase, env, {
-    userId: 'system',
-    organizationId,
-    role: 'owner',
-    email: '',
-    isActive: true,
-  });
-
   const result: DigestOrgResult = {
     organizationId,
     tokenCount: expoPushTokens.length,
-    summary,
   };
 
-  if (!expoPushTokens.length) return result;
-
-  const delivery = await sendExpoPushBatch(expoPushTokens, summary);
-  if ('error' in delivery) {
-    result.pushError = delivery.error;
+  const context = await resolveDigestReportContext(supabase, organizationId);
+  if (!context) {
+    result.summaryError = 'No active owner found for organization';
     return result;
   }
 
+  try {
+    result.summary = await buildSummary(supabase, env, context);
+  } catch (error) {
+    result.summaryError = error instanceof Error ? error.message : 'Summary build failed';
+    return result;
+  }
+
+  if (!expoPushTokens.length) return result;
+
+  const delivery = await sendExpoPushBatch(expoPushTokens, result.summary);
   result.pushDelivery = delivery;
+  if (delivery.error) {
+    result.pushError = delivery.error;
+  }
+
   return result;
 }
 
@@ -237,9 +294,17 @@ export async function sendDigest(supabase: SupabaseClient, env: WorkerEnv): Prom
 
   for (const organizationId of organizationIds) {
     const orgTokens = tokensByOrg.get(organizationId) ?? [];
-    const orgResult = await sendDigestForOrganization(supabase, env, organizationId, orgTokens);
-    results.push(orgResult);
-    sent += orgResult.pushDelivery?.sent ?? 0;
+    try {
+      const orgResult = await sendDigestForOrganization(supabase, env, organizationId, orgTokens);
+      results.push(orgResult);
+      sent += orgResult.pushDelivery?.sent ?? 0;
+    } catch (error) {
+      results.push({
+        organizationId,
+        tokenCount: orgTokens.length,
+        summaryError: error instanceof Error ? error.message : 'Digest failed',
+      });
+    }
   }
 
   return { sent, organizations: organizationIds.length, results };

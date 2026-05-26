@@ -49,6 +49,20 @@ describe('supabase auth storage', () => {
     await expect(supabaseAuthStorage.getItem('auth-token')).resolves.toBeNull();
   });
 
+  it('keeps the previous session readable if a chunked write is interrupted', async () => {
+    const original = 'x'.repeat(4500);
+    await supabaseAuthStorage.setItem('auth-token', original);
+
+    secureStore.setItemAsync.mockImplementationOnce(async () => {
+      throw new Error('write interrupted');
+    });
+
+    await expect(supabaseAuthStorage.setItem('auth-token', 'y'.repeat(4500))).rejects.toThrow(
+      'write interrupted',
+    );
+    await expect(supabaseAuthStorage.getItem('auth-token')).resolves.toBe(original);
+  });
+
   it('uses the shared auth storage key constant', async () => {
     const { SUPABASE_AUTH_STORAGE_KEY } = await import('@/lib/core/supabase-storage');
     expect(SUPABASE_AUTH_STORAGE_KEY).toBe('myshepherdline.auth.session');

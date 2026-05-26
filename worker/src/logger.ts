@@ -54,3 +54,23 @@ export function logRouteTiming(
     }),
   );
 }
+
+export function logRouteError(
+  context: RequestContext,
+  details: {
+    durationMs: number;
+    message: string;
+  },
+) {
+  console.error(
+    safeLogPayload({
+      level: 'error',
+      event: 'route_error',
+      requestId: context.requestId,
+      method: context.method,
+      path: context.path,
+      ...details,
+      ts: new Date().toISOString(),
+    }),
+  );
+}

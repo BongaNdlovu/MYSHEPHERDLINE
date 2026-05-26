@@ -20,12 +20,25 @@ type ReportCacheEntry = { summary: ReportSummary; expiresAt: number };
 
 const reportCache = new Map<string, ReportCacheEntry>();
 const CACHE_TTL_MS = 60_000;
+const CACHE_MAX_ENTRIES = 200;
 
 function cacheKey(context: AuthContext, recentDays: number) {
   return `${context.organizationId}:${context.userId}:${context.role}:${recentDays}`;
 }
 
+function pruneReportCache(now = Date.now()) {
+  for (const [key, entry] of reportCache) {
+    if (entry.expiresAt <= now) reportCache.delete(key);
+  }
+  while (reportCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = reportCache.keys().next().value;
+    if (!oldest) break;
+    reportCache.delete(oldest);
+  }
+}
+
 function readCache(key: string): ReportSummary | null {
+  pruneReportCache();
   const entry = reportCache.get(key);
   if (!entry) return null;
   if (Date.now() > entry.expiresAt) {
@@ -36,6 +49,7 @@ function readCache(key: string): ReportSummary | null {
 }
 
 function writeCache(key: string, summary: ReportSummary) {
+  pruneReportCache();
   reportCache.set(key, { summary, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
@@ -63,4 +77,9 @@ export async function buildSummary(
   const summary = data as ReportSummary;
   writeCache(key, summary);
   return summary;
+}
+
+/** @internal test helper */
+export function resetReportCache() {
+  reportCache.clear();
 }

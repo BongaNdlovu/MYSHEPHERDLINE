@@ -1,6 +1,8 @@
 import type { WorkerEnv } from './env';
 import { safeStringify } from './safe-json';
 
+export const REGISTER_MAX_BODY_BYTES = 16 * 1024;
+
 export function corsHeaders(request: Request, env: WorkerEnv) {
   const origin = request.headers.get('Origin');
   const allowed = (env.ALLOWED_ORIGINS ?? '')
@@ -14,9 +16,11 @@ export function corsHeaders(request: Request, env: WorkerEnv) {
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Cron-Secret',
+    'Access-Control-Max-Age': '86400',
   };
 
   if (allowOrigin) headers['Access-Control-Allow-Origin'] = allowOrigin;
+  if (origin) headers.Vary = 'Origin';
 
   return headers;
 }
@@ -36,4 +40,31 @@ export function json(
       ...extraHeaders,
     },
   });
+}
+
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number,
+): Promise<
+  | { ok: true; body: unknown }
+  | { ok: false; status: 413 | 400; error: string }
+> {
+  const contentLength = request.headers.get('Content-Length');
+  if (contentLength) {
+    const parsedLength = Number(contentLength);
+    if (Number.isFinite(parsedLength) && parsedLength > maxBytes) {
+      return { ok: false, status: 413, error: 'Request body too large' };
+    }
+  }
+
+  const text = await request.text();
+  if (text.length > maxBytes) {
+    return { ok: false, status: 413, error: 'Request body too large' };
+  }
+
+  try {
+    return { ok: true, body: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false, status: 400, error: 'Invalid JSON body' };
+  }
 }

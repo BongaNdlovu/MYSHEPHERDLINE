@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 const CHUNK_SIZE = 2000;
 const CHUNK_COUNT_SUFFIX = '_chunk_count';
+const STAGING_SUFFIX = '_staging';
 
 async function getChunkedItem(key: string): Promise<string | null> {
   const chunkCountRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
@@ -20,39 +21,75 @@ async function getChunkedItem(key: string): Promise<string | null> {
   return chunks.join('');
 }
 
-async function deleteChunkKeys(key: string, chunkCount: number) {
+async function deleteChunkKeys(key: string, chunkCount: number, prefix = '') {
   for (let index = 0; index < chunkCount; index += 1) {
-    await SecureStore.deleteItemAsync(`${key}_chunk_${index}`).catch(() => undefined);
+    await SecureStore.deleteItemAsync(`${key}${prefix}_chunk_${index}`).catch(() => undefined);
   }
 }
 
-async function setChunkedItem(key: string, value: string): Promise<void> {
-  if (value.length <= CHUNK_SIZE) {
-    await removeChunkedItem(key);
-    await SecureStore.setItemAsync(key, value);
-    return;
-  }
+async function deleteStagingKeys(key: string) {
+  const stagingCountRaw = await SecureStore.getItemAsync(`${key}${STAGING_SUFFIX}${CHUNK_COUNT_SUFFIX}`);
+  if (!stagingCountRaw) return;
 
+  const stagingCount = Number(stagingCountRaw);
+  if (Number.isFinite(stagingCount) && stagingCount > 0) {
+    await deleteChunkKeys(key, stagingCount, STAGING_SUFFIX);
+  }
+  await SecureStore.deleteItemAsync(`${key}${STAGING_SUFFIX}${CHUNK_COUNT_SUFFIX}`).catch(() => undefined);
+  await SecureStore.deleteItemAsync(`${key}${STAGING_SUFFIX}`).catch(() => undefined);
+}
+
+async function commitDirectValue(key: string, value: string): Promise<void> {
+  await SecureStore.setItemAsync(`${key}${STAGING_SUFFIX}`, value);
+  const previousChunkCountRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
+  const previousChunkCount = Number(previousChunkCountRaw);
+  if (Number.isFinite(previousChunkCount) && previousChunkCount > 0) {
+    await deleteChunkKeys(key, previousChunkCount);
+  }
+  await SecureStore.deleteItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`).catch(() => undefined);
+  await SecureStore.setItemAsync(key, value);
+  await SecureStore.deleteItemAsync(`${key}${STAGING_SUFFIX}`).catch(() => undefined);
+}
+
+async function commitChunkedValue(key: string, value: string): Promise<void> {
   const previousChunkCountRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
   const previousChunkCount = Number(previousChunkCountRaw);
   const chunkCount = Math.ceil(value.length / CHUNK_SIZE);
 
-  await SecureStore.deleteItemAsync(key).catch(() => undefined);
-  await SecureStore.deleteItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`).catch(() => undefined);
-
   for (let index = 0; index < chunkCount; index += 1) {
     const chunk = value.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
-    await SecureStore.setItemAsync(`${key}_chunk_${index}`, chunk);
+    await SecureStore.setItemAsync(`${key}${STAGING_SUFFIX}_chunk_${index}`, chunk);
   }
+  await SecureStore.setItemAsync(`${key}${STAGING_SUFFIX}${CHUNK_COUNT_SUFFIX}`, String(chunkCount));
 
+  await SecureStore.deleteItemAsync(key).catch(() => undefined);
+  for (let index = 0; index < chunkCount; index += 1) {
+    const stagedChunk = await SecureStore.getItemAsync(`${key}${STAGING_SUFFIX}_chunk_${index}`);
+    if (stagedChunk === null) {
+      throw new Error('Staged session chunk missing during commit');
+    }
+    await SecureStore.setItemAsync(`${key}_chunk_${index}`, stagedChunk);
+  }
   await SecureStore.setItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`, String(chunkCount));
+
+  await deleteStagingKeys(key);
 
   if (Number.isFinite(previousChunkCount) && previousChunkCount > chunkCount) {
     await deleteChunkKeys(key, previousChunkCount);
   }
 }
 
+async function setChunkedItem(key: string, value: string): Promise<void> {
+  if (value.length <= CHUNK_SIZE) {
+    await commitDirectValue(key, value);
+    return;
+  }
+
+  await commitChunkedValue(key, value);
+}
+
 async function removeChunkedItem(key: string): Promise<void> {
+  await deleteStagingKeys(key);
   const chunkCountRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
   if (chunkCountRaw) {
     const chunkCount = Number(chunkCountRaw);

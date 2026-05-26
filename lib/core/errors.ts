@@ -17,6 +17,53 @@ export type AppError = {
   details?: string;
 };
 
+export class AppException extends Error {
+  readonly appError: AppError;
+
+  constructor(appError: AppError) {
+    super(appError.message);
+    this.name = 'AppException';
+    this.appError = appError;
+  }
+}
+
+function normalizeErrorMessage(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (
+    value &&
+    typeof value === 'object' &&
+    'message' in value &&
+    typeof (value as { message: unknown }).message === 'string'
+  ) {
+    return (value as { message: string }).message;
+  }
+  return fallback;
+}
+
+function normalizeErrorCode(value: unknown): string | undefined {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'code' in value &&
+    typeof (value as { code: unknown }).code === 'string'
+  ) {
+    return (value as { code: string }).code;
+  }
+  return undefined;
+}
+
+function normalizeErrorStatus(value: unknown): number | undefined {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'status' in value &&
+    typeof (value as { status: unknown }).status === 'number'
+  ) {
+    return (value as { status: number }).status;
+  }
+  return undefined;
+}
+
 const RETRYABLE: Record<AppErrorCategory, boolean> = {
   config: false,
   network: true,
@@ -84,21 +131,24 @@ function userSafeBackendMessage(raw: string, fallback: string): string {
 }
 
 export function fromSupabaseError(
-  error: { message: string; code?: string; status?: number },
+  error: { message?: unknown; code?: unknown; status?: unknown } | null | undefined,
   fallbackMessage = DEFAULT_MESSAGES.server,
 ): AppError {
-  const message = error.message.toLowerCase();
+  const rawMessage = normalizeErrorMessage(error, fallbackMessage);
+  const code = normalizeErrorCode(error);
+  const status = normalizeErrorStatus(error);
+  const message = rawMessage.toLowerCase();
 
-  if (error.status === 401 || message.includes('jwt') || message.includes('not authenticated')) {
-    return createAppError('auth', 'Your session expired. Sign in again.', { code: error.code });
+  if (status === 401 || message.includes('jwt') || message.includes('not authenticated')) {
+    return createAppError('auth', 'Your session expired. Sign in again.', { code });
   }
 
-  if (error.status === 403 || error.code === '42501') {
-    return createAppError('forbidden', undefined, { code: error.code });
+  if (status === 403 || code === '42501') {
+    return createAppError('forbidden', undefined, { code });
   }
 
-  if (error.code === 'PGRST116') {
-    return createAppError('not_found', undefined, { code: error.code });
+  if (code === 'PGRST116') {
+    return createAppError('not_found', undefined, { code });
   }
 
   if (
@@ -107,19 +157,22 @@ export function fromSupabaseError(
     message.includes('failed to fetch') ||
     message.includes('network request failed')
   ) {
-    return createAppError('network', undefined, { code: error.code, details: error.message });
+    return createAppError('network', undefined, { code, details: rawMessage });
   }
 
-  return createAppError('server', userSafeBackendMessage(error.message, fallbackMessage), {
-    code: error.code,
-    details: error.message,
+  return createAppError('server', userSafeBackendMessage(rawMessage, fallbackMessage), {
+    code,
+    details: rawMessage,
   });
 }
 
-export function fromAuthError(error: { message: string; status?: number } | null): AppError | null {
+export function fromAuthError(
+  error: { message?: unknown; status?: unknown } | null | undefined,
+): AppError | null {
   if (!error) return null;
 
-  const message = error.message.toLowerCase();
+  const rawMessage = normalizeErrorMessage(error, DEFAULT_MESSAGES.auth);
+  const message = rawMessage.toLowerCase();
   if (message.includes('invalid login credentials')) {
     return createAppError('auth', 'Email or password is incorrect.');
   }
@@ -130,8 +183,8 @@ export function fromAuthError(error: { message: string; status?: number } | null
     return createAppError('validation', 'An account with this email already exists.', { field: 'email' });
   }
 
-  return createAppError('auth', userSafeBackendMessage(error.message, DEFAULT_MESSAGES.auth), {
-    details: error.message,
+  return createAppError('auth', userSafeBackendMessage(rawMessage, DEFAULT_MESSAGES.auth), {
+    details: rawMessage,
   });
 }
 
@@ -151,6 +204,7 @@ export function fromFetchFailure(fallbackMessage = DEFAULT_MESSAGES.network): Ap
 
 export function toAppError(err: unknown, fallbackMessage = DEFAULT_MESSAGES.unknown): AppError {
   if (isAppError(err)) return err;
+  if (err instanceof AppException) return err.appError;
   if (err instanceof Error) {
     const message = err.message.toLowerCase();
     if (message.includes('network') || message.includes('fetch')) {

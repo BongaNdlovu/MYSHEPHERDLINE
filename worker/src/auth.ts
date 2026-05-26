@@ -42,15 +42,19 @@ function parseBearerToken(request: Request): string | null {
   return token || null;
 }
 
-export async function resolveAuth(request: Request, env: WorkerEnv): Promise<AuthResolution> {
+export async function resolveAuth(
+  request: Request,
+  env: WorkerEnv,
+  supabase?: SupabaseClient,
+): Promise<AuthResolution> {
   const token = parseBearerToken(request);
   if (!token) return { status: 'unauthorized' };
 
-  const supabase = createServiceClient(env);
-  const { data, error } = await supabase.auth.getUser(token);
+  const client = supabase ?? createServiceClient(env);
+  const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) return { status: 'unauthorized' };
 
-  const { data: profile } = await supabase
+  const { data: profile } = await client
     .from('profiles')
     .select('role, email, is_active, organization_id')
     .eq('id', data.user.id)

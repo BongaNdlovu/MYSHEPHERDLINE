@@ -1,4 +1,5 @@
-export function getInitials(fullName: string, maxLength = 2) {
+export function getInitials(fullName: string | null | undefined, maxLength = 2) {
+  if (fullName == null || typeof fullName !== 'string') return '';
   return fullName
     .trim()
     .split(/\s+/)

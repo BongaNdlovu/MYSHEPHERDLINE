@@ -65,9 +65,10 @@ describe('isProfileActive', () => {
     expect(isProfileActive(null)).toBe(false);
   });
 
-  it('respects is_active flag', () => {
+  it('requires explicit active state', () => {
     expect(isProfileActive(profile({ is_active: false }))).toBe(false);
     expect(isProfileActive(profile({ is_active: true }))).toBe(true);
+    expect(isProfileActive(profile({ is_active: undefined as never }))).toBe(false);
   });
 });
 
