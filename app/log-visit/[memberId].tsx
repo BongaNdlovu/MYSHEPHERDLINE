@@ -1,1 +1,1 @@
-export { default } from '@/features/visits/screens/LogVisitScreen';
+export { LogVisitScreen as default } from '@/features/visits';

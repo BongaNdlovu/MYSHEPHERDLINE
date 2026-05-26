@@ -1,1 +1,1 @@
-export { default } from '@/features/auth/screens/MoreScreen';
+export { MoreScreen as default } from '@/features/account';

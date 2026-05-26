@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import { useMember } from '@/features/members/hooks/useMembers';
+import { useMember } from '@/features/members';
 import { useToast } from '@/lib/core/toast';
 
 export default function MemberProfileScreen() {

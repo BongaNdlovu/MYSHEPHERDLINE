@@ -3,11 +3,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { TaskItem } from '@/features/tasks/components/TaskItem';
+import { buildWeekDayStrip, groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
-import { buildWeekDayStrip, groupTasksByDueDate } from '@/features/tasks/selectors/tasks';
-import { useTasks } from '@/features/tasks/hooks/useTasks';
 
 export default function TasksScreen() {
   const { data: tasks, loading, error, toggleTask } = useTasks();

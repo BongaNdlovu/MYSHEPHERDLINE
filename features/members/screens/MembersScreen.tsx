@@ -4,13 +4,10 @@ import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
-import { FilterChips } from '@/features/members/components/FilterChips';
-import { MemberListItem } from '@/features/members/components/MemberListItem';
+import { FilterChips, MemberListItem, filterMembers, useMembers, type MemberFilter } from '@/features/members';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors } from '@/constants/theme';
-import { filterMembers, type MemberFilter } from '@/features/members/selectors/members';
-import { useMembers } from '@/features/members/hooks/useMembers';
 
 const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'All', value: 'all' },

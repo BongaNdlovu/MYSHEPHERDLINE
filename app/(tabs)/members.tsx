@@ -1,1 +1,1 @@
-export { default } from '@/features/members/screens/MembersScreen';
+export { MembersScreen as default } from '@/features/members';

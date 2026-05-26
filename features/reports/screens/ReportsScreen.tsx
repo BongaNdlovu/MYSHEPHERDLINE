@@ -3,10 +3,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { StatCard } from '@/features/reports/components/StatCard';
+import { StatCard, useReportSummary } from '@/features/reports';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import { useReportSummary } from '@/features/reports/hooks/useReportSummary';
 
 export default function ReportsScreen() {
   const { summary, loading, error, source } = useReportSummary();

@@ -5,13 +5,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
-import { MemberListItem } from '@/features/members/components/MemberListItem';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { TaskItem } from '@/features/tasks/components/TaskItem';
-import { filterMembers, membersNeedingAttention } from '@/features/members/selectors/members';
-import { groupTasksByDueDate } from '@/features/tasks/selectors/tasks';
-import { useMembers } from '@/features/members/hooks/useMembers';
-import { useTasks } from '@/features/tasks/hooks/useTasks';
+import { buildAttentionPreview } from '@/features/home/selectors/dashboard';
+import { MemberListItem, useMembers } from '@/features/members';
+import { groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
@@ -22,9 +19,7 @@ export default function HomeScreen() {
   const { data: tasks, loading: tasksLoading, error: tasksError, toggleTask } = useTasks();
   const [query, setQuery] = useState('');
 
-  const attentionMembers = useMemo(() => {
-    return filterMembers(membersNeedingAttention(members), query, 'all').slice(0, 4);
-  }, [members, query]);
+  const attentionMembers = useMemo(() => buildAttentionPreview(members, query), [members, query]);
 
   const { today: todayTasks } = groupTasksByDueDate(tasks);
 

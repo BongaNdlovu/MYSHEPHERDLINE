@@ -11,6 +11,8 @@ Expo + React Native + TypeScript app for congregation shepherding.
 
 ## Setup
 
+This repo uses **npm workspaces** for the Expo app (root) and the Cloudflare Worker (`worker/`).
+
 ```powershell
 npm.cmd install
 copy .env.example .env
@@ -19,12 +21,15 @@ copy .env.example .env
 Apply `supabase/schema.sql`, then deploy the worker:
 
 ```powershell
-cd worker
-npm.cmd install
-npx.cmd wrangler secret put SUPABASE_URL
-npx.cmd wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-npx.cmd wrangler secret put DIGEST_CRON_SECRET
-npm.cmd run deploy
+npm.cmd run deploy --workspace myshepherdline-worker
+```
+
+Set Worker secrets before deploy (from any directory):
+
+```powershell
+npx.cmd wrangler secret put SUPABASE_URL --config worker/wrangler.toml
+npx.cmd wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config worker/wrangler.toml
+npx.cmd wrangler secret put DIGEST_CRON_SECRET --config worker/wrangler.toml
 ```
 
 Set `EXPO_PUBLIC_WORKER_API_URL` in `.env` to your `*.workers.dev` URL.
@@ -65,19 +70,21 @@ Operational POPIA/PAIA drafts live in `docs/compliance/`. In-app privacy/terms s
 
 ## Project layout
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full guide. Quick map:
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/README.md](docs/README.md). Quick map:
 
 | Path | Purpose |
-|---|---|
-| `app/` | Expo Router URLs — thin re-exports only |
-| `features/` | Business features (auth, members, tasks, reports, visits, legal, home) |
+| --- | --- |
+| `app/` | Expo Router URLs - thin re-exports only |
+| `features/` | Business features (auth, account, home, members, tasks, reports, visits, legal) |
+| `lib/core/` | Env, Supabase, auth session, API, toast |
+| `lib/app-shell/` | Shell behavior (auth redirect gate) |
 | `components/ui/` | Shared UI primitives |
-| `lib/core/` | Env, Supabase, auth, API, toast |
 | `types/` | Backend/domain types |
-| `worker/` | Cloudflare Worker API |
-| `__tests__/` | Unit/integration tests and fixtures |
+| `worker/` | Cloudflare Worker API package |
+| `__tests__/` | App unit/integration tests and fixtures |
+| `docs/` | Documentation index |
 
-**Where to add code:** new screens go in `features/<name>/screens/`; routes in `app/` should only re-export them. Data fetching goes in feature `hooks/` → `services/` → Supabase/Worker.
+**Where to add code:** new screens go in `features/<name>/screens/` and are exported from `features/<name>/index.ts`. Routes in `app/` should only re-export them. Data fetching goes in feature `hooks/` -> `services/` -> Supabase/Worker.
 
 ## EAS
 
