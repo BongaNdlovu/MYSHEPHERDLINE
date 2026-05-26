@@ -1,0 +1,9 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- assertVisible:
+    id: landing-title
+- tapOn:
+    id: landing-sign-in
+- assertVisible:
+    text: Welcome back

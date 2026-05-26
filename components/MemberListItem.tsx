@@ -6,6 +6,7 @@ import type { Member, RiskLevel } from '@/types/database';
 type MemberListItemProps = {
   member: Member;
   onPress?: () => void;
+  testID?: string;
 };
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -20,7 +21,7 @@ const riskStyles: Record<RiskLevel, { bg: string; color: string }> = {
   low: { bg: colors.primaryPale, color: colors.primarySoft },
 };
 
-export function MemberListItem({ member, onPress }: MemberListItemProps) {
+export function MemberListItem({ member, onPress, testID }: MemberListItemProps) {
   const risk = riskStyles[member.risk_level];
   const initials = member.full_name
     .split(' ')
@@ -30,7 +31,7 @@ export function MemberListItem({ member, onPress }: MemberListItemProps) {
     .toUpperCase();
 
   return (
-    <Pressable style={styles.item} onPress={onPress}>
+    <Pressable style={styles.item} onPress={onPress} testID={testID} accessibilityLabel={member.full_name}>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials}</Text>
       </View>

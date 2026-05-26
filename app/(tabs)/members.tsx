@@ -6,11 +6,11 @@ import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
 import { FilterChips } from '@/components/FilterChips';
 import { MemberListItem } from '@/components/MemberListItem';
+import { QueryStateView } from '@/components/QueryStateView';
+import { testIds } from '@/constants/testIds';
 import { colors } from '@/constants/theme';
-import { filterMembers, useMembers } from '@/lib/data';
-import { useToast } from '@/lib/toast';
-
-type MemberFilter = 'all' | 'risk' | 'inactive' | 'new';
+import { filterMembers, type MemberFilter } from '@/lib/domain/members';
+import { useMembers } from '@/lib/hooks/useMembers';
 
 const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'All', value: 'all' },
@@ -20,34 +20,42 @@ const filterOptions: { label: string; value: MemberFilter }[] = [
 ];
 
 export default function MembersScreen() {
-  const { showToast } = useToast();
-  const { members } = useMembers();
+  const { data: members, loading, error } = useMembers();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<MemberFilter>('all');
 
-  const filtered = useMemo(
-    () => filterMembers(members, query, filter),
-    [members, query, filter],
-  );
+  const filtered = useMemo(() => filterMembers(members, query, filter), [members, query, filter]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.members.screen}>
       <AppHeader
         title="Members"
         subtitle={`${filtered.length} in directory`}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search directory..."
-        onFilterPress={() => showToast(`Filter: ${filter}`)}
+        searchTestID={testIds.members.search}
       />
 
-      <FilterChips options={filterOptions} value={filter} onChange={setFilter} />
+      <FilterChips
+        options={filterOptions}
+        value={filter}
+        onChange={setFilter}
+        testIdForValue={(value) => testIds.members.filter(value)}
+      />
 
       <Card title="Congregation Directory">
+        <QueryStateView
+          loading={loading}
+          error={error}
+          isEmpty={!filtered.length}
+          emptyMessage="No members match your search or filter."
+        />
         {filtered.map((member) => (
           <MemberListItem
             key={member.id}
             member={member}
+            testID={testIds.members.member(member.id)}
             onPress={() => router.push(`/member/${member.id}`)}
           />
         ))}

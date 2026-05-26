@@ -2,46 +2,47 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
+import { QueryStateView } from '@/components/QueryStateView';
 import { TaskItem } from '@/components/TaskItem';
+import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
-import { useTasks } from '@/lib/data';
-import { useToast } from '@/lib/toast';
+import { buildWeekDayStrip, groupTasksByDueDate } from '@/lib/domain/tasks';
+import { useTasks } from '@/lib/hooks/useTasks';
 
 export default function TasksScreen() {
-  const { tasks, toggleTask } = useTasks();
-  const { showToast } = useToast();
-
-  const today = tasks.filter((task) => task.due_date === '2026-05-26');
-  const upcoming = tasks.filter((task) => task.due_date !== '2026-05-26');
+  const { data: tasks, loading, error, toggleTask } = useTasks();
+  const { today, upcoming } = groupTasksByDueDate(tasks);
+  const weekDays = buildWeekDayStrip();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <AppHeader
-        title="Tasks"
-        subtitle="Stay on top of shepherding work"
-        searchValue=""
-        onSearchChange={() => showToast('Task search filters by title')}
-        searchPlaceholder="Search tasks..."
-      />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.tasks.screen}>
+      <AppHeader title="Tasks" subtitle="Stay on top of shepherding work" />
 
       <View style={styles.calendarRow}>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, index) => (
-          <View key={day} style={[styles.day, index === 1 && styles.dayActive]}>
-            <Text style={[styles.dayLabel, index === 1 && styles.dayLabelActive]}>{day}</Text>
-            <Text style={[styles.dayNumber, index === 1 && styles.dayLabelActive]}>{24 + index}</Text>
+        {weekDays.map((day) => (
+          <View key={day.dateKey} style={[styles.day, day.isToday && styles.dayActive]}>
+            <Text style={[styles.dayLabel, day.isToday && styles.dayLabelActive]}>{day.label}</Text>
+            <Text style={[styles.dayNumber, day.isToday && styles.dayLabelActive]}>{day.dayNumber}</Text>
           </View>
         ))}
       </View>
 
       <Card title="Today" badge={`${today.length}`}>
+        <QueryStateView
+          loading={loading}
+          error={error}
+          isEmpty={!today.length}
+          emptyMessage="No open tasks due today."
+        />
         {today.map((task) => (
-          <TaskItem key={task.id} task={task} onToggle={() => toggleTask(task)} />
+          <TaskItem key={task.id} task={task} toggleTestID={testIds.tasks.toggle(task.id)} onToggle={() => void toggleTask(task)} />
         ))}
       </Card>
 
-      <Card title="Upcoming">
+      <Card title="Upcoming" badge={`${upcoming.length}`}>
+        <QueryStateView loading={loading} error={error} isEmpty={!upcoming.length} emptyMessage="No upcoming tasks." />
         {upcoming.map((task) => (
-          <TaskItem key={task.id} task={task} onToggle={() => toggleTask(task)} />
+          <TaskItem key={task.id} task={task} toggleTestID={testIds.tasks.toggle(task.id)} onToggle={() => void toggleTask(task)} />
         ))}
       </Card>
     </ScrollView>
@@ -56,16 +57,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
+    gap: 4,
   },
   day: {
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 14,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    minWidth: 56,
+    flex: 1,
   },
   dayActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },

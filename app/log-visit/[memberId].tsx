@@ -1,11 +1,15 @@
+import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader } from '@/components/AppHeader';
+import { QueryStateView } from '@/components/QueryStateView';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
+import { createVisit } from '@/lib/domain/visits';
 import { useAuth } from '@/lib/auth';
-import { createVisit, useMember } from '@/lib/data';
+import { useMember } from '@/lib/hooks/useMembers';
 import { useToast } from '@/lib/toast';
 import type { VisitType } from '@/types/database';
 
@@ -18,7 +22,7 @@ const contactTypes: { label: string; value: VisitType }[] = [
 
 export default function LogVisitScreen() {
   const { memberId } = useLocalSearchParams<{ memberId: string }>();
-  const { member } = useMember(memberId);
+  const { data: member, loading, error } = useMember(memberId);
   const { user } = useAuth();
   const { showToast } = useToast();
   const [visitType, setVisitType] = useState<VisitType>('visit');
@@ -28,11 +32,11 @@ export default function LogVisitScreen() {
 
   const onSave = async () => {
     if (!member || !user) {
-      showToast('Sign in to log visits');
+      showToast('Sign in and select a valid member to log a visit.');
       return;
     }
     setSaving(true);
-    const error = await createVisit({
+    const saveError = await createVisit({
       memberId: member.id,
       userId: user.id,
       visitType,
@@ -40,61 +44,66 @@ export default function LogVisitScreen() {
       followUpRequired: followUp,
     });
     setSaving(false);
-    if (error) {
-      showToast(error);
+    if (saveError) {
+      showToast(saveError);
       return;
     }
-    showToast('Visit saved successfully!');
+    showToast('Visit saved successfully.');
     setTimeout(() => router.back(), 800);
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <AppHeader
-        title="Log Visit"
-        subtitle={member?.full_name ?? 'Member'}
-      />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
+      <AppHeader title="Log Visit" subtitle={member?.full_name ?? 'Member'} />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contact type</Text>
-        <View style={styles.typeRow}>
-          {contactTypes.map((type) => {
-            const active = visitType === type.value;
-            return (
-              <Pressable
-                key={type.value}
-                style={[styles.typeChip, active && styles.typeChipActive]}
-                onPress={() => setVisitType(type.value)}
-              >
-                <Text style={[styles.typeText, active && styles.typeTextActive]}>{type.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <QueryStateView loading={loading} error={error ?? (!member && !loading ? 'Member not found.' : null)} />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
-        <TextInput
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="What was discussed or observed?"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          style={styles.notesInput}
-        />
-      </View>
+      {member ? (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Contact type</Text>
+            <View style={styles.typeRow}>
+              {contactTypes.map((type) => {
+                const active = visitType === type.value;
+                return (
+                  <Pressable
+                    key={type.value}
+                    testID={testIds.logVisit.type(type.value)}
+                    style={[styles.typeChip, active && styles.typeChipActive]}
+                    onPress={() => setVisitType(type.value)}
+                  >
+                    <Text style={[styles.typeText, active && styles.typeTextActive]}>{type.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
-      <Pressable style={styles.followUpRow} onPress={() => setFollowUp((value) => !value)}>
-        <View style={[styles.checkbox, followUp && styles.checkboxActive]}>
-          {followUp ? <Text style={styles.checkMark}>✓</Text> : null}
-        </View>
-        <Text style={styles.followUpText}>Follow-up required</Text>
-      </Pressable>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <TextInput
+              testID={testIds.logVisit.notes}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="What was discussed or observed?"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              style={styles.notesInput}
+            />
+          </View>
 
-      <Pressable style={styles.saveButton} onPress={onSave} disabled={saving}>
-        <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Visit'}</Text>
-      </Pressable>
+          <Pressable style={styles.followUpRow} onPress={() => setFollowUp((value) => !value)}>
+            <View style={[styles.checkbox, followUp && styles.checkboxActive]}>
+              {followUp ? <Feather name="check" size={12} color={colors.white} /> : null}
+            </View>
+            <Text style={styles.followUpText}>Follow-up required</Text>
+          </Pressable>
+
+          <Pressable style={styles.saveButton} testID={testIds.logVisit.save} onPress={onSave} disabled={saving}>
+            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Visit'}</Text>
+          </Pressable>
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -143,7 +152,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxActive: { backgroundColor: colors.primaryLight, borderColor: colors.primaryLight },
-  checkMark: { color: colors.white, fontWeight: '700', fontSize: 12 },
   followUpText: { color: colors.primary, fontWeight: '600' },
   saveButton: {
     marginHorizontal: spacing.lg,

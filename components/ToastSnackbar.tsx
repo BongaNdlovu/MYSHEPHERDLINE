@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useToast } from '@/lib/toast';
 
@@ -8,7 +9,7 @@ export function ToastSnackbar() {
   if (!message) return null;
 
   return (
-    <View style={styles.wrap} pointerEvents="none">
+    <View style={styles.wrap} pointerEvents="none" testID={testIds.toast}>
       <Text style={styles.text}>{message}</Text>
     </View>
   );

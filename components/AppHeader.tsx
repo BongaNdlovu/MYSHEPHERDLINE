@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { colors, radii, spacing } from '@/constants/theme';
 
@@ -12,6 +12,7 @@ type AppHeaderProps = {
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
   onFilterPress?: () => void;
+  searchTestID?: string;
 };
 
 export function AppHeader({
@@ -22,6 +23,7 @@ export function AppHeader({
   onSearchChange,
   searchPlaceholder = 'Search members...',
   onFilterPress,
+  searchTestID,
 }: AppHeaderProps) {
   return (
     <LinearGradient colors={['#14532d', '#166534', '#15803d']} style={styles.header}>
@@ -34,19 +36,14 @@ export function AppHeader({
       </View>
       {onSearchChange ? (
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>⌕</Text>
           <TextInput
+            testID={searchTestID}
             value={searchValue ?? ''}
             onChangeText={onSearchChange}
             placeholder={searchPlaceholder}
             placeholderTextColor="rgba(255,255,255,0.45)"
             style={styles.input}
           />
-          {onFilterPress ? (
-            <Pressable onPress={onFilterPress} hitSlop={8}>
-              <Text style={styles.filterIcon}>☰</Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
     </LinearGradient>
@@ -82,16 +79,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  searchIcon: { color: 'rgba(255,255,255,0.45)', fontSize: 16 },
-  filterIcon: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginLeft: spacing.sm },
   input: {
-    flex: 1,
     color: colors.white,
     fontSize: 14,
     padding: 0,

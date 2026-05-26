@@ -5,8 +5,10 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
+import { ConfigErrorScreen } from '@/components/ConfigErrorScreen';
 import { ToastSnackbar } from '@/components/ToastSnackbar';
 import { colors } from '@/constants/theme';
+import { envValidation } from '@/lib/config/env';
 import { AuthProvider } from '@/lib/auth';
 import { ToastProvider } from '@/lib/toast';
 
@@ -29,6 +31,10 @@ export default function RootLayout() {
 
   if (!loaded) return null;
 
+  if (!envValidation.ok) {
+    return <ConfigErrorScreen validation={envValidation} />;
+  }
+
   return (
     <AuthProvider>
       <ToastProvider>
@@ -41,6 +47,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="member/[id]" />
             <Stack.Screen name="log-visit/[memberId]" />
+            <Stack.Screen name="legal/privacy" />
+            <Stack.Screen name="legal/terms" />
           </Stack>
           <ToastSnackbar />
         </View>

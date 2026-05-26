@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 
 import { FormField } from '@/components/FormField';
 import { LogoMark } from '@/components/LogoMark';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
@@ -35,11 +36,11 @@ export default function SignUpScreen() {
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>Set up your shepherd profile to get started.</Text>
 
-        <FormField label="Display name" value={displayName} onChangeText={setDisplayName} />
-        <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-        <FormField label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+        <FormField label="Display name" fieldTestId={testIds.auth.displayName} value={displayName} onChangeText={setDisplayName} />
+        <FormField label="Email" fieldTestId={testIds.auth.email} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+        <FormField label="Password" fieldTestId={testIds.auth.password} value={password} onChangeText={setPassword} secureTextEntry />
 
-        <Pressable style={styles.button} onPress={onSubmit} disabled={loading}>
+        <Pressable style={styles.button} onPress={onSubmit} disabled={loading} testID={testIds.auth.signUpButton}>
           <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Create Account'}</Text>
         </Pressable>
 

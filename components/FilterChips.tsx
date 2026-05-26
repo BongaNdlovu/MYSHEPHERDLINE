@@ -6,9 +6,15 @@ type FilterChipsProps<T extends string> = {
   options: { label: string; value: T }[];
   value: T;
   onChange: (value: T) => void;
+  testIdForValue?: (value: T) => string;
 };
 
-export function FilterChips<T extends string>({ options, value, onChange }: FilterChipsProps<T>) {
+export function FilterChips<T extends string>({
+  options,
+  value,
+  onChange,
+  testIdForValue,
+}: FilterChipsProps<T>) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {options.map((option) => {
@@ -16,6 +22,7 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
         return (
           <Pressable
             key={option.value}
+            testID={testIdForValue?.(option.value)}
             style={[styles.chip, active && styles.chipActive]}
             onPress={() => onChange(option.value)}
           >

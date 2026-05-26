@@ -1,21 +1,27 @@
+import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
+import { QueryStateView } from '@/components/QueryStateView';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import { useMember } from '@/lib/data';
 import { useToast } from '@/lib/toast';
+import { useMember } from '@/lib/hooks/useMembers';
 
 export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { member, loading } = useMember(id);
+  const { data: member, loading, error } = useMember(id);
   const { showToast } = useToast();
 
-  if (loading || !member) {
+  if (loading || error || !member) {
     return (
       <View style={styles.loading}>
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <QueryStateView
+          loading={loading}
+          error={error ?? (!member && !loading ? 'Member not found.' : null)}
+        />
       </View>
     );
   }
@@ -28,19 +34,24 @@ export default function MemberProfileScreen() {
     .toUpperCase();
 
   return (
-    <ScrollView style={styles.screen}>
+    <ScrollView style={styles.screen} testID={testIds.memberProfile.screen}>
       <LinearGradient colors={['#14532d', '#166534', '#15803d']} style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backText}>‹</Text>
+        <Pressable style={styles.iconButton} onPress={() => router.back()}>
+          <Feather name="chevron-left" size={24} color={colors.white} />
         </Pressable>
-        <Pressable style={styles.editButton} onPress={() => showToast('Profile editing saved locally')}>
-          <Text style={styles.editText}>✎</Text>
+        <Pressable
+          style={[styles.iconButton, styles.editButton]}
+          onPress={() => showToast('Profile updates will sync to Supabase in a future release.')}
+        >
+          <Feather name="edit-2" size={16} color={colors.white} />
         </Pressable>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.name}>{member.full_name}</Text>
-        <Text style={styles.meta}>{member.status.toUpperCase()} • {member.risk_level.toUpperCase()} RISK</Text>
+        <Text style={styles.meta}>
+          {member.status.toUpperCase()} | {member.risk_level.toUpperCase()} RISK
+        </Text>
       </LinearGradient>
 
       <Card title="Overview">
@@ -58,7 +69,7 @@ export default function MemberProfileScreen() {
         <InfoRow label="Notes" value={member.notes ?? 'No notes yet'} />
       </Card>
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push(`/log-visit/${member.id}`)}>
+      <Pressable style={styles.primaryButton} testID={testIds.memberProfile.logVisit} onPress={() => router.push(`/log-visit/${member.id}`)}>
         <Text style={styles.primaryButtonText}>Log Visit</Text>
       </Pressable>
     </ScrollView>
@@ -76,15 +87,14 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  loadingText: { color: colors.textSecondary },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: spacing.xl },
   header: {
     paddingTop: 52,
     paddingBottom: 32,
     alignItems: 'center',
     position: 'relative',
   },
-  backButton: {
+  iconButton: {
     position: 'absolute',
     top: 52,
     left: 16,
@@ -95,19 +105,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editButton: {
-    position: 'absolute',
-    top: 52,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.white, fontSize: 28, lineHeight: 30 },
-  editText: { color: colors.white, fontSize: 16 },
+  editButton: { left: undefined, right: 16 },
   avatar: {
     width: 96,
     height: 96,

@@ -1,3 +1,5 @@
+import Feather from '@expo/vector-icons/Feather';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/constants/theme';
@@ -6,36 +8,40 @@ import type { Task } from '@/types/database';
 type TaskItemProps = {
   task: Task;
   onToggle?: () => void;
+  toggleTestID?: string;
 };
 
-const iconStyles: Record<string, { bg: string; color: string; glyph: string }> = {
-  call: { bg: colors.infoSoft, color: colors.info, glyph: '☎' },
-  visit: { bg: colors.purpleSoft, color: colors.purple, glyph: '⌂' },
-  bible_study: { bg: colors.orangeSoft, color: colors.orange, glyph: '✦' },
-  meeting: { bg: colors.primaryWash, color: colors.textSecondary, glyph: '◉' },
-  other: { bg: colors.tealSoft, color: colors.teal, glyph: '✓' },
+const iconMap: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = {
+  call: 'phone',
+  visit: 'home',
+  bible_study: 'book',
+  meeting: 'users',
+  other: 'check',
 };
 
-export function TaskItem({ task, onToggle }: TaskItemProps) {
-  const icon = iconStyles[task.task_type ?? 'other'] ?? iconStyles.other;
+export function TaskItem({ task, onToggle, toggleTestID }: TaskItemProps) {
   const completed = task.status === 'completed';
+  const iconName = iconMap[task.task_type ?? 'other'] ?? 'check';
 
   return (
-    <View style={styles.item}>
-      <View style={[styles.icon, { backgroundColor: icon.bg }]}>
-        <Text style={{ color: icon.color, fontSize: 18 }}>{icon.glyph}</Text>
+    <View style={styles.item} testID={`task-item-${task.id}`}>
+      <View style={[styles.icon, { backgroundColor: colors.infoSoft }]}>
+        <FontAwesome name={iconName} size={16} color={colors.info} />
       </View>
       <View style={styles.info}>
-        <Text style={[styles.name, completed && styles.completedName]}>{task.title}</Text>
+        <Text style={styles.name}>{task.title}</Text>
         <Text style={styles.status}>
           {completed ? 'Completed' : task.due_date ? `Due ${task.due_date}` : 'Open'}
         </Text>
       </View>
       <Pressable
+        testID={toggleTestID}
         style={[styles.check, completed && styles.checkCompleted]}
         onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
       >
-        {completed ? <Text style={styles.checkMark}>✓</Text> : null}
+        {completed ? <Feather name="check" size={12} color={colors.white} /> : null}
       </Pressable>
     </View>
   );
@@ -74,5 +80,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderColor: colors.primaryLight,
   },
-  checkMark: { color: colors.white, fontSize: 12, fontWeight: '700' },
 });

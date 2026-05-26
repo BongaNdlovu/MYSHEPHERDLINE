@@ -1,0 +1,23 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-members
+- tapOn:
+    text: ${E2E_MEMBER_NAME}
+- tapOn:
+    id: member-log-visit
+- assertVisible:
+    id: log-visit-screen
+- tapOn:
+    id: log-visit-type-call
+- tapOn:
+    id: log-visit-notes
+- inputText: E2E visit note from Maestro
+- hideKeyboard
+- tapOn:
+    id: log-visit-save
+- extendedWaitUntil:
+    visible:
+      id: app-toast
+    timeout: 15000

@@ -1,0 +1,13 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-more
+- assertVisible:
+    id: more-screen
+- tapOn:
+    id: more-sign-out
+- extendedWaitUntil:
+    visible:
+      id: landing-title
+    timeout: 15000

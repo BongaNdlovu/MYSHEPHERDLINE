@@ -1,72 +1,76 @@
+import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/lib/toast';
 
 const quickActions = [
-  { title: 'Add Member', subtitle: 'Register a new congregation member', icon: '＋', route: '/(tabs)/members' },
-  { title: 'Log Visit', subtitle: 'Record contact with a member', icon: '✎', route: '/log-visit/1' },
-  { title: 'Prayer Requests', subtitle: 'Track prayer needs', icon: '🙏', action: 'prayer' },
-  { title: 'Elder Assignment', subtitle: 'Manage elder territories', icon: '👤', action: 'elder' },
-];
-
-const shortcuts = [
-  { title: 'Announcements', icon: '📢' },
-  { title: 'Birthdays', icon: '🎂' },
-  { title: 'Sign Out', icon: '⎋' },
+  {
+    title: 'Add Member',
+    subtitle: 'Open the member directory',
+    icon: 'user-plus' as const,
+    route: '/(tabs)/members' as const,
+  },
+  {
+    title: 'Log Visit',
+    subtitle: 'Choose a member to visit',
+    icon: 'edit-3' as const,
+    route: '/(tabs)/members' as const,
+  },
+  {
+    title: 'Privacy Policy',
+    subtitle: 'Read how we handle personal information',
+    icon: 'shield' as const,
+    route: '/legal/privacy' as const,
+  },
+  {
+    title: 'Terms & Conditions',
+    subtitle: 'App usage terms',
+    icon: 'file-text' as const,
+    route: '/legal/terms' as const,
+  },
 ];
 
 export default function MoreScreen() {
   const { signOut } = useAuth();
-  const { showToast } = useToast();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <AppHeader title="More" subtitle="Quick actions and settings" />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.more.screen}>
+      <AppHeader title="More" subtitle="Quick actions, privacy, and account" />
 
       <View style={styles.grid}>
         {quickActions.map((action) => (
           <Pressable
             key={action.title}
             style={styles.actionCard}
-            onPress={() => {
-              if (action.route) {
-                router.push(action.route as '/(tabs)/members');
-                return;
-              }
-              showToast(`${action.title} opened`);
-            }}
+            onPress={() => router.push(action.route)}
           >
-            <Text style={styles.actionIcon}>{action.icon}</Text>
+            <Feather name={action.icon} size={22} color={colors.primary} />
             <Text style={styles.actionTitle}>{action.title}</Text>
             <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
           </Pressable>
         ))}
       </View>
 
-      <Card title="Shortcuts">
-        {shortcuts.map((item) => (
-          <Pressable
-            key={item.title}
-            style={styles.shortcut}
-            onPress={() => {
-              if (item.title === 'Sign Out') {
-                void signOut().then(() => router.replace('/landing'));
-                return;
-              }
-              showToast(`${item.title} list`);
-            }}
-          >
-            <Text style={styles.shortcutIcon}>{item.icon}</Text>
-            <Text style={styles.shortcutText}>{item.title}</Text>
-            <Text style={styles.shortcutArrow}>›</Text>
-          </Pressable>
-        ))}
+      <Card title="Account">
+        <Pressable
+          style={styles.shortcut}
+          testID={testIds.more.signOut}
+          onPress={() => void signOut().then(() => router.replace('/landing'))}
+        >
+          <Feather name="log-out" size={18} color={colors.primary} />
+          <Text style={styles.shortcutText}>Sign Out</Text>
+          <Feather name="chevron-right" size={18} color={colors.textMuted} />
+        </Pressable>
       </Card>
+
+      <Text style={styles.footer}>
+        For data subject requests or security concerns, contact your congregation Information Officer.
+      </Text>
     </ScrollView>
   );
 }
@@ -88,19 +92,22 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.sm,
   },
-  actionIcon: { fontSize: 24, marginBottom: spacing.sm },
   actionTitle: { fontSize: 15, fontWeight: '700', color: colors.primary },
-  actionSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, lineHeight: 16 },
+  actionSubtitle: { fontSize: 12, color: colors.textSecondary, lineHeight: 16 },
   shortcut: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     gap: spacing.md,
   },
-  shortcutIcon: { fontSize: 18 },
   shortcutText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primary },
-  shortcutArrow: { color: colors.textMuted, fontSize: 18 },
+  footer: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
 });

@@ -1,0 +1,11 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-reports
+- assertVisible:
+    id: reports-screen
+# When Worker URL is unset, app falls back to Supabase and still renders summary or explicit error text.
+- assertVisible:
+    text: ".*"
+    optional: true

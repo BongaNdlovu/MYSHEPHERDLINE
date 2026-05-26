@@ -1,15 +1,17 @@
+import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LogoMark } from '@/components/LogoMark';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
 const features = [
-  { icon: '👥', text: 'Track congregation members' },
-  { icon: '📋', text: 'Manage shepherding tasks' },
-  { icon: '📊', text: 'View activity reports' },
-  { icon: '🔔', text: 'Get visit reminders' },
+  { icon: 'users' as const, text: 'Track congregation members' },
+  { icon: 'check-square' as const, text: 'Manage shepherding tasks' },
+  { icon: 'bar-chart-2' as const, text: 'View activity reports' },
+  { icon: 'bell' as const, text: 'Get visit reminders' },
 ];
 
 export default function LandingScreen() {
@@ -18,7 +20,7 @@ export default function LandingScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <LogoMark size={140} />
-          <Text style={styles.title}>MyShepherdLine</Text>
+          <Text testID={testIds.landing.title} style={styles.title}>MyShepherdLine</Text>
           <Text style={styles.subtitle}>
             Shepherd your congregation with clarity, compassion, and consistency.
           </Text>
@@ -28,7 +30,7 @@ export default function LandingScreen() {
           {features.map((feature) => (
             <View key={feature.text} style={styles.featureItem}>
               <View style={styles.featureIcon}>
-                <Text>{feature.icon}</Text>
+                <Feather name={feature.icon} size={16} color={colors.white} />
               </View>
               <Text style={styles.featureText}>{feature.text}</Text>
             </View>
@@ -36,13 +38,18 @@ export default function LandingScreen() {
         </View>
 
         <Link href="/sign-in" asChild>
-          <Pressable style={styles.primaryButton}>
+          <Pressable style={styles.primaryButton} testID={testIds.landing.signIn}>
             <Text style={styles.primaryButtonText}>Sign In</Text>
           </Pressable>
         </Link>
         <Link href="/sign-up" asChild>
-          <Pressable style={styles.secondaryButton}>
+          <Pressable style={styles.secondaryButton} testID={testIds.landing.signUp}>
             <Text style={styles.secondaryButtonText}>Create Account</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/privacy" asChild>
+          <Pressable testID={testIds.landing.privacy}>
+            <Text style={styles.legalLink}>Privacy Policy</Text>
           </Pressable>
         </Link>
       </ScrollView>
@@ -108,6 +115,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
+    marginBottom: spacing.md,
   },
   secondaryButtonText: { color: colors.white, fontWeight: '600', fontSize: 15 },
+  legalLink: { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontWeight: '600' },
 });

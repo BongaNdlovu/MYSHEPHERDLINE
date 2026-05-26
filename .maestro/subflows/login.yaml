@@ -1,0 +1,23 @@
+appId: ${E2E_APP_ID}
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: landing-title
+    timeout: 30000
+- tapOn:
+    id: landing-sign-in
+- tapOn:
+    id: auth-email
+- inputText: ${E2E_EMAIL}
+- tapOn:
+    id: auth-password
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: auth-sign-in-button
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 30000

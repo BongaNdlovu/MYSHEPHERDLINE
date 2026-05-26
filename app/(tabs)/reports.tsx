@@ -1,61 +1,58 @@
-import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
+import { QueryStateView } from '@/components/QueryStateView';
 import { StatCard } from '@/components/StatCard';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import { fetchReportSummary } from '@/lib/api';
-import { buildLocalReportSummary, useMembers, useTasks } from '@/lib/data';
-import { useAuth } from '@/lib/auth';
-import type { ReportSummary } from '@/types/database';
+import { useReportSummary } from '@/lib/hooks/useReportSummary';
 
 export default function ReportsScreen() {
-  const { session } = useAuth();
-  const { members } = useMembers();
-  const { tasks } = useTasks();
-  const [summary, setSummary] = useState<ReportSummary>(() => buildLocalReportSummary(members, tasks));
-
-  useEffect(() => {
-    setSummary(buildLocalReportSummary(members, tasks));
-  }, [members, tasks]);
-
-  useEffect(() => {
-    if (!session?.access_token) return;
-    void fetchReportSummary(session.access_token).then((remote) => {
-      if (remote) setSummary(remote);
-    });
-  }, [session?.access_token]);
+  const { summary, loading, error, source } = useReportSummary();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <AppHeader title="Reports" subtitle={`Last ${summary.recentActivityDays} days`} />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.reports.screen}>
+      <AppHeader
+        title="Reports"
+        subtitle={summary ? `Last ${summary.recentActivityDays} days` : 'Activity summary'}
+      />
 
-      <View style={styles.rangePill}>
-        <Text style={styles.rangeText}>Last {summary.recentActivityDays} days</Text>
-      </View>
+      <QueryStateView loading={loading} error={error} isEmpty={!summary} emptyMessage="No report data available." />
 
-      <View style={styles.statsGrid}>
-        <StatCard label="Visits" value={summary.visitBreakdown.visits} tone="blue" />
-        <StatCard label="Calls" value={summary.visitBreakdown.calls} tone="green" />
-        <StatCard label="Bible Studies" value={summary.visitBreakdown.bibleStudies} tone="purple" />
-        <StatCard label="New Converts" value={summary.visitBreakdown.newConverts} tone="orange" />
-      </View>
+      {summary ? (
+        <>
+          <View style={styles.rangePill}>
+            <Text style={styles.rangeText}>
+              Last {summary.recentActivityDays} days{source ? ` (${source})` : ''}
+            </Text>
+          </View>
 
-      <Card title="Summary">
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Members needing attention</Text>
-          <Text style={styles.summaryValue}>{summary.membersNeedingAttention}</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Visits completed</Text>
-          <Text style={styles.summaryValue}>{summary.visitsCompleted}</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Open tasks</Text>
-          <Text style={styles.summaryValue}>{summary.tasksOpen}</Text>
-        </View>
-      </Card>
+          <View style={styles.statsGrid}>
+            <StatCard label="Visits" value={summary.visitBreakdown.visits} tone="blue" />
+            <StatCard label="Calls" value={summary.visitBreakdown.calls} tone="green" />
+            <StatCard label="Bible Studies" value={summary.visitBreakdown.bibleStudies} tone="purple" />
+            <StatCard label="New Members" value={summary.visitBreakdown.newConverts} tone="orange" />
+          </View>
+
+          <Card title="Summary">
+            <View testID={testIds.reports.summary}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Members needing attention</Text>
+              <Text style={styles.summaryValue}>{summary.membersNeedingAttention}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Visits completed</Text>
+              <Text style={styles.summaryValue}>{summary.visitsCompleted}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Open tasks</Text>
+              <Text style={styles.summaryValue}>{summary.tasksOpen}</Text>
+            </View>
+            </View>
+          </Card>
+        </>
+      ) : null}
     </ScrollView>
   );
 }

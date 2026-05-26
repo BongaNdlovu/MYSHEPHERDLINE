@@ -1,21 +1,25 @@
+import { getAppEnv } from '@/lib/config/env';
 import type { ReportSummary } from '@/types/database';
 
-const workerBaseUrl = process.env.EXPO_PUBLIC_WORKER_API_URL ?? '';
-
 function workerUrl(path: string) {
-  if (!workerBaseUrl) return null;
-  return `${workerBaseUrl.replace(/\/$/, '')}${path}`;
+  const { workerApiUrl } = getAppEnv();
+  if (!workerApiUrl) return null;
+  return `${workerApiUrl.replace(/\/$/, '')}${path}`;
 }
 
 export async function fetchReportSummary(accessToken: string): Promise<ReportSummary | null> {
   const url = workerUrl('/reports/summary');
   if (!url) return null;
 
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) return null;
-  return response.json() as Promise<ReportSummary>;
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return null;
+    return response.json() as Promise<ReportSummary>;
+  } catch {
+    return null;
+  }
 }
 
 export async function registerPushToken(
@@ -24,9 +28,9 @@ export async function registerPushToken(
   deviceName: string,
 ) {
   const url = workerUrl('/notifications/register');
-  if (!url) return;
+  if (!url) return { error: 'Worker API URL is not configured.' };
 
-  await fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -34,12 +38,19 @@ export async function registerPushToken(
     },
     body: JSON.stringify({ expoPushToken, deviceName }),
   });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    return { error: body?.error ?? 'Unable to register push token.' };
+  }
+
+  return { error: null };
 }
 
 export async function checkWorkerHealth(): Promise<boolean> {
-  const url = workerUrl('/health');
-  if (!url) return false;
   try {
+    const url = workerUrl('/health');
+    if (!url) return false;
     const response = await fetch(url);
     const data = (await response.json()) as { status?: string };
     return response.ok && data.status === 'healthy';

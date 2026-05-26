@@ -1,9 +1,10 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { FormField } from '@/components/FormField';
 import { LogoMark } from '@/components/LogoMark';
+import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
@@ -33,10 +34,10 @@ export default function SignInScreen() {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to continue shepherding your congregation.</Text>
 
-        <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-        <FormField label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+        <FormField label="Email" fieldTestId={testIds.auth.email} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+        <FormField label="Password" fieldTestId={testIds.auth.password} value={password} onChangeText={setPassword} secureTextEntry />
 
-        <Pressable style={styles.button} onPress={onSubmit} disabled={loading}>
+        <Pressable style={styles.button} onPress={onSubmit} disabled={loading} testID={testIds.auth.signInButton}>
           <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
         </Pressable>
 

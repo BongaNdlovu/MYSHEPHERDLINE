@@ -4,13 +4,15 @@ import { colors, radii, spacing } from '@/constants/theme';
 
 type FormFieldProps = TextInputProps & {
   label: string;
+  fieldTestId?: string;
 };
 
-export function FormField({ label, style, ...props }: FormFieldProps) {
+export function FormField({ label, style, fieldTestId, ...props }: FormFieldProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        testID={fieldTestId}
         placeholderTextColor={colors.textMuted}
         style={[styles.input, style]}
         {...props}

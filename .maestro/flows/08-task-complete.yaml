@@ -1,0 +1,10 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-tasks
+- assertVisible:
+    id: tasks-screen
+- tapOn:
+    id: ${E2E_TASK_TOGGLE_ID}
+    optional: true

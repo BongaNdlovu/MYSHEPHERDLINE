@@ -1,0 +1,19 @@
+appId: ${E2E_APP_ID}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: landing-sign-in
+- tapOn:
+    id: auth-email
+- inputText: bad-user@test.example
+- tapOn:
+    id: auth-password
+- inputText: wrong-password
+- hideKeyboard
+- tapOn:
+    id: auth-sign-in-button
+- extendedWaitUntil:
+    visible:
+      id: app-toast
+    timeout: 15000

@@ -1,0 +1,11 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-members
+- tapOn:
+    text: ${E2E_MEMBER_NAME}
+- assertVisible:
+    id: member-profile-screen
+- assertVisible:
+    id: member-log-visit
