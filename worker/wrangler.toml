@@ -1,0 +1,6 @@
+name = "myshepherdline-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-25"
+
+[vars]
+RECENT_ACTIVITY_DAYS = "7"
