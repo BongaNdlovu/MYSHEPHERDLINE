@@ -4,7 +4,7 @@ Android-first end-to-end tests using [Maestro](https://maestro.mobile.dev/).
 
 ## Prerequisites
 
-1. Install Maestro CLI: https://maestro.mobile.dev/docs/getting-started/installation
+1. Install Maestro CLI: [Maestro installation guide](https://maestro.mobile.dev/docs/getting-started/installation)
 2. Android emulator running **or** physical device connected
 3. App installed on the device:
    - **Preview/production build:** `com.myshepherdline.app` (recommended)
@@ -12,17 +12,18 @@ Android-first end-to-end tests using [Maestro](https://maestro.mobile.dev/).
 4. `.env` configured with valid Supabase credentials
 5. Test shepherd account created in Supabase Auth
 6. At least one member matching `E2E_MEMBER_NAME` in the database for member/visit flows
-7. After scoped RLS is applied, that member should be **unassigned or assigned to the test shepherd** — otherwise member/visit flows will show empty results
+7. After scoped RLS is applied, that member must be **assigned to the test shepherd** — otherwise member/visit flows
+   will show empty results
 
 ## Environment variables
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
+| --- | --- | --- |
 | `E2E_APP_ID` | `com.myshepherdline.app` | Android application id |
 | `E2E_EMAIL` | — | Test shepherd email |
 | `E2E_PASSWORD` | — | Test shepherd password |
 | `E2E_NEW_EMAIL` | — | Unique email for sign-up flow |
-| `E2E_MEMBER_NAME` | `Sarah` | Member name visible in directory |
+| `E2E_MEMBER_NAME` | `Sipho` | Member name visible in directory (must be assigned to test shepherd) |
 
 PowerShell example:
 
@@ -31,7 +32,7 @@ $env:E2E_APP_ID = "com.myshepherdline.app"
 $env:E2E_EMAIL = "shepherd@yourchurch.test"
 $env:E2E_PASSWORD = "YourTestPassword123!"
 $env:E2E_NEW_EMAIL = "shepherd-new-$(Get-Random)@yourchurch.test"
-$env:E2E_MEMBER_NAME = "Sarah Mkhize"
+$env:E2E_MEMBER_NAME = "Sipho"
 ```
 
 ## Run the app
@@ -71,7 +72,7 @@ maestro test .maestro/flows/02-auth-sign-in-success.yaml
 ## Flow coverage
 
 | Flow | Scenario |
-|------|----------|
+| --- | --- |
 | 01 | Landing → sign-in screen |
 | 02 | Sign-in success → home |
 | 03 | Sign-in failure toast |
@@ -87,7 +88,8 @@ maestro test .maestro/flows/02-auth-sign-in-success.yaml
 
 ## Push permission flows
 
-Maestro cannot reliably assert OS notification dialogs across all Android versions in CI. Validate push manually after sign-in on a physical device, or extend flow `13-push-permission.yaml` once a dedicated test build disables auto-grant.
+Maestro cannot reliably assert OS notification dialogs across all Android versions in CI. Validate push manually after
+sign-in on a physical device, or extend flow `13-push-permission.yaml` once a dedicated test build disables auto-grant.
 
 ## Troubleshooting
 

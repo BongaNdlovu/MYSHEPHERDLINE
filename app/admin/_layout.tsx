@@ -1,14 +1,34 @@
 import { Redirect, Stack, useSegments } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
+import { QueryStateView } from '@/components/ui/QueryStateView';
+import { spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin/hooks/useAdminAccess';
+import {
+  canRenderAdminLayout,
+  shouldRedirectFromAdminLayout,
+} from '@/features/admin/selectors/route-guards';
 
 export default function AdminLayout() {
   const { loading, isAdmin } = useAdminAccess();
   const segments = useSegments();
-  const onUnauthorized = segments.includes('unauthorized');
+  const onUnauthorizedScreen = segments.includes('unauthorized');
+  const state = { loading, isAdmin, onUnauthorizedScreen };
 
-  if (!onUnauthorized && !loading && !isAdmin) {
+  if (loading && !onUnauthorizedScreen) {
+    return (
+      <View style={styles.centered}>
+        <QueryStateView loading error={null} />
+      </View>
+    );
+  }
+
+  if (shouldRedirectFromAdminLayout(state)) {
     return <Redirect href="/admin/unauthorized" />;
+  }
+
+  if (!canRenderAdminLayout(state)) {
+    return null;
   }
 
   return (
@@ -27,3 +47,7 @@ export default function AdminLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  centered: { flex: 1, justifyContent: 'center', padding: spacing.xl },
+});

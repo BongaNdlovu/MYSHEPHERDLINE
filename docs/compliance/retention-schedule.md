@@ -1,7 +1,7 @@
 # Retention & Deletion Schedule (Draft)
 
 | Record type | Retention period | Deletion method | Owner |
-|-------------|------------------|-----------------|-------|
+| --- | --- | --- | --- |
 | Shepherd profiles | Active account + 12 months | Supabase delete/anonymize | Information Officer |
 | Member records | While member remains in care program + 24 months | Secure delete after review | Information Officer |
 | Visit logs | 7 years or congregation policy | Secure delete/archive | Information Officer |

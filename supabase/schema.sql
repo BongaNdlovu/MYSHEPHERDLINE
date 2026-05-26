@@ -153,6 +153,7 @@ create policy "Visits readable by logger assignee or admin"
   on public.visits for select to authenticated
   using (
     public.is_admin()
+    or logged_by = auth.uid()
     or exists (
       select 1 from public.members m
       where m.id = member_id and m.assigned_to = auth.uid()
@@ -254,10 +255,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Promote designated owner (safe to re-run).
-update public.profiles
-set role = 'owner', is_active = true, updated_at = now()
-where lower(email) = lower('Fanelesibonge50@gmail.com');
+-- Owner bootstrap: run supabase/bootstrap-owner.sql once after the owner signs in.
 
 -- Audit trail for role/access changes (owner-readable).
 create table if not exists public.audit_events (

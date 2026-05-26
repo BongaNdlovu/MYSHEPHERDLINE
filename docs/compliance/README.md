@@ -1,6 +1,7 @@
 # MyShepherdLine Compliance Pack (Draft)
 
-These documents are implementation-ready operational drafts. Final POPIA/PAIA approval must be completed by qualified South African legal/compliance counsel before production launch.
+These documents are implementation-ready operational drafts. Final POPIA/PAIA approval must be completed by qualified
+South African legal/compliance counsel before production launch.
 
 ## Documents
 
@@ -15,4 +16,5 @@ These documents are implementation-ready operational drafts. Final POPIA/PAIA ap
 
 ## Special personal information note
 
-Congregation membership and pastoral care context may reveal religious belief. Treat member records as potentially special personal information under POPIA and obtain legal review before launch.
+Congregation membership and pastoral care context may reveal religious belief. Treat member records as potentially
+special personal information under POPIA and obtain legal review before launch.

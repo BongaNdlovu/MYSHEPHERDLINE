@@ -93,6 +93,7 @@ create policy "Visits readable by logger assignee or admin"
   on public.visits for select to authenticated
   using (
     public.is_admin()
+    or logged_by = auth.uid()
     or exists (
       select 1 from public.members m
       where m.id = member_id and m.assigned_to = auth.uid()

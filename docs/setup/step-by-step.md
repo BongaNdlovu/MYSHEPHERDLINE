@@ -1,6 +1,7 @@
 # Step-by-step production setup
 
-Use this guide if you are setting up MyShepherdLine for the first time or finishing security hardening. Your project already has Supabase credentials in `.env`; the Worker URL still needs to be configured.
+Use this guide if you are setting up MyShepherdLine for the first time or finishing security hardening. Your project
+already has Supabase credentials in `.env`; the Worker URL still needs to be configured.
 
 ## Where you are now
 
@@ -52,7 +53,8 @@ select id, email from auth.users order by created_at desc;
 2. Replace `REPLACE_SHEPHERD_USER_ID` and `REPLACE_ADMIN_USER_ID` with the UUIDs from Step 3
 3. Run the script in SQL Editor
 
-This creates **Sarah Mkhize** (unassigned) and **Sipho Dlamini** (assigned to shepherd) for Maestro flows.
+This creates **Sarah Mkhize** (assigned to a second shepherd for denial tests) and **Sipho Dlamini** (assigned to your
+test shepherd) for Maestro flows.
 
 ## Step 5 — Deploy Worker (10 min)
 
@@ -86,8 +88,8 @@ npm.cmd start
 
 Sign in as `shepherd@test.local`:
 
-- You should see Sarah (unassigned) and Sipho (assigned to you)
-- You should **not** see members assigned to other shepherds
+- You should see Sipho (assigned to you)
+- You should **not** see Sarah (assigned to another shepherd) or unassigned records
 
 Sign in as `admin@test.local`:
 
@@ -107,7 +109,7 @@ npm.cmd run verify:win
 
 ## Step 8 — Android E2E (optional)
 
-Install Maestro: https://maestro.mobile.dev/docs/getting-started/installation
+Install Maestro: [Maestro installation guide](https://maestro.mobile.dev/docs/getting-started/installation)
 
 ```powershell
 $env:E2E_EMAIL = "shepherd@test.local"
@@ -120,7 +122,7 @@ npm.cmd run test:e2e:smoke
 
 | Problem | Fix |
 | --- | --- |
-| Empty members list for shepherd | Run seed SQL; ensure member is unassigned or assigned to that user |
+| Empty members list for shepherd | Run seed SQL; ensure the member is assigned to that shepherd (`E2E_MEMBER_NAME=Sipho`) |
 | Worker returns 500 `missing` secrets | Re-run `npm run setup:worker` |
 | Reports use local fallback only | Set `EXPO_PUBLIC_WORKER_API_URL` in `.env` and restart Metro |
 | `spawn EPERM` running tests | Use `npm run verify:win` |

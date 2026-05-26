@@ -8,6 +8,8 @@ import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
+import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
+import { listAssignableShepherds } from '@/features/admin/selectors/assignees';
 import {
   createTask,
   deleteTask,
@@ -26,8 +28,11 @@ export default function AdminTaskFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { showToast } = useToast();
+  const { data: profiles, loading: profilesLoading } = useAdminProfiles();
+  const shepherds = listAssignableShepherds(profiles);
 
   const [loading, setLoading] = useState(isEdit);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<ReturnType<typeof createAppError> | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -52,6 +57,7 @@ export default function AdminTaskFormScreen() {
         setDueDate(found.due_date ?? '');
         setPriority(found.priority);
         setStatus(found.status);
+        setAssigneeId(found.assignee_id);
       })
       .catch(() => setLoadError(createAppError('server', 'Unable to load task.')))
       .finally(() => setLoading(false));
@@ -71,11 +77,16 @@ export default function AdminTaskFormScreen() {
     due_date: dueDate || null,
     priority,
     status,
+    assignee_id: assigneeId,
   });
 
   const save = async () => {
     if (!title.trim()) {
       setSubmitError('Title is required.');
+      return;
+    }
+    if (!assigneeId) {
+      setSubmitError('Assign a shepherd before saving this task.');
       return;
     }
     setSaving(true);
@@ -125,6 +136,26 @@ export default function AdminTaskFormScreen() {
         onChangeText={setDueDate}
         placeholder="2026-05-30"
       />
+
+      <Text style={styles.section}>Assigned shepherd</Text>
+      {profilesLoading ? (
+        <Text style={styles.hint}>Loading shepherds…</Text>
+      ) : shepherds.length === 0 ? (
+        <Text style={styles.hint}>No active shepherds available. Create shepherd accounts first.</Text>
+      ) : (
+        <View style={styles.chips}>
+          {shepherds.map((shepherd) => (
+            <Pressable
+              key={shepherd.id}
+              style={[styles.chip, assigneeId === shepherd.id && styles.chipActive]}
+              testID={testIds.admin.tasks.assignShepherd(shepherd.id)}
+              onPress={() => setAssigneeId(shepherd.id)}
+            >
+              <Text style={styles.chipText}>{shepherd.display_name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.section}>Priority</Text>
       <View style={styles.chips}>
@@ -189,6 +220,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { borderColor: colors.primary, backgroundColor: '#ecfdf5' },
   chipText: { fontWeight: '600', color: colors.primary, textTransform: 'capitalize' },
+  hint: { color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 18 },
   primary: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,

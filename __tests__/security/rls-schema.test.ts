@@ -37,8 +37,13 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('Members readable by assignee or admin');
     expect(schema).toContain('Visits readable by logger assignee or admin');
     expect(schema).toContain('Tasks readable by assignee or admin');
+    expect(schema).toMatch(
+      /create policy "Visits readable by logger assignee or admin"[\s\S]*logged_by = auth\.uid\(\)/,
+    );
     expect(schema).not.toContain('assigned_to is null');
     expect(schema).not.toContain('assignee_id is null');
+    expect(schema).not.toMatch(/where lower\(email\) = lower\('[^']+@[^']+'\)/);
+    expect(schema).toContain('bootstrap-owner.sql');
     expect(schema).not.toMatch(
       /create policy "Members readable by authenticated users"\s+on public\.members for select to authenticated using \(true\)/,
     );

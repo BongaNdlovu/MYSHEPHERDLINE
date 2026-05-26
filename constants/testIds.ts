@@ -63,6 +63,7 @@ export const testIds = {
       add: 'admin-members-add',
       form: 'admin-member-form',
       save: 'admin-member-save',
+      assignShepherd: (id: string) => `admin-member-assign-${id}`,
       item: (id: string) => `admin-member-${id}`,
     },
     tasks: {
@@ -70,6 +71,7 @@ export const testIds = {
       add: 'admin-tasks-add',
       form: 'admin-task-form',
       save: 'admin-task-save',
+      assignShepherd: (id: string) => `admin-task-assign-${id}`,
       item: (id: string) => `admin-task-${id}`,
     },
     reports: { screen: 'admin-reports-screen' },

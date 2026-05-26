@@ -19,13 +19,18 @@ Run the full schema in the Supabase SQL Editor:
 -- Paste contents of supabase/schema.sql
 ```
 
+Then run `supabase/bootstrap-owner.sql` for the owner account.
+
 ### Existing project (already has tables)
 
-Run the incremental patch instead:
+Run the incremental patches in order:
 
 ```sql
 -- Paste contents of supabase/fix-rls-security.sql
+-- Then supabase/admin-access.sql if not already applied
 ```
+
+Re-apply visit read policy if shepherds lose visit history after reassignment (`logged_by = auth.uid()` on select).
 
 This adds `public.is_admin()` and replaces permissive read policies with scoped ones.
 
@@ -36,17 +41,37 @@ After applying SQL, confirm policies in **Authentication → Policies** (or SQL)
 | Table | Expected read scope |
 | --- | --- |
 | `profiles` | Own row or admin |
-| `members` | Unassigned, assigned to self, or admin |
-| `visits` | Logged by self, member in scope, or admin |
-| `tasks` | Unassigned, assigned to self, or admin |
+| `members` | Assigned to self, or admin/owner (global) |
+| `visits` | Logged by self, member currently assigned to self, or admin/owner |
+| `tasks` | Assigned to self, or admin/owner (global) |
 | `push_tokens` | Owner only |
+
+Unassigned members and tasks are **admin/owner-only** until explicitly assigned in the admin app.
 
 Quick manual check as a **shepherd** (not admin):
 
 1. Sign in on the app.
-2. Members list should show only unassigned members and members assigned to you.
-3. Reports and tasks should reflect the same scope.
-4. Sign in as **admin** — full congregation data should be visible.
+2. Members list should show only members assigned to you.
+3. Visit history should include visits you logged, even if the member was later reassigned.
+4. Reports and tasks should reflect the same assigned-only scope.
+5. Sign in as **admin** — full congregation data should be visible.
+
+### Owner bootstrap
+
+Do **not** hardcode owner emails in `schema.sql` or reusable migrations. After the owner signs in once:
+
+1. Run `supabase/bootstrap-owner.sql` with the production owner email.
+2. Confirm with `select email, role from public.profiles where role = 'owner';`
+
+### Null assignment rollout
+
+Before production cutover:
+
+```sql
+-- Paste supabase/verify-null-assignments.sql
+```
+
+Resolve any rows returned via the admin app or `supabase/resolve-null-assignments.sql` (review first).
 
 Repo gate for schema shape:
 
@@ -91,24 +116,28 @@ npx.cmd wrangler secret put DIGEST_CRON_SECRET --config worker/wrangler.toml
 1. Create a KV namespace in the Cloudflare dashboard.
 2. Uncomment and fill `[[kv_namespaces]]` in `worker/wrangler.toml`:
 
-```toml
-[[kv_namespaces]]
-binding = "RATE_LIMIT"
-id = "<production-kv-namespace-id>"
-preview_id = "<preview-kv-namespace-id>"
-```
+    ```toml
+    [[kv_namespaces]]
+    binding = "RATE_LIMIT"
+    id = "<production-kv-namespace-id>"
+    preview_id = "<preview-kv-namespace-id>"
+    ```
 
-3. Redeploy. Without KV, the Worker falls back to in-memory limits (resets on restart, not suitable for multi-instance abuse resistance).
+3. Redeploy. Without KV, the Worker falls back to in-memory limits (resets on restart, not suitable for multi-instance
+   abuse resistance).
 
 ### CORS
 
-Set `ALLOWED_ORIGINS` in `worker/wrangler.toml` to your app/web origins (comma-separated). Leave empty only for API-only/mobile Bearer-token usage.
+Set `ALLOWED_ORIGINS` in `worker/wrangler.toml` to your app/web origins (comma-separated). Leave empty only for
+API-only/mobile Bearer-token usage.
 
 ### Digest cron
 
-Schedule a POST to `/notifications/send-digest` with header `X-Cron-Secret: <DIGEST_CRON_SECRET>`. Admins can also trigger via Bearer token.
+Schedule a POST to `/notifications/send-digest` with header `X-Cron-Secret: <DIGEST_CRON_SECRET>`. Admins can also
+trigger via Bearer token.
 
-Audit events appear in Worker logs as JSON (`digest_sent`, `digest_send_forbidden`, `push_token_registered`, `rate_limit_exceeded`). Responses include `X-Request-Id` for correlation.
+Audit events appear in Worker logs as JSON (`digest_sent`, `digest_send_forbidden`, `push_token_registered`,
+`rate_limit_exceeded`). Responses include `X-Request-Id` for correlation.
 
 Deploy:
 

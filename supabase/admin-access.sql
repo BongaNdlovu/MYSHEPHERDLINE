@@ -40,7 +40,4 @@ create policy "Owner can update any profile"
   using (public.is_owner())
   with check (public.is_owner());
 
--- Promote designated owner (run once; safe to re-run).
-update public.profiles
-set role = 'owner', is_active = true, updated_at = now()
-where lower(email) = lower('Fanelesibonge50@gmail.com');
+-- Owner bootstrap: run supabase/bootstrap-owner.sql once after the owner signs in.

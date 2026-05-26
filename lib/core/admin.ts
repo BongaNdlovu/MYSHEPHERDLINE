@@ -1,11 +1,5 @@
 import type { Profile, UserRole } from '@/types/database';
 
-/** Single owner account — must have profile.role = 'owner'. */
-export const OWNER_EMAIL = 'Fanelesibonge50@gmail.com';
-
-/** @deprecated Use OWNER_EMAIL */
-export const PRIMARY_ADMIN_EMAIL = OWNER_EMAIL;
-
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }

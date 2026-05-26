@@ -1,6 +1,7 @@
 # Architecture
 
-MyShepherdLine uses a **hybrid feature-first** layout: business features live together under `features/`, while shared infrastructure stays centralized under `lib/core/` and reusable UI primitives under `components/ui/`.
+MyShepherdLine uses a **hybrid feature-first** layout: business features live together under `features/`, while shared
+infrastructure stays centralized under `lib/core/` and reusable UI primitives under `components/ui/`.
 
 ## Principles
 
@@ -11,7 +12,7 @@ MyShepherdLine uses a **hybrid feature-first** layout: business features live to
 
 ## Folder map
 
-```
+```text
 app/                      Expo Router routes (thin re-exports only)
 features/
   auth/                   Landing, sign-in, sign-up
@@ -37,7 +38,7 @@ docs/                     Documentation entrypoint (see docs/README.md)
 
 Every feature uses the same folder shape. Empty folders are kept with `.gitkeep` so the layout stays predictable:
 
-```
+```text
 features/members/
   index.ts          Public barrel exports for the feature
   screens/          Route-facing containers (MembersScreen, MemberProfileScreen)
@@ -90,7 +91,7 @@ Expo Router requires route files to stay under `app/`. Shell route files should 
 
 ## Example data flow: Members list
 
-```
+```text
 app/(tabs)/members.tsx
   -> re-exports MembersScreen from @/features/members
 
@@ -117,11 +118,16 @@ features/members/selectors/members.ts
 
 ## Query and mutation patterns
 
-- **Lists/details:** use feature hooks returning `{ data, loading, error, refresh, lastLoadedAt, isStale }` via `QueryState` from `lib/core/query-types.ts`
-- **Errors:** services throw normalized `AppError` values from `lib/core/errors.ts`; hooks catch with `toAppError()` and screens render through `QueryStateView` or inline form errors
-- **UI feedback:** render loading/error/empty with `QueryStateView` from `components/ui/`; pass `onRetry={() => refresh()}` for recoverable query failures
-- **Mutations:** validate inline with helpers from `lib/core/validation.ts`; show field errors on the form and use `InlineError` for submission failures; reserve `useToast()` for success and lightweight non-blocking feedback
-- **Fatal render errors:** Expo Router `ErrorBoundary` in `app/_layout.tsx` delegates to `components/ui/RouteErrorBoundary.tsx` and `FatalErrorScreen`
+- **Lists/details:** use feature hooks returning `{ data, loading, error, refresh, lastLoadedAt, isStale }` via
+  `QueryState` from `lib/core/query-types.ts`
+- **Errors:** services throw normalized `AppError` values from `lib/core/errors.ts`; hooks catch with `toAppError()` and
+  screens render through `QueryStateView` or inline form errors
+- **UI feedback:** render loading/error/empty with `QueryStateView` from `components/ui/`; pass
+  `onRetry={() => refresh()}` for recoverable query failures
+- **Mutations:** validate inline with helpers from `lib/core/validation.ts`; show field errors on the form and use
+  `InlineError` for submission failures; reserve `useToast()` for success and lightweight non-blocking feedback
+- **Fatal render errors:** Expo Router `ErrorBoundary` in `app/_layout.tsx` delegates to
+  `components/ui/RouteErrorBoundary.tsx` and `FatalErrorScreen`
 
 ## Error handling ownership
 
@@ -143,7 +149,9 @@ Escalation rules:
 - **Toast only:** success confirmations and non-blocking mutation feedback (e.g. task toggle failure on home/tasks)
 - **Fatal boundary:** unexpected React render errors not tied to a known backend failure
 
-Report fetching tries the Worker first and falls back to local Supabase aggregation. When the Worker is configured but unreachable, `useReportSummary()` sets `workerUnavailable: true` and the reports screen shows a notice while displaying local fallback data.
+Report fetching tries the Worker first and falls back to local Supabase aggregation. When the Worker is configured but
+unreachable, `useReportSummary()` sets `workerUnavailable: true` and the reports screen shows a notice while
+displaying local fallback data.
 
 ## Admin control center
 
@@ -152,7 +160,7 @@ Operational management lives in `features/admin/` with thin routes under `app/ad
 | Flow | Path |
 | --- | --- |
 | Entry (admins only) | More tab → **Admin Center** |
-| Guard | `profile.role === 'admin'` **and** email matches `PRIMARY_ADMIN_EMAIL` in `lib/core/admin.ts` |
+| Guard | `useAdminAccess()` after auth load; admin stack or `OwnerRoute` for owner screens |
 | Unauthorized | Direct `/admin/*` navigation → `/admin/unauthorized` |
 
 Modules:
@@ -167,7 +175,8 @@ Access model:
 
 - Public landing no longer promotes open self-service sign-up; `/sign-up` explains admin-provisioned accounts.
 - New auth users still get a `profiles` row from `handle_new_user`, but role/access changes require an admin.
-- Apply `supabase/admin-access.sql` on existing projects for `is_active`, admin profile updates, and primary admin promotion.
+- Apply `supabase/admin-access.sql` on existing projects for `is_active` and owner profile updates.
+- Promote the owner with `supabase/bootstrap-owner.sql` (not in reusable schema).
 
 ## Security
 
@@ -180,7 +189,8 @@ Production controls and migration steps: [docs/security/production-hardening.md]
 | Worker | Bearer auth + admin/cron gate for digest; optional KV rate limits; audit logs |
 | App env | Fail-fast when Supabase vars missing (`lib/core/env.ts`) |
 
-Shepherd-facing queries rely on RLS — services do not filter client-side for authorization. Worker summaries apply an additional role scope in `worker/src/reports.ts` when using the service role.
+Shepherd-facing queries rely on RLS — services do not filter client-side for authorization. Worker summaries apply an
+additional role scope in `worker/src/reports.ts` when using the service role.
 
 ## Tests
 
@@ -203,4 +213,5 @@ npm.cmd run verify
 
 ## npm workspaces
 
-The repo root and `worker/` are npm workspaces. Run `npm install` once at the root to install both packages. Root scripts orchestrate app and Worker verification together.
+The repo root and `worker/` are npm workspaces. Run `npm install` once at the root to install both packages. Root scripts
+orchestrate app and Worker verification together.

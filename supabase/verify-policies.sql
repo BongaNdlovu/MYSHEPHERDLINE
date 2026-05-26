@@ -62,3 +62,12 @@ where schemaname = 'public'
     or qual like '%assignee_id is null%'
   );
 -- Expect 0 rows
+
+-- 7. Confirm visit read policy keeps self-logged history
+select tablename, policyname, qual
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'visits'
+  and policyname = 'Visits readable by logger assignee or admin'
+  and qual not like '%logged_by = auth.uid()%';
+-- Expect 0 rows

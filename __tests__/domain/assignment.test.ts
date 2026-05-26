@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest';
+
+import { listAssignableShepherds, requireAssigneeId } from '@/features/admin/selectors/assignees';
+import type { Profile } from '@/types/database';
+
+function profile(overrides: Partial<Profile> = {}): Profile {
+  return {
+    id: '1',
+    email: 'user@example.com',
+    display_name: 'User',
+    role: 'shepherd',
+    is_active: true,
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  };
+}
+
+describe('listAssignableShepherds', () => {
+  it('returns only active shepherds', () => {
+    const result = listAssignableShepherds([
+      profile({ id: 's1', role: 'shepherd' }),
+      profile({ id: 'a1', role: 'admin' }),
+      profile({ id: 'o1', role: 'owner' }),
+      profile({ id: 's2', role: 'shepherd', is_active: false }),
+    ]);
+
+    expect(result.map((p) => p.id)).toEqual(['s1']);
+  });
+});
+
+describe('requireAssigneeId', () => {
+  it('returns trimmed assignee id', () => {
+    expect(requireAssigneeId('  abc  ', 'member')).toBe('abc');
+  });
+
+  it('rejects missing member assignment', () => {
+    expect(() => requireAssigneeId(null, 'member')).toThrow(/Assign a shepherd/);
+  });
+
+  it('rejects missing task assignment', () => {
+    expect(() => requireAssigneeId('', 'task')).toThrow(/Assign a shepherd/);
+  });
+});

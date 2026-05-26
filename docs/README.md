@@ -63,7 +63,9 @@ On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win` —
 
 See [security/production-hardening.md](security/production-hardening.md) for the full production sign-off list. Summary:
 
-1. **New Supabase project:** apply `supabase/schema.sql`. **Existing project:** apply `supabase/fix-rls-security.sql`, then `supabase/admin-access.sql`.
+1. **New Supabase project:** apply `supabase/schema.sql`, then `supabase/bootstrap-owner.sql`.
+   **Existing project:** apply `supabase/fix-rls-security.sql`, then `supabase/admin-access.sql`.
+   Run `supabase/verify-null-assignments.sql` before production cutover.
 2. Set `.env` from `.env.example` (Supabase URL and publishable key; optional Worker URL).
 3. Deploy Worker secrets, optional KV rate-limit namespace, and run `npm run deploy --workspace myshepherdline-worker`.
 4. Run `npm.cmd run verify` (or `verify:win` on Windows if needed).

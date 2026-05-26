@@ -25,7 +25,7 @@ List Supabase, Cloudflare, Expo and hosting locations. Document safeguards.
 ## 6. Risks and mitigations
 
 | Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
+| --- | --- | --- | --- |
 | Unauthorized access | High | Medium | RLS, role checks, Worker auth |
 | Over-collection | Medium | Medium | Field minimization, no prayer/health notes in v1 |
 | Token misuse | Medium | Low | Admin-only digest, token validation |

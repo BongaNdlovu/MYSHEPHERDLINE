@@ -8,7 +8,8 @@
 
 ## Purpose
 
-This manual describes records held by the responsible party and how requesters may access them under the Promotion of Access to Information Act (PAIA).
+This manual describes records held by the responsible party and how requesters may access them under the Promotion of
+Access to Information Act (PAIA).
 
 ## Categories of records
 

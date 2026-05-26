@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OwnerRoute } from '@/features/admin/components/OwnerRoute';
 import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
-import { isOwnerRole, OWNER_EMAIL } from '@/features/admin/selectors/guard';
+import { isOwnerRole } from '@/features/admin/selectors/guard';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
@@ -63,8 +63,7 @@ function UserRow({
   onRole: (role: UserRole) => void;
   onAccess: (active: boolean) => void;
 }) {
-  const isOwnerAccount =
-    isOwnerRole(profile.role) || profile.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
+  const isOwnerAccount = isOwnerRole(profile.role);
   const nextRole: UserRole = profile.role === 'admin' ? 'shepherd' : 'admin';
 
   return (

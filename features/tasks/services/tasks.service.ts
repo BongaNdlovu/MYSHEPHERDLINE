@@ -1,3 +1,4 @@
+import { requireAssigneeId } from '@/features/admin/selectors/assignees';
 import { fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Task } from '@/types/database';
@@ -27,13 +28,14 @@ export type TaskInput = {
 };
 
 export async function createTask(input: TaskInput): Promise<Task> {
+  const assigneeId = requireAssigneeId(input.assignee_id, 'task');
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('tasks')
     .insert({
       title: input.title.trim(),
       description: input.description?.trim() || null,
-      assignee_id: input.assignee_id ?? null,
+      assignee_id: assigneeId,
       member_id: input.member_id ?? null,
       due_date: input.due_date ?? null,
       status: input.status ?? 'open',
@@ -47,13 +49,14 @@ export async function createTask(input: TaskInput): Promise<Task> {
 }
 
 export async function updateTask(id: string, input: TaskInput): Promise<Task> {
+  const assigneeId = requireAssigneeId(input.assignee_id, 'task');
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('tasks')
     .update({
       title: input.title.trim(),
       description: input.description?.trim() || null,
-      assignee_id: input.assignee_id ?? null,
+      assignee_id: assigneeId,
       member_id: input.member_id ?? null,
       due_date: input.due_date ?? null,
       status: input.status,

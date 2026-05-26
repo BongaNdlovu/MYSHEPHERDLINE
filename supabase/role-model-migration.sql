@@ -92,6 +92,7 @@ create policy "Visits readable by logger assignee or admin"
   on public.visits for select to authenticated
   using (
     public.is_admin()
+    or logged_by = auth.uid()
     or exists (
       select 1 from public.members m
       where m.id = member_id and m.assigned_to = auth.uid()
@@ -128,7 +129,4 @@ create policy "Tasks updatable by assignee or admin"
   using (assignee_id = auth.uid() or public.is_admin())
   with check (assignee_id = auth.uid() or public.is_admin());
 
--- Promote designated owner (safe to re-run).
-update public.profiles
-set role = 'owner', is_active = true, updated_at = now()
-where lower(email) = lower('Fanelesibonge50@gmail.com');
+-- Owner bootstrap: run supabase/bootstrap-owner.sql once after the owner signs in.

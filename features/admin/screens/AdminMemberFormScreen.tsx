@@ -8,6 +8,8 @@ import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
+import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
+import { listAssignableShepherds } from '@/features/admin/selectors/assignees';
 import {
   createMember,
   deleteMember,
@@ -25,9 +27,12 @@ export default function AdminMemberFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { data: member, loading, error, refresh } = useMember(id);
+  const { data: profiles, loading: profilesLoading } = useAdminProfiles();
   const { showToast } = useToast();
+  const shepherds = listAssignableShepherds(profiles);
 
   const [fullName, setFullName] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -46,6 +51,7 @@ export default function AdminMemberFormScreen() {
     setNotes(member.notes ?? '');
     setRiskLevel(member.risk_level);
     setStatus(member.status);
+    setAssignedTo(member.assigned_to);
   }, [member]);
 
   if (isEdit && (loading || error || !member)) {
@@ -64,11 +70,16 @@ export default function AdminMemberFormScreen() {
     notes,
     risk_level: riskLevel,
     status,
+    assigned_to: assignedTo,
   });
 
   const save = async () => {
     if (!fullName.trim()) {
       setSubmitError('Full name is required.');
+      return;
+    }
+    if (!assignedTo) {
+      setSubmitError('Assign a shepherd before saving this member.');
       return;
     }
     setSaving(true);
@@ -115,6 +126,26 @@ export default function AdminMemberFormScreen() {
       <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
       <FormField label="Address" value={address} onChangeText={setAddress} />
       <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
+
+      <Text style={styles.section}>Assigned shepherd</Text>
+      {profilesLoading ? (
+        <Text style={styles.hint}>Loading shepherds…</Text>
+      ) : shepherds.length === 0 ? (
+        <Text style={styles.hint}>No active shepherds available. Create shepherd accounts first.</Text>
+      ) : (
+        <View style={styles.chips}>
+          {shepherds.map((shepherd) => (
+            <Pressable
+              key={shepherd.id}
+              style={[styles.chip, assignedTo === shepherd.id && styles.chipActive]}
+              testID={testIds.admin.members.assignShepherd(shepherd.id)}
+              onPress={() => setAssignedTo(shepherd.id)}
+            >
+              <Text style={styles.chipText}>{shepherd.display_name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.section}>Risk level</Text>
       <View style={styles.chips}>
@@ -179,6 +210,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { borderColor: colors.primary, backgroundColor: '#ecfdf5' },
   chipText: { fontWeight: '600', color: colors.primary, textTransform: 'capitalize' },
+  hint: { color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 18 },
   primary: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,

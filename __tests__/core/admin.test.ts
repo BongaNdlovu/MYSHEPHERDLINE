@@ -6,14 +6,13 @@ import {
   isOwner,
   isProfileActive,
   normalizeEmail,
-  OWNER_EMAIL,
 } from '@/lib/core/admin';
 import type { Profile } from '@/types/database';
 
 function profile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: '1',
-    email: OWNER_EMAIL,
+    email: 'owner@example.com',
     display_name: 'Owner',
     role: 'owner',
     is_active: true,

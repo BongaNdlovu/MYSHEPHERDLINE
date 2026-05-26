@@ -1,3 +1,4 @@
+import { requireAssigneeId } from '@/features/admin/selectors/assignees';
 import { fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Member } from '@/types/database';
@@ -28,6 +29,7 @@ export type MemberInput = {
 };
 
 export async function createMember(input: MemberInput): Promise<Member> {
+  const assignedTo = requireAssigneeId(input.assigned_to, 'member');
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('members')
@@ -39,7 +41,7 @@ export async function createMember(input: MemberInput): Promise<Member> {
       risk_level: input.risk_level ?? 'low',
       status: input.status ?? 'new',
       notes: input.notes?.trim() || null,
-      assigned_to: input.assigned_to ?? null,
+      assigned_to: assignedTo,
     })
     .select('*')
     .single();
@@ -48,6 +50,7 @@ export async function createMember(input: MemberInput): Promise<Member> {
 }
 
 export async function updateMember(id: string, input: MemberInput): Promise<Member> {
+  const assignedTo = requireAssigneeId(input.assigned_to, 'member');
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('members')
@@ -59,7 +62,7 @@ export async function updateMember(id: string, input: MemberInput): Promise<Memb
       risk_level: input.risk_level,
       status: input.status,
       notes: input.notes?.trim() || null,
-      assigned_to: input.assigned_to ?? null,
+      assigned_to: assignedTo,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
