@@ -1,5 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { accountQuickActions } from '../selectors/quick-actions';
@@ -15,6 +16,14 @@ export default function MoreScreen() {
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const { isAdmin } = useAdminAccess();
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.more.screen}>
@@ -57,7 +66,10 @@ export default function MoreScreen() {
           testID={testIds.more.signOut}
           onPress={() => {
             void signOut()
-              .then(() => router.replace('/landing'))
+              .then(() => {
+                if (!mountedRef.current) return;
+                router.replace('/landing');
+              })
               .catch(() => showToast('Unable to sign out. Please try again.'));
           }}
         >

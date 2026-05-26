@@ -19,7 +19,9 @@ export default function AdminReportsScreen() {
   const workerConfigured = Boolean(getAppEnv().workerApiUrl);
 
   useEffect(() => {
-    void checkWorkerHealth().then(setWorkerHealthy);
+    void checkWorkerHealth()
+      .then(setWorkerHealthy)
+      .catch(() => setWorkerHealthy(false));
   }, []);
 
   return (

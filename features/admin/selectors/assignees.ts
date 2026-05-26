@@ -1,3 +1,4 @@
+import { createAppError } from '@/lib/core/errors';
 import type { Profile } from '@/types/database';
 
 /** Active shepherds eligible for member/task assignment. */
@@ -11,7 +12,8 @@ export function requireAssigneeId(
 ): string {
   const trimmed = assigneeId?.trim();
   if (!trimmed) {
-    throw new Error(
+    throw createAppError(
+      'validation',
       entityLabel === 'member'
         ? 'Assign a shepherd before saving this member.'
         : 'Assign a shepherd before saving this task.',

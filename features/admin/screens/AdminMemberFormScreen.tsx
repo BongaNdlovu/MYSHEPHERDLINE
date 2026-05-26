@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
@@ -18,7 +18,13 @@ import {
   type MemberInput,
 } from '@/features/members';
 import { useToast } from '@/lib/core/toast';
+import { validateOptionalEmail, validateOptionalPhone } from '@/lib/core/validation';
 import type { MemberStatus, RiskLevel } from '@/types/database';
+
+function goBackOrMembersList() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/admin/members');
+}
 
 const riskLevels: RiskLevel[] = ['low', 'medium', 'high'];
 const statuses: MemberStatus[] = ['new', 'active', 'inactive'];
@@ -39,11 +45,15 @@ export default function AdminMemberFormScreen() {
   const [notes, setNotes] = useState('');
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('low');
   const [status, setStatus] = useState<MemberStatus>('new');
+  const [emailError, setEmailError] = useState<string | undefined>();
+  const [phoneError, setPhoneError] = useState<string | undefined>();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formReady, setFormReady] = useState(!isEdit);
+  const formInitializedRef = useRef(false);
 
   useEffect(() => {
-    if (!member) return;
+    if (!isEdit || !member || formInitializedRef.current) return;
     setFullName(member.full_name);
     setPhone(member.phone ?? '');
     setEmail(member.email ?? '');
@@ -52,12 +62,20 @@ export default function AdminMemberFormScreen() {
     setRiskLevel(member.risk_level);
     setStatus(member.status);
     setAssignedTo(member.assigned_to);
-  }, [member]);
+    formInitializedRef.current = true;
+    setFormReady(true);
+  }, [isEdit, member]);
 
-  if (isEdit && (loading || error || !member)) {
+  const retryLoad = useCallback(() => {
+    formInitializedRef.current = false;
+    setFormReady(false);
+    void refresh();
+  }, [refresh]);
+
+  if (isEdit && !formReady) {
     return (
       <View style={styles.centered}>
-        <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
+        <QueryStateView loading={loading} error={error} onRetry={retryLoad} />
       </View>
     );
   }
@@ -78,6 +96,14 @@ export default function AdminMemberFormScreen() {
       setSubmitError('Full name is required.');
       return;
     }
+    const nextEmailError = validateOptionalEmail(email);
+    const nextPhoneError = validateOptionalPhone(phone);
+    setEmailError(nextEmailError);
+    setPhoneError(nextPhoneError);
+    if (nextEmailError || nextPhoneError) {
+      setSubmitError(nextEmailError ?? nextPhoneError ?? 'Check the highlighted fields.');
+      return;
+    }
     if (!assignedTo) {
       setSubmitError('Assign a shepherd before saving this member.');
       return;
@@ -92,7 +118,7 @@ export default function AdminMemberFormScreen() {
         await createMember(input());
         showToast('Member created.');
       }
-      router.back();
+      goBackOrMembersList();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unable to save member.');
     } finally {
@@ -116,14 +142,31 @@ export default function AdminMemberFormScreen() {
 
   return (
     <ScrollView style={styles.screen} testID={testIds.admin.members.form}>
-      <Pressable onPress={() => router.back()} style={styles.back}>
+      <Pressable onPress={goBackOrMembersList} style={styles.back}>
         <Feather name="chevron-left" size={24} color={colors.primary} />
       </Pressable>
       <Text style={styles.title}>{isEdit ? 'Edit member' : 'New member'}</Text>
 
       <FormField label="Full name" value={fullName} onChangeText={setFullName} />
-      <FormField label="Phone" value={phone} onChangeText={setPhone} />
-      <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+      <FormField
+        label="Phone"
+        value={phone}
+        onChangeText={(value) => {
+          setPhone(value);
+          setPhoneError(undefined);
+        }}
+        error={phoneError}
+      />
+      <FormField
+        label="Email"
+        value={email}
+        onChangeText={(value) => {
+          setEmail(value);
+          setEmailError(undefined);
+        }}
+        error={emailError}
+        autoCapitalize="none"
+      />
       <FormField label="Address" value={address} onChangeText={setAddress} />
       <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
 

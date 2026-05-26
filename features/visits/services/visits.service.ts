@@ -1,4 +1,4 @@
-import { fromSupabaseError } from '@/lib/core/errors';
+import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Visit } from '@/types/database';
 
@@ -16,8 +16,12 @@ export async function createVisit(input: {
     .eq('id', input.memberId)
     .maybeSingle();
 
+  if (!member?.organization_id) {
+    throw createAppError('not_found', 'Member not found.');
+  }
+
   const payload = {
-    organization_id: member?.organization_id,
+    organization_id: member.organization_id,
     member_id: input.memberId,
     logged_by: input.userId,
     visit_type: input.visitType,

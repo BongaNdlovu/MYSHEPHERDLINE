@@ -5,6 +5,8 @@ appId: ${E2E_APP_ID}
     id: tab-tasks
 - assertVisible:
     id: tasks-screen
+# Seed data guarantees at least one open task for the test shepherd.
 - tapOn:
-    id: ${E2E_TASK_TOGGLE_ID}
-    optional: true
+    text: "Follow up with Sipho"
+- tapOn:
+    id: "task-toggle-.*"

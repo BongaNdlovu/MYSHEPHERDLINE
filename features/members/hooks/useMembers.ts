@@ -6,7 +6,7 @@ import {
   type MemberListQuery,
 } from '@/features/members/services/members.service';
 import type { AppError } from '@/lib/core/errors';
-import { createAppError, notFoundError, toAppError } from '@/lib/core/errors';
+import { notFoundError, toAppError } from '@/lib/core/errors';
 import type { PaginatedQueryState, QueryState } from '@/lib/core/query-types';
 import type { Member, MemberListRow } from '@/types/database';
 
@@ -83,7 +83,7 @@ export function useMember(id: string | undefined): QueryState<Member | null> {
     if (!id) {
       setData(null);
       setLoading(false);
-      setError(createAppError('validation', 'Member id is required.'));
+      setError(null);
       return;
     }
     setLoading(true);

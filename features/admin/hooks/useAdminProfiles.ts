@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   fetchProfilesPage,
@@ -21,6 +21,7 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const loadingMoreRef = useRef(false);
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
     if (append) setLoadingMore(true);
@@ -50,8 +51,13 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
   }, [loadPage]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
-    await loadPage(page + 1, true);
+    if (loading || loadingMore || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    try {
+      await loadPage(page + 1, true);
+    } finally {
+      loadingMoreRef.current = false;
+    }
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
   useEffect(() => {

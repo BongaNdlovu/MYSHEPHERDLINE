@@ -14,6 +14,7 @@ export type UseTasksOptions = Omit<TaskListQuery, 'page'>;
 
 type TasksState = PaginatedQueryState<TaskListRow> & {
   toggleTask: (task: TaskListRow) => Promise<AppError | null>;
+  isTaskToggling: (taskId: string) => boolean;
 };
 
 export function useTasks(options: UseTasksOptions = {}): TasksState {
@@ -24,8 +25,14 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const togglingRef = useRef(new Set<string>());
+  const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(() => new Set());
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  const syncTogglingIds = useCallback(() => {
+    setTogglingIds(new Set(togglingRef.current));
+  }, []);
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
     if (append) setLoadingMore(true);
@@ -44,7 +51,6 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
       setError(toAppError(err, 'Unable to load tasks.'));
       if (!append) setData([]);
       setHasMore(false);
-      throw err;
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -60,10 +66,16 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     await loadPage(page + 1, true);
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
+  const isTaskToggling = useCallback((taskId: string) => togglingIds.has(taskId), [togglingIds]);
+
   const toggleTask = useCallback(
     async (task: TaskListRow) => {
+      if (togglingRef.current.has(task.id)) return null;
+
       const previousStatus = task.status;
       const nextStatus = previousStatus === 'completed' ? 'open' : 'completed';
+      togglingRef.current.add(task.id);
+      syncTogglingIds();
       setData((current) =>
         current.map((item) => (item.id === task.id ? { ...item, status: nextStatus } : item)),
       );
@@ -71,19 +83,18 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
         await updateTaskStatus(task.id, nextStatus);
         return null;
       } catch (err) {
-        try {
-          await refresh();
-        } catch {
-          setData((current) =>
-            current.map((item) =>
-              item.id === task.id ? { ...item, status: previousStatus } : item,
-            ),
-          );
-        }
+        setData((current) =>
+          current.map((item) =>
+            item.id === task.id ? { ...item, status: previousStatus } : item,
+          ),
+        );
         return toAppError(err, 'Unable to update task.');
+      } finally {
+        togglingRef.current.delete(task.id);
+        syncTogglingIds();
       }
     },
-    [refresh],
+    [syncTogglingIds],
   );
 
   useEffect(() => {
@@ -102,5 +113,6 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     lastLoadedAt,
     isStale: false,
     toggleTask,
+    isTaskToggling,
   };
 }

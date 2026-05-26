@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { listAssignableShepherds, requireAssigneeId } from '@/features/admin/selectors/assignees';
+import { isAppError } from '@/lib/core/errors';
 import type { Profile } from '@/types/database';
 
 function profile(overrides: Partial<Profile> = {}): Profile {
@@ -36,10 +37,22 @@ describe('requireAssigneeId', () => {
   });
 
   it('rejects missing member assignment', () => {
-    expect(() => requireAssigneeId(null, 'member')).toThrow(/Assign a shepherd/);
+    try {
+      requireAssigneeId(null, 'member');
+      expect.fail('expected validation error');
+    } catch (error) {
+      expect(isAppError(error)).toBe(true);
+      expect((error as Error).message).toMatch(/Assign a shepherd/);
+    }
   });
 
   it('rejects missing task assignment', () => {
-    expect(() => requireAssigneeId('', 'task')).toThrow(/Assign a shepherd/);
+    try {
+      requireAssigneeId('', 'task');
+      expect.fail('expected validation error');
+    } catch (error) {
+      expect(isAppError(error)).toBe(true);
+      expect((error as Error).message).toMatch(/Assign a shepherd/);
+    }
   });
 });

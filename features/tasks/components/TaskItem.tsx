@@ -10,6 +10,7 @@ type TaskItemProps = {
   task: TaskListRow;
   onToggle?: () => void;
   toggleTestID?: string;
+  toggleDisabled?: boolean;
 };
 
 const iconMap: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = {
@@ -20,7 +21,7 @@ const iconMap: Record<string, React.ComponentProps<typeof FontAwesome>['name']> 
   other: 'check',
 };
 
-export function TaskItem({ task, onToggle, toggleTestID }: TaskItemProps) {
+export function TaskItem({ task, onToggle, toggleTestID, toggleDisabled }: TaskItemProps) {
   const completed = task.status === 'completed';
   const iconName = iconMap[task.task_type ?? 'other'] ?? 'check';
   const formattedDueDate = formatTaskDueDate(task.due_date);
@@ -38,10 +39,11 @@ export function TaskItem({ task, onToggle, toggleTestID }: TaskItemProps) {
       </View>
       <Pressable
         testID={toggleTestID}
-        style={[styles.check, completed && styles.checkCompleted]}
+        style={[styles.check, completed && styles.checkCompleted, toggleDisabled && styles.checkDisabled]}
         onPress={onToggle}
+        disabled={toggleDisabled}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked: completed }}
+        accessibilityState={{ checked: completed, disabled: toggleDisabled }}
       >
         {completed ? <Feather name="check" size={12} color={colors.white} /> : null}
       </Pressable>
@@ -82,4 +84,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderColor: colors.primaryLight,
   },
+  checkDisabled: { opacity: 0.5 },
 });

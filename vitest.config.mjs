@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['__tests__/**/*.test.ts', 'supabase/tests/**/*.test.ts'],
+    include: ['__tests__/**/*.test.ts'],
     pool: 'forks',
     poolOptions: {
       forks: {

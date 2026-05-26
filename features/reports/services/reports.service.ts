@@ -1,6 +1,6 @@
 import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
-import { fromSupabaseError } from '@/lib/core/errors';
+import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 
 export async function fetchWorkerSummary(accessToken: string) {
@@ -10,7 +10,10 @@ export async function fetchWorkerSummary(accessToken: string) {
 /** Dev / break-glass only — not for production steady state. */
 export async function fetchLocalReportInputs(recentDays = 7) {
   if (!getAppEnv().allowReportFallback) {
-    throw new Error('Local report fallback is disabled. Configure the Worker API for production reports.');
+    throw createAppError(
+      'config',
+      'Local report fallback is disabled. Configure the Worker API for production reports.',
+    );
   }
 
   const supabase = requireSupabase();

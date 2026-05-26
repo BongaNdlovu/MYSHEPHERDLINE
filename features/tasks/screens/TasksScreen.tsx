@@ -13,10 +13,22 @@ import { colors, spacing } from '@/constants/theme';
 import type { TaskListRow } from '@/types/database';
 
 export default function TasksScreen() {
-  const { data: tasks, loading, error, refresh, toggleTask, loadMore, hasMore, loadingMore } = useTasks();
+  const {
+    data: tasks,
+    loading,
+    error,
+    refresh,
+    toggleTask,
+    isTaskToggling,
+    loadMore,
+    hasMore,
+    loadingMore,
+  } = useTasks();
   const { showToast } = useToast();
   const { today, overdue, upcoming } = groupTasksByDueDate(tasks);
   const weekDays = buildWeekDayStrip();
+  const initialLoad = loading && tasks.length === 0;
+  const refreshing = loading && tasks.length > 0;
 
   const sections = useMemo(
     () => [
@@ -36,6 +48,37 @@ export default function TasksScreen() {
     [sections],
   );
 
+  const listHeader = (
+    <>
+      <AppHeader title="Tasks" subtitle="Stay on top of shepherding work" />
+      <View style={styles.calendarRow}>
+        {weekDays.map((day) => (
+          <View key={day.dateKey} style={[styles.day, day.isToday && styles.dayActive]}>
+            <Text style={[styles.dayLabel, day.isToday && styles.dayLabelActive]}>{day.label}</Text>
+            <Text style={[styles.dayNumber, day.isToday && styles.dayLabelActive]}>{day.dayNumber}</Text>
+          </View>
+        ))}
+      </View>
+      <QueryStateView
+        loading={initialLoad}
+        error={error && tasks.length === 0 ? error : null}
+        onRetry={() => void refresh()}
+      />
+      {refreshing ? <Text style={styles.refreshing}>Refreshing tasks…</Text> : null}
+      {error && tasks.length > 0 ? (
+        <Text style={styles.refreshError}>Could not refresh tasks. Showing last loaded data.</Text>
+      ) : null}
+    </>
+  );
+
+  if (initialLoad || (error && tasks.length === 0)) {
+    return (
+      <View style={styles.screen} testID={testIds.tasks.screen}>
+        {listHeader}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen} testID={testIds.tasks.screen}>
       <PaginatedFlatList
@@ -44,48 +87,23 @@ export default function TasksScreen() {
         hasMore={hasMore}
         loadingMore={loadingMore}
         onLoadMore={() => void loadMore()}
-        ListHeaderComponent={
-          <>
-            <AppHeader title="Tasks" subtitle="Stay on top of shepherding work" />
-            <View style={styles.calendarRow}>
-              {weekDays.map((day) => (
-                <View key={day.dateKey} style={[styles.day, day.isToday && styles.dayActive]}>
-                  <Text style={[styles.dayLabel, day.isToday && styles.dayLabelActive]}>{day.label}</Text>
-                  <Text style={[styles.dayNumber, day.isToday && styles.dayLabelActive]}>{day.dayNumber}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        }
+        ListHeaderComponent={listHeader}
         renderItem={({ item }) => {
           if (item.type === 'header') {
             return (
               <Card title={item.section.title} badge={`${item.section.badge}`}>
-                {item.section.key === 'today' ? (
-                  <QueryStateView
-                    loading={loading}
-                    error={error}
-                    isEmpty={!item.section.items.length}
-                    emptyMessage="No open tasks due today."
-                    onRetry={() => void refresh()}
-                  />
-                ) : item.section.key === 'overdue' ? (
-                  <QueryStateView
-                    loading={loading}
-                    error={error}
-                    isEmpty={!item.section.items.length}
-                    emptyMessage="No overdue tasks."
-                    onRetry={() => void refresh()}
-                  />
-                ) : (
-                  <QueryStateView
-                    loading={loading}
-                    error={error}
-                    isEmpty={!item.section.items.length}
-                    emptyMessage="No upcoming tasks."
-                    onRetry={() => void refresh()}
-                  />
-                )}
+                <QueryStateView
+                  isEmpty={!item.section.items.length}
+                  emptyMessage={
+                    item.section.key === 'overdue'
+                      ? 'No overdue tasks.'
+                      : item.section.key === 'today'
+                        ? 'No open tasks due today.'
+                        : 'No upcoming tasks.'
+                  }
+                  loading={false}
+                  error={null}
+                />
               </Card>
             );
           }
@@ -95,6 +113,7 @@ export default function TasksScreen() {
             <TaskItem
               task={task}
               toggleTestID={testIds.tasks.toggle(task.id)}
+              toggleDisabled={isTaskToggling(task.id)}
               onToggle={async () => {
                 const err = await toggleTask(task);
                 if (err) showToast(getUserMessage(err));
@@ -132,4 +151,20 @@ const styles = StyleSheet.create({
   dayLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
   dayNumber: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
   dayLabelActive: { color: colors.white },
+  refreshing: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  refreshError: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
 });

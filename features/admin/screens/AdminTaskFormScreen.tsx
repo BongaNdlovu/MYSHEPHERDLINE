@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
@@ -18,8 +18,14 @@ import {
   type TaskInput,
 } from '@/features/tasks/services/tasks.service';
 import { createAppError } from '@/lib/core/errors';
+import { validateDueDate } from '@/lib/core/validation';
 import { useToast } from '@/lib/core/toast';
 import type { TaskPriority, TaskStatus } from '@/types/database';
+
+function goBackOrTasksList() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/admin/tasks');
+}
 
 const priorities: TaskPriority[] = ['low', 'medium', 'high'];
 const statuses: TaskStatus[] = ['open', 'completed', 'cancelled'];
@@ -39,12 +45,14 @@ export default function AdminTaskFormScreen() {
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [status, setStatus] = useState<TaskStatus>('open');
+  const [dueDateError, setDueDateError] = useState<string | undefined>();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadTask = useCallback(() => {
     if (!id) return;
     setLoading(true);
+    setLoadError(null);
     void fetchTaskById(id)
       .then((found) => {
         if (!found) {
@@ -62,10 +70,14 @@ export default function AdminTaskFormScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (isEdit && loading) {
+  useEffect(() => {
+    loadTask();
+  }, [loadTask]);
+
+  if (isEdit && (loading || loadError)) {
     return (
       <View style={styles.centered}>
-        <QueryStateView loading={loading} error={loadError} />
+        <QueryStateView loading={loading} error={loadError} onRetry={loadTask} />
       </View>
     );
   }
@@ -84,6 +96,12 @@ export default function AdminTaskFormScreen() {
       setSubmitError('Title is required.');
       return;
     }
+    const dueDateValidation = validateDueDate(dueDate);
+    setDueDateError(dueDateValidation);
+    if (dueDateValidation) {
+      setSubmitError(dueDateValidation);
+      return;
+    }
     if (!assigneeId) {
       setSubmitError('Assign a shepherd before saving this task.');
       return;
@@ -98,7 +116,7 @@ export default function AdminTaskFormScreen() {
         await createTask(input());
         showToast('Task created.');
       }
-      router.back();
+      goBackOrTasksList();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unable to save task.');
     } finally {
@@ -122,7 +140,7 @@ export default function AdminTaskFormScreen() {
 
   return (
     <ScrollView style={styles.screen} testID={testIds.admin.tasks.form}>
-      <Pressable onPress={() => router.back()} style={styles.back}>
+      <Pressable onPress={goBackOrTasksList} style={styles.back}>
         <Feather name="chevron-left" size={24} color={colors.primary} />
       </Pressable>
       <Text style={styles.heading}>{isEdit ? 'Edit task' : 'New task'}</Text>
@@ -132,7 +150,11 @@ export default function AdminTaskFormScreen() {
       <FormField
         label="Due date (YYYY-MM-DD)"
         value={dueDate}
-        onChangeText={setDueDate}
+        onChangeText={(value) => {
+          setDueDate(value);
+          setDueDateError(undefined);
+        }}
+        error={dueDateError}
         placeholder="2026-05-30"
       />
 

@@ -19,10 +19,21 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { showToast } = useToast();
   const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } = useMembers();
-  const { data: tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks, toggleTask } = useTasks();
+  const {
+    data: tasks,
+    loading: tasksLoading,
+    error: tasksError,
+    refresh: refreshTasks,
+    toggleTask,
+    isTaskToggling,
+  } = useTasks();
   const [query, setQuery] = useState('');
 
   const attentionMembers = useMemo(() => buildAttentionPreview(members, query), [members, query]);
+  const membersInitialLoad = membersLoading && members.length === 0;
+  const membersRefreshing = membersLoading && members.length > 0;
+  const tasksInitialLoad = tasksLoading && tasks.length === 0;
+  const tasksRefreshing = tasksLoading && tasks.length > 0;
 
   const { today: todayTasks } = groupTasksByDueDate(tasks);
 
@@ -49,45 +60,52 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={18} color={colors.accent} />
       </Pressable>
 
-      <Card title="Needs Attention" badge={membersLoading ? undefined : `${attentionMembers.length}`} >
+      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionMembers.length}`} >
         <View testID={testIds.home.attentionList}>
         <QueryStateView
-          loading={membersLoading}
+          loading={membersInitialLoad}
           error={membersError}
-          isEmpty={!attentionMembers.length}
+          isEmpty={!membersInitialLoad && !membersError && !attentionMembers.length}
           emptyMessage="No members currently flagged for follow-up."
           onRetry={() => void refreshMembers()}
         />
-        {attentionMembers.map((member) => (
+        {membersRefreshing ? <Text style={styles.refreshing}>Refreshing members…</Text> : null}
+        {!membersInitialLoad && !membersError
+          ? attentionMembers.map((member) => (
           <MemberListItem
             key={member.id}
             member={member}
             testID={testIds.members.member(member.id)}
             onPress={() => router.push(`/member/${member.id}`)}
           />
-        ))}
+        ))
+          : null}
         </View>
       </Card>
 
-      <Card title="Today's Tasks" badge={tasksLoading ? undefined : `${todayTasks.length}`}>
+      <Card title="Today's Tasks" badge={tasksInitialLoad ? undefined : `${todayTasks.length}`}>
         <QueryStateView
-          loading={tasksLoading}
+          loading={tasksInitialLoad}
           error={tasksError}
-          isEmpty={!todayTasks.length}
+          isEmpty={!tasksInitialLoad && !tasksError && !todayTasks.length}
           emptyMessage="No open tasks due today."
           onRetry={() => void refreshTasks()}
         />
-        {todayTasks.map((task) => (
+        {tasksRefreshing ? <Text style={styles.refreshing}>Refreshing tasks…</Text> : null}
+        {!tasksInitialLoad && !tasksError
+          ? todayTasks.map((task) => (
           <TaskItem
             key={task.id}
             task={task}
             toggleTestID={testIds.tasks.toggle(task.id)}
+            toggleDisabled={isTaskToggling(task.id)}
             onToggle={async () => {
               const err = await toggleTask(task);
               if (err) showToast(getUserMessage(err));
             }}
           />
-        ))}
+        ))
+          : null}
       </Card>
     </ScrollView>
   );
@@ -119,4 +137,11 @@ const styles = StyleSheet.create({
   alertContent: { flex: 1 },
   alertTitle: { color: '#dc2626', fontWeight: '700', fontSize: 14 },
   alertText: { color: '#991b1b', fontSize: 13, marginTop: 3, opacity: 0.8 },
+  refreshing: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
 });

@@ -32,18 +32,25 @@ export default function LogVisitScreen() {
   const [notes, setNotes] = useState('');
   const [followUp, setFollowUp] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const navigatedRef = useRef(false);
   const backTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (backTimeoutRef.current) clearTimeout(backTimeoutRef.current);
     };
   }, []);
 
-  const canSave = Boolean(member && user) && !saving;
+  const canSave = Boolean(member && user) && !saving && !saved;
 
   const onSave = async () => {
+    if (saving || saved) return;
+
     const activeMember = member;
     const activeUser = user;
     const guardMessage = validateVisitLog({
@@ -65,11 +72,15 @@ export default function LogVisitScreen() {
         notes,
         followUpRequired: followUp,
       });
+      setSaved(true);
       showToast('Visit saved successfully.');
-      backTimeoutRef.current = setTimeout(() => router.back(), 800);
+      backTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current || navigatedRef.current) return;
+        navigatedRef.current = true;
+        router.back();
+      }, 800);
     } catch (err) {
       setSubmitError(getUserMessage(toAppError(err, 'Unable to save visit.')));
-    } finally {
       setSaving(false);
     }
   };
@@ -95,6 +106,7 @@ export default function LogVisitScreen() {
                     testID={testIds.logVisit.type(type.value)}
                     style={[styles.typeChip, active && styles.typeChipActive]}
                     onPress={() => setVisitType(type.value)}
+                    disabled={saved}
                   >
                     <Text style={[styles.typeText, active && styles.typeTextActive]}>{type.label}</Text>
                   </Pressable>
@@ -112,11 +124,16 @@ export default function LogVisitScreen() {
               placeholder="What was discussed or observed?"
               placeholderTextColor={colors.textMuted}
               multiline
+              editable={!saved}
               style={styles.notesInput}
             />
           </View>
 
-          <Pressable style={styles.followUpRow} onPress={() => setFollowUp((value) => !value)}>
+          <Pressable
+            style={styles.followUpRow}
+            onPress={() => setFollowUp((value) => !value)}
+            disabled={saved}
+          >
             <View style={[styles.checkbox, followUp && styles.checkboxActive]}>
               {followUp ? <Feather name="check" size={12} color={colors.white} /> : null}
             </View>
@@ -126,12 +143,14 @@ export default function LogVisitScreen() {
           <Pressable
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             testID={testIds.logVisit.save}
-            onPress={onSave}
+            onPress={() => void onSave()}
             disabled={!canSave}
           >
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Visit'}</Text>
+            <Text style={styles.saveButtonText}>
+              {saved ? 'Saved' : saving ? 'Saving...' : 'Save Visit'}
+            </Text>
           </Pressable>
-          {!canSave && !saving ? (
+          {!canSave && !saving && !saved ? (
             <Text style={styles.helper}>Sign in and select a valid member before saving.</Text>
           ) : null}
         </>

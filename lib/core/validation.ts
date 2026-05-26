@@ -44,3 +44,25 @@ export function validateVisitLog(values: { memberPresent: boolean; userPresent: 
   if (!values.memberPresent) return 'Select a valid member to log a visit.';
   return undefined;
 }
+
+export function validateOptionalEmail(email: string): string | undefined {
+  const trimmed = email.trim();
+  if (!trimmed) return undefined;
+  return validateEmail(trimmed);
+}
+
+export function validateOptionalPhone(phone: string): string | undefined {
+  const trimmed = phone.trim();
+  if (!trimmed) return undefined;
+  if (!/^[\d\s+\-().]{7,20}$/.test(trimmed)) return 'Enter a valid phone number.';
+  return undefined;
+}
+
+export function validateDueDate(dueDate: string): string | undefined {
+  const trimmed = dueDate.trim();
+  if (!trimmed) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return 'Use YYYY-MM-DD format.';
+  const parsed = new Date(`${trimmed}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return 'Enter a valid due date.';
+  return undefined;
+}
