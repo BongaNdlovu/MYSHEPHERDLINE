@@ -34,6 +34,7 @@ create policy "Members readable by assignee or admin"
     or public.is_admin()
   );
 
+drop policy if exists "Members insertable by authenticated users" on public.members;
 create policy "Members insertable by authenticated users"
   on public.members for insert to authenticated
   with check (
@@ -42,6 +43,7 @@ create policy "Members insertable by authenticated users"
     or public.is_admin()
   );
 
+drop policy if exists "Members updatable by assignee or admin" on public.members;
 create policy "Members updatable by assignee or admin"
   on public.members for update to authenticated
   using (
@@ -55,6 +57,7 @@ create policy "Members updatable by assignee or admin"
     or public.is_admin()
   );
 
+drop policy if exists "Members deletable by admin" on public.members;
 create policy "Members deletable by admin"
   on public.members for delete to authenticated
   using (public.is_admin());
@@ -70,6 +73,7 @@ create policy "Tasks readable by assignee or admin"
     or public.is_admin()
   );
 
+drop policy if exists "Tasks insertable by authenticated users" on public.tasks;
 create policy "Tasks insertable by authenticated users"
   on public.tasks for insert to authenticated
   with check (
@@ -78,6 +82,7 @@ create policy "Tasks insertable by authenticated users"
     or public.is_admin()
   );
 
+drop policy if exists "Tasks updatable by assignee or admin" on public.tasks;
 create policy "Tasks updatable by assignee or admin"
   on public.tasks for update to authenticated
   using (
@@ -91,6 +96,7 @@ create policy "Tasks updatable by assignee or admin"
     or public.is_admin()
   );
 
+drop policy if exists "Tasks deletable by admin" on public.tasks;
 create policy "Tasks deletable by admin"
   on public.tasks for delete to authenticated
   using (public.is_admin());
