@@ -23,6 +23,12 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('using (user_id = auth.uid())');
   });
 
+  it('includes admin profile access controls', () => {
+    expect(schema).toContain('is_active boolean not null default true');
+    expect(schema).toContain('Admins can update any profile');
+    expect(schema).toContain('enforce_profile_update');
+  });
+
   it('scopes read access by role and assignment', () => {
     expect(schema).toContain('create or replace function public.is_admin()');
     expect(schema).toContain('Profiles readable by self or admin');

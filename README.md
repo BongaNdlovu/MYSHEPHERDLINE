@@ -69,7 +69,8 @@ npm.cmd run test:e2e
 
 - App fails fast when Supabase env vars are missing (no placeholder client in production mode).
 - Supabase auth sessions persist via `expo-secure-store` on native (chunked for large payloads) and `localStorage` on web.
-- RLS read policies scope profiles, members, visits, and tasks by role/assignment; apply `supabase/schema.sql` or `supabase/fix-rls-security.sql` on existing projects.
+- RLS read policies scope profiles, members, visits, and tasks by role/assignment; apply `supabase/schema.sql` or `supabase/fix-rls-security.sql` on existing projects, then `supabase/admin-access.sql` for admin-managed access.
+- Admin Center is gated by `profile.role = admin` and the primary admin email (`lib/core/admin.ts`). Set credentials only in Supabase Auth — never in app code or SQL.
 - Worker `/notifications/send-digest` requires admin auth or `X-Cron-Secret`; sensitive actions emit structured audit logs with `X-Request-Id`.
 - Worker rate limiting uses in-memory buckets in dev; bind a Cloudflare KV namespace as `RATE_LIMIT` for production.
 - Worker reports are role-scoped for shepherds.
@@ -87,7 +88,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/README.md](docs/README.md). Qui
 | Path | Purpose |
 | --- | --- |
 | `app/` | Expo Router URLs - thin re-exports only |
-| `features/` | Business features (auth, account, home, members, tasks, reports, visits, legal) |
+| `features/` | Business features (auth, account, home, members, tasks, reports, visits, legal, admin) |
 | `lib/core/` | Env, Supabase, auth session, API, toast |
 | `lib/app-shell/` | Shell behavior (auth redirect gate) |
 | `components/ui/` | Shared UI primitives |

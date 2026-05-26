@@ -22,6 +22,7 @@ features/
   reports/                Reports screen, summary hook, report selectors
   visits/                 Log-visit flow and visit mutations
   legal/                  Privacy and terms screens
+  admin/                  Admin control center (users, members, tasks, ops)
 components/ui/            Shared UI primitives (Card, FormField, QueryStateView, ...)
 lib/core/                 Env, Supabase client, auth session, API, toast, notifications
 lib/app-shell/            Shell-level behavior (auth redirect gate)
@@ -83,6 +84,7 @@ Expo Router requires route files to stay under `app/`. Shell route files should 
 | Reusable button/card/input | `components/ui/` |
 | Env, Supabase, auth session, API | `lib/core/` |
 | Shell redirect/navigation glue | `lib/app-shell/` |
+| Admin authorization helpers | `lib/core/admin.ts` |
 | Database row types | `types/database.ts` |
 | Worker endpoint logic | `worker/src/` |
 
@@ -143,6 +145,29 @@ Escalation rules:
 
 Report fetching tries the Worker first and falls back to local Supabase aggregation. When the Worker is configured but unreachable, `useReportSummary()` sets `workerUnavailable: true` and the reports screen shows a notice while displaying local fallback data.
 
+## Admin control center
+
+Operational management lives in `features/admin/` with thin routes under `app/admin/`.
+
+| Flow | Path |
+| --- | --- |
+| Entry (admins only) | More tab → **Admin Center** |
+| Guard | `profile.role === 'admin'` **and** email matches `PRIMARY_ADMIN_EMAIL` in `lib/core/admin.ts` |
+| Unauthorized | Direct `/admin/*` navigation → `/admin/unauthorized` |
+
+Modules:
+
+- **Users & Roles** — list profiles, promote/demote role, activate/deactivate (`profiles.is_active`)
+- **Members** — create, edit, delete via `members.service` mutations
+- **Tasks** — create, edit, delete via `tasks.service` mutations
+- **Reports & Ops** — org summary + Worker health (no secrets in app)
+- **App Controls** — legal links and operator references
+
+Access model:
+
+- Public landing no longer promotes open self-service sign-up; `/sign-up` explains admin-provisioned accounts.
+- New auth users still get a `profiles` row from `handle_new_user`, but role/access changes require an admin.
+- Apply `supabase/admin-access.sql` on existing projects for `is_active`, admin profile updates, and primary admin promotion.
 
 ## Security
 

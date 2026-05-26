@@ -7,13 +7,13 @@ import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
+import { useAdminAccess } from '@/features/admin';
 import { useMember } from '@/features/members';
-import { useToast } from '@/lib/core/toast';
 
 export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, loading, error, refresh } = useMember(id);
-  const { showToast } = useToast();
+  const { isAdmin } = useAdminAccess();
 
   if (loading || error || !member) {
     return (
@@ -38,7 +38,10 @@ export default function MemberProfileScreen() {
         </Pressable>
         <Pressable
           style={[styles.iconButton, styles.editButton]}
-          onPress={() => showToast('Profile updates will sync to Supabase in a future release.')}
+          onPress={() => {
+            if (isAdmin) router.push(`/admin/members/${member.id}`);
+          }}
+          disabled={!isAdmin}
         >
           <Feather name="edit-2" size={16} color={colors.white} />
         </Pressable>

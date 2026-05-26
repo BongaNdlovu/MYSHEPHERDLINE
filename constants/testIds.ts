@@ -2,7 +2,7 @@ export const testIds = {
   landing: {
     title: 'landing-title',
     signIn: 'landing-sign-in',
-    signUp: 'landing-sign-up',
+    accessNote: 'landing-access-note',
     privacy: 'landing-privacy',
   },
   auth: {
@@ -10,7 +10,7 @@ export const testIds = {
     password: 'auth-password',
     displayName: 'auth-display-name',
     signInButton: 'auth-sign-in-button',
-    signUpButton: 'auth-sign-up-button',
+    signUpRestricted: 'auth-sign-up-restricted',
   },
   tabs: {
     home: 'tab-home',
@@ -51,6 +51,29 @@ export const testIds = {
     screen: 'more-screen',
     signOut: 'more-sign-out',
     privacy: 'more-privacy',
+  },
+  admin: {
+    entry: 'admin-entry',
+    center: 'admin-center',
+    unauthorized: 'admin-unauthorized',
+    menu: (id: string) => `admin-menu-${id}`,
+    users: { screen: 'admin-users-screen' },
+    members: {
+      screen: 'admin-members-screen',
+      add: 'admin-members-add',
+      form: 'admin-member-form',
+      save: 'admin-member-save',
+      item: (id: string) => `admin-member-${id}`,
+    },
+    tasks: {
+      screen: 'admin-tasks-screen',
+      add: 'admin-tasks-add',
+      form: 'admin-task-form',
+      save: 'admin-task-save',
+      item: (id: string) => `admin-task-${id}`,
+    },
+    reports: { screen: 'admin-reports-screen' },
+    controls: { screen: 'admin-controls-screen' },
   },
   toast: 'app-toast',
 } as const;

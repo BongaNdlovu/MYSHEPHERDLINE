@@ -3,20 +3,12 @@ appId: ${E2E_APP_ID}
 - launchApp:
     clearState: true
 - tapOn:
-    id: landing-sign-up
+    id: landing-sign-in
 - tapOn:
-    id: auth-display-name
-- inputText: E2E Shepherd
+    text: Request access
+- assertVisible:
+    id: auth-sign-up-restricted
 - tapOn:
-    id: auth-email
-- inputText: ${E2E_NEW_EMAIL}
-- tapOn:
-    id: auth-password
-- inputText: ${E2E_PASSWORD}
-- hideKeyboard
-- tapOn:
-    id: auth-sign-up-button
-- extendedWaitUntil:
-    visible:
-      id: app-toast
-    timeout: 20000
+    text: Back to Sign In
+- assertVisible:
+    id: auth-sign-in-button

@@ -49,6 +49,7 @@ export default function RootLayout() {
             <Stack.Screen name="log-visit/[memberId]" />
             <Stack.Screen name="legal/privacy" />
             <Stack.Screen name="legal/terms" />
+            <Stack.Screen name="admin" />
           </Stack>
           <ToastSnackbar />
         </View>

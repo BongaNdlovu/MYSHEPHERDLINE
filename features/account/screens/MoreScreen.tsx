@@ -7,14 +7,33 @@ import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
+import { useAdminAccess } from '@/features/admin';
 import { useAuth } from '@/lib/core/auth';
 
 export default function MoreScreen() {
   const { signOut } = useAuth();
+  const { isAdmin } = useAdminAccess();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.more.screen}>
       <AppHeader title="More" subtitle="Quick actions, privacy, and account" />
+
+      {isAdmin ? (
+        <Card title="Administration">
+          <Pressable
+            style={styles.shortcut}
+            testID={testIds.admin.entry}
+            onPress={() => router.push('/admin')}
+          >
+            <Feather name="settings" size={18} color={colors.primary} />
+            <View style={styles.shortcutBody}>
+              <Text style={styles.shortcutText}>Admin Center</Text>
+              <Text style={styles.shortcutSub}>Users, members, tasks, and operations</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Pressable>
+        </Card>
+      ) : null}
 
       <View style={styles.grid}>
         {accountQuickActions.map((action) => (
@@ -76,7 +95,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
-  shortcutText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primary },
+  shortcutBody: { flex: 1 },
+  shortcutText: { fontSize: 15, fontWeight: '600', color: colors.primary },
+  shortcutSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   footer: {
     color: colors.textMuted,
     fontSize: 12,

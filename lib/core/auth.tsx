@@ -7,6 +7,7 @@ import { fromAuthError } from '@/lib/core/errors';
 import { registerForPushNotifications } from '@/lib/core/notifications';
 import { SUPABASE_AUTH_STORAGE_KEY, supabaseAuthStorage } from '@/lib/core/supabase-storage';
 import { requireSupabase } from '@/lib/core/supabase';
+import { isProfileActive } from '@/lib/core/admin';
 import type { Profile } from '@/types/database';
 
 type AuthContextValue = {
@@ -39,7 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    setProfile(await fetchProfile(session.user.id));
+    const next = await fetchProfile(session.user.id);
+    if (next && !isProfileActive(next)) {
+      const supabase = requireSupabase();
+      await supabase.auth.signOut();
+      await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+      setProfile(null);
+      return;
+    }
+    setProfile(next);
   }, [session?.user?.id]);
 
   useEffect(() => {

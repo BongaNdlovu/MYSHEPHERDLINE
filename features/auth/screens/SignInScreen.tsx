@@ -91,7 +91,7 @@ export default function SignInScreen() {
 
         <Link href="/sign-up" asChild>
           <Pressable>
-            <Text style={styles.link}>Need an account? Sign up</Text>
+            <Text style={styles.link}>Need an account? Request access</Text>
           </Pressable>
         </Link>
       </ScrollView>

@@ -32,7 +32,7 @@ npm.cmd install
 ## Where code lives
 
 - **Routes:** `app/` (thin re-exports only)
-- **Business features:** `features/` (auth, account, home, members, tasks, reports, visits, legal)
+- **Business features:** `features/` (auth, account, home, members, tasks, reports, visits, legal, admin)
 - **App shell:** `lib/app-shell/` (auth redirect), `app/_layout.tsx`, `app/(tabs)/_layout.tsx`
 - **Shared infra:** `lib/core/` (env, Supabase, auth session, API, toast, errors, validation)
 - **Shared UI:** `components/ui/`
@@ -63,7 +63,7 @@ On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win` —
 
 See [security/production-hardening.md](security/production-hardening.md) for the full production sign-off list. Summary:
 
-1. **New Supabase project:** apply `supabase/schema.sql`. **Existing project:** apply `supabase/fix-rls-security.sql`.
+1. **New Supabase project:** apply `supabase/schema.sql`. **Existing project:** apply `supabase/fix-rls-security.sql`, then `supabase/admin-access.sql`.
 2. Set `.env` from `.env.example` (Supabase URL and publishable key; optional Worker URL).
 3. Deploy Worker secrets, optional KV rate-limit namespace, and run `npm run deploy --workspace myshepherdline-worker`.
 4. Run `npm.cmd run verify` (or `verify:win` on Windows if needed).

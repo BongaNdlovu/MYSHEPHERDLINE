@@ -42,11 +42,9 @@ export default function LandingScreen() {
             <Text style={styles.primaryButtonText}>Sign In</Text>
           </Pressable>
         </Link>
-        <Link href="/sign-up" asChild>
-          <Pressable style={styles.secondaryButton} testID={testIds.landing.signUp}>
-            <Text style={styles.secondaryButtonText}>Create Account</Text>
-          </Pressable>
-        </Link>
+        <Text style={styles.accessNote} testID={testIds.landing.accessNote}>
+          Access is managed by your congregation administrator. Contact them if you need an account.
+        </Text>
         <Link href="/legal/privacy" asChild>
           <Pressable testID={testIds.landing.privacy}>
             <Text style={styles.legalLink}>Privacy Policy</Text>
@@ -117,6 +115,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.25)',
     marginBottom: spacing.md,
   },
-  secondaryButtonText: { color: colors.white, fontWeight: '600', fontSize: 15 },
+  accessNote: {
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
   legalLink: { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontWeight: '600' },
 });

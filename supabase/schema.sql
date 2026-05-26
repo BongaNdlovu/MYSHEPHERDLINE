@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   email text not null,
   display_name text not null,
   role text not null default 'shepherd' check (role in ('shepherd', 'admin')),
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -96,6 +97,12 @@ create policy "Profiles readable by self or admin"
 drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update to authenticated using (auth.uid() = id);
+
+drop policy if exists "Admins can update any profile" on public.profiles;
+create policy "Admins can update any profile"
+  on public.profiles for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 drop policy if exists "Users can insert own profile" on public.profiles;
 create policy "Users can insert own profile"
@@ -260,6 +267,34 @@ $$;
 
 revoke all on function public.handle_new_user() from public;
 revoke all on function public.handle_new_user() from anon, authenticated;
+
+create or replace function public.enforce_profile_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() = new.id and not public.is_admin() then
+    if new.role is distinct from old.role then
+      raise exception 'Cannot change role';
+    end if;
+    if new.is_active is distinct from old.is_active then
+      raise exception 'Cannot change access status';
+    end if;
+  end if;
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_profile_update() from public;
+revoke all on function public.enforce_profile_update() from anon, authenticated;
+
+drop trigger if exists enforce_profile_update on public.profiles;
+create trigger enforce_profile_update
+  before update on public.profiles
+  for each row execute function public.enforce_profile_update();
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

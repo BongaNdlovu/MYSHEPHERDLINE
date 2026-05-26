@@ -3,5 +3,12 @@ export { default as MemberProfileScreen } from './screens/MemberProfileScreen';
 export { MemberListItem } from './components/MemberListItem';
 export { FilterChips } from './components/FilterChips';
 export { useMembers, useMember } from './hooks/useMembers';
-export { fetchMembers, fetchMemberById } from './services/members.service';
+export {
+  fetchMembers,
+  fetchMemberById,
+  createMember,
+  updateMember,
+  deleteMember,
+  type MemberInput,
+} from './services/members.service';
 export { filterMembers, membersNeedingAttention, type MemberFilter } from './selectors/members';
