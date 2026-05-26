@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 type ToastContextValue = {
   message: string | null;
@@ -6,13 +15,25 @@ type ToastContextValue = {
 };
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+const TOAST_DURATION_MS = 2200;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const showToast = useCallback((nextMessage: string) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setMessage(nextMessage);
-    setTimeout(() => setMessage(null), 2200);
+    timeoutRef.current = setTimeout(() => {
+      setMessage(null);
+      timeoutRef.current = null;
+    }, TOAST_DURATION_MS);
   }, []);
 
   const value = useMemo(() => ({ message, showToast }), [message, showToast]);

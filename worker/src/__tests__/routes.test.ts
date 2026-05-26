@@ -54,6 +54,11 @@ describe('worker routes', () => {
     expect(response.status).toBe(200);
   });
 
+  it('returns health for HEAD without auth', async () => {
+    const response = await worker.fetch(new Request('https://worker.test/health', { method: 'HEAD' }), env);
+    expect(response.status).toBe(200);
+  });
+
   it('rejects unauthenticated report requests', async () => {
     authMocks.resolveAuth.mockResolvedValue({ status: 'unauthorized' });
     const response = await worker.fetch(new Request('https://worker.test/reports/summary'), env);

@@ -105,22 +105,26 @@ export async function createMember(input: MemberInput): Promise<Member> {
   return data as Member;
 }
 
-export async function updateMember(id: string, input: MemberInput): Promise<Member> {
-  const assignedTo = requireAssigneeId(input.assigned_to, 'member');
+export async function updateMember(id: string, input: Partial<MemberInput>): Promise<Member> {
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.full_name !== undefined) patch.full_name = input.full_name.trim();
+  if (input.phone !== undefined) patch.phone = input.phone?.trim() || null;
+  if (input.email !== undefined) patch.email = input.email?.trim() || null;
+  if (input.address !== undefined) patch.address = input.address?.trim() || null;
+  if (input.risk_level !== undefined) patch.risk_level = input.risk_level;
+  if (input.status !== undefined) patch.status = input.status;
+  if (input.notes !== undefined) patch.notes = input.notes?.trim() || null;
+  if (input.assigned_to !== undefined) {
+    patch.assigned_to = requireAssigneeId(input.assigned_to, 'member');
+  }
+
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('members')
-    .update({
-      full_name: input.full_name.trim(),
-      phone: input.phone?.trim() || null,
-      email: input.email?.trim() || null,
-      address: input.address?.trim() || null,
-      risk_level: input.risk_level,
-      status: input.status,
-      notes: input.notes?.trim() || null,
-      assigned_to: assignedTo,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', id)
     .select(MEMBER_DETAIL_COLUMNS)
     .single();

@@ -15,6 +15,10 @@ export function validateWorkerEnv(env: WorkerEnv) {
 }
 
 export function getRecentActivityDays(env: WorkerEnv) {
-  const parsed = Number(env.RECENT_ACTIVITY_DAYS ?? '7');
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+  const raw = env.RECENT_ACTIVITY_DAYS?.trim();
+  if (!raw) return 7;
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return 7;
+  return parsed;
 }

@@ -454,7 +454,10 @@ security definer
 set search_path = public
 as $$
 declare
-  v_since timestamptz := now() - make_interval(days => greatest(p_recent_days, 1));
+  v_since timestamptz := case
+    when coalesce(p_recent_days, 7) <= 0 then date_trunc('day', now())
+    else now() - make_interval(days => p_recent_days)
+  end;
   v_global boolean := p_role in ('admin', 'owner');
   v_members_needing int;
   v_visits_completed int;
@@ -514,13 +517,14 @@ begin
   from public.members m
   where m.organization_id = p_organization_id
     and m.status = 'new'
+    and m.created_at >= v_since
     and (v_global or m.assigned_to = p_user_id);
 
   return jsonb_build_object(
     'membersNeedingAttention', v_members_needing,
     'visitsCompleted', v_visits_completed,
     'tasksOpen', v_tasks_open,
-    'recentActivityDays', p_recent_days,
+    'recentActivityDays', coalesce(p_recent_days, 7),
     'visitBreakdown', jsonb_build_object(
       'visits', v_visits,
       'calls', v_calls,

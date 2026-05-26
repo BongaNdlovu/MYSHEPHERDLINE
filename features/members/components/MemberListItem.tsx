@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/constants/theme';
+import { getInitials } from '@/lib/core/names';
 import type { MemberListRow, RiskLevel } from '@/types/database';
 
 type MemberListItemProps = {
@@ -23,12 +24,7 @@ const riskStyles: Record<RiskLevel, { bg: string; color: string }> = {
 
 export function MemberListItem({ member, onPress, testID }: MemberListItemProps) {
   const risk = riskStyles[member.risk_level];
-  const initials = member.full_name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(member.full_name);
 
   return (
     <Pressable style={styles.item} onPress={onPress} testID={testID} accessibilityLabel={member.full_name}>

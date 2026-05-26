@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, gradients, radii, spacing } from '@/constants/theme';
 
 type AppHeaderProps = {
   title: string;
@@ -11,7 +11,6 @@ type AppHeaderProps = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  onFilterPress?: () => void;
   searchTestID?: string;
 };
 
@@ -21,12 +20,11 @@ export function AppHeader({
   rightIcon,
   searchValue,
   onSearchChange,
-  searchPlaceholder = 'Search members...',
-  onFilterPress,
+  searchPlaceholder = 'Search...',
   searchTestID,
 }: AppHeaderProps) {
   return (
-    <LinearGradient colors={['#14532d', '#166534', '#15803d']} style={styles.header}>
+    <LinearGradient colors={[...gradients.header]} style={styles.header}>
       <View style={styles.topRow}>
         <View style={styles.titleWrap}>
           <Text style={styles.title}>{title}</Text>

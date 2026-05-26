@@ -20,6 +20,12 @@ async function getChunkedItem(key: string): Promise<string | null> {
   return chunks.join('');
 }
 
+async function deleteChunkKeys(key: string, chunkCount: number) {
+  for (let index = 0; index < chunkCount; index += 1) {
+    await SecureStore.deleteItemAsync(`${key}_chunk_${index}`).catch(() => undefined);
+  }
+}
+
 async function setChunkedItem(key: string, value: string): Promise<void> {
   if (value.length <= CHUNK_SIZE) {
     await removeChunkedItem(key);
@@ -27,12 +33,22 @@ async function setChunkedItem(key: string, value: string): Promise<void> {
     return;
   }
 
-  await SecureStore.deleteItemAsync(key).catch(() => undefined);
+  const previousChunkCountRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
+  const previousChunkCount = Number(previousChunkCountRaw);
   const chunkCount = Math.ceil(value.length / CHUNK_SIZE);
-  await SecureStore.setItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`, String(chunkCount));
+
+  await SecureStore.deleteItemAsync(key).catch(() => undefined);
+  await SecureStore.deleteItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`).catch(() => undefined);
+
   for (let index = 0; index < chunkCount; index += 1) {
     const chunk = value.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
     await SecureStore.setItemAsync(`${key}_chunk_${index}`, chunk);
+  }
+
+  await SecureStore.setItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`, String(chunkCount));
+
+  if (Number.isFinite(previousChunkCount) && previousChunkCount > chunkCount) {
+    await deleteChunkKeys(key, previousChunkCount);
   }
 }
 
@@ -41,9 +57,7 @@ async function removeChunkedItem(key: string): Promise<void> {
   if (chunkCountRaw) {
     const chunkCount = Number(chunkCountRaw);
     if (Number.isFinite(chunkCount) && chunkCount > 0) {
-      for (let index = 0; index < chunkCount; index += 1) {
-        await SecureStore.deleteItemAsync(`${key}_chunk_${index}`).catch(() => undefined);
-      }
+      await deleteChunkKeys(key, chunkCount);
     }
     await SecureStore.deleteItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`).catch(() => undefined);
   }

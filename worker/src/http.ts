@@ -1,4 +1,5 @@
 import type { WorkerEnv } from './env';
+import { safeStringify } from './safe-json';
 
 export function corsHeaders(request: Request, env: WorkerEnv) {
   const origin = request.headers.get('Origin');
@@ -11,7 +12,7 @@ export function corsHeaders(request: Request, env: WorkerEnv) {
     origin && allowed.includes(origin) ? origin : allowed.length === 1 ? allowed[0] : null;
 
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Cron-Secret',
   };
 
@@ -27,7 +28,7 @@ export function json(
   status = 200,
   extraHeaders: Record<string, string> = {},
 ) {
-  return new Response(JSON.stringify(data), {
+  return new Response(safeStringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json',

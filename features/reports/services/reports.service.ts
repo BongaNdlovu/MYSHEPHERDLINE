@@ -17,7 +17,7 @@ export async function fetchLocalReportInputs(recentDays = 7) {
   const since = new Date();
   since.setDate(since.getDate() - recentDays);
 
-  const memberCols = 'id, risk_level, status, assigned_to';
+  const memberCols = 'id, risk_level, status, assigned_to, created_at';
   const visitCols = 'visit_type, visited_at, logged_by, member_id';
   const taskCols = 'status, assignee_id';
 

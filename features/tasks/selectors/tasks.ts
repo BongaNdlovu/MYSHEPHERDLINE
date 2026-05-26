@@ -6,11 +6,39 @@ export function toDateKey(value: Date = new Date()) {
   return value.toISOString().slice(0, 10);
 }
 
+export function normalizeDueDateKey(dueDate: string | null | undefined) {
+  if (!dueDate) return null;
+  return dueDate.slice(0, 10);
+}
+
+export function formatTaskDueDate(dueDate: string | null | undefined) {
+  const key = normalizeDueDateKey(dueDate);
+  if (!key) return null;
+
+  const parsed = new Date(`${key}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return key;
+  return parsed.toLocaleDateString();
+}
+
 export function groupTasksByDueDate(tasks: TaskLike[], todayKey = toDateKey()) {
   const openTasks = tasks.filter((task) => task.status === 'open');
-  const today = openTasks.filter((task) => task.due_date === todayKey);
-  const upcoming = openTasks.filter((task) => task.due_date !== todayKey);
-  return { today, upcoming, openTasks };
+  const today: TaskLike[] = [];
+  const overdue: TaskLike[] = [];
+  const upcoming: TaskLike[] = [];
+  const unscheduled: TaskLike[] = [];
+
+  for (const task of openTasks) {
+    const dueKey = normalizeDueDateKey(task.due_date);
+    if (!dueKey) {
+      unscheduled.push(task);
+      continue;
+    }
+    if (dueKey === todayKey) today.push(task);
+    else if (dueKey < todayKey) overdue.push(task);
+    else upcoming.push(task);
+  }
+
+  return { today, overdue, upcoming, unscheduled, openTasks };
 }
 
 export function buildWeekDayStrip(reference = new Date()) {

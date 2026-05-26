@@ -44,6 +44,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
       setError(toAppError(err, 'Unable to load tasks.'));
       if (!append) setData([]);
       setHasMore(false);
+      throw err;
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -61,7 +62,8 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
 
   const toggleTask = useCallback(
     async (task: TaskListRow) => {
-      const nextStatus = task.status === 'completed' ? 'open' : 'completed';
+      const previousStatus = task.status;
+      const nextStatus = previousStatus === 'completed' ? 'open' : 'completed';
       setData((current) =>
         current.map((item) => (item.id === task.id ? { ...item, status: nextStatus } : item)),
       );
@@ -69,7 +71,15 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
         await updateTaskStatus(task.id, nextStatus);
         return null;
       } catch (err) {
-        await refresh();
+        try {
+          await refresh();
+        } catch {
+          setData((current) =>
+            current.map((item) =>
+              item.id === task.id ? { ...item, status: previousStatus } : item,
+            ),
+          );
+        }
         return toAppError(err, 'Unable to update task.');
       }
     },

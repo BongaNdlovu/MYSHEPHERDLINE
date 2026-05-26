@@ -1,3 +1,5 @@
+import { safeLogPayload } from './safe-json';
+
 export type RequestContext = {
   requestId: string;
   method: string;
@@ -18,7 +20,7 @@ export function logAudit(
   details: Record<string, unknown> = {},
 ) {
   console.log(
-    JSON.stringify({
+    safeLogPayload({
       level: 'audit',
       event,
       requestId: context.requestId,
@@ -41,7 +43,7 @@ export function logRouteTiming(
   },
 ) {
   console.log(
-    JSON.stringify({
+    safeLogPayload({
       level: 'info',
       event: 'route_timing',
       requestId: context.requestId,

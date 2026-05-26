@@ -12,3 +12,6 @@ id = "e23495d886034bc191af036d76129197"
 preview_id = "1e740872c43a457aadb6b15cee15f513"
 
 # Set via wrangler secret put DIGEST_CRON_SECRET
+
+[triggers]
+crons = ["0 8 * * *"]

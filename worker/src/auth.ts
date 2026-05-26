@@ -23,17 +23,27 @@ export function createServiceClient(env: WorkerEnv): SupabaseClient {
   });
 }
 
-function normalizeRole(role: string | null | undefined): UserRole {
-  if (role === 'owner') return 'owner';
-  if (role === 'admin') return 'admin';
-  return 'shepherd';
+export function normalizeRole(role: string | null | undefined): UserRole | null {
+  const normalized = role?.trim().toLowerCase();
+  if (normalized === 'owner') return 'owner';
+  if (normalized === 'admin') return 'admin';
+  if (normalized === 'shepherd') return 'shepherd';
+  return null;
+}
+
+function parseBearerToken(request: Request): string | null {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) return null;
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const token = match[1].trim();
+  return token || null;
 }
 
 export async function resolveAuth(request: Request, env: WorkerEnv): Promise<AuthResolution> {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return { status: 'unauthorized' };
-
-  const token = authHeader.slice('Bearer '.length).trim();
+  const token = parseBearerToken(request);
   if (!token) return { status: 'unauthorized' };
 
   const supabase = createServiceClient(env);
@@ -46,19 +56,24 @@ export async function resolveAuth(request: Request, env: WorkerEnv): Promise<Aut
     .eq('id', data.user.id)
     .maybeSingle();
 
-  if (profile?.is_active === false) {
+  if (!profile || profile.is_active !== true) {
     return { status: 'inactive', userId: data.user.id };
   }
 
-  if (!profile?.organization_id) {
+  if (!profile.organization_id) {
+    return { status: 'unauthorized' };
+  }
+
+  const role = normalizeRole(profile.role);
+  if (!role) {
     return { status: 'unauthorized' };
   }
 
   return {
     userId: data.user.id,
     organizationId: profile.organization_id,
-    role: normalizeRole(profile?.role),
-    email: profile?.email ?? data.user.email ?? '',
+    role,
+    email: profile.email ?? data.user.email ?? '',
     isActive: true,
   };
 }

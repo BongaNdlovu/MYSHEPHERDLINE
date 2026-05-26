@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { formatTaskDueDate } from '@/features/tasks/selectors/tasks';
 import { colors, spacing } from '@/constants/theme';
 import type { TaskListRow } from '@/types/database';
 
@@ -22,6 +23,7 @@ const iconMap: Record<string, React.ComponentProps<typeof FontAwesome>['name']> 
 export function TaskItem({ task, onToggle, toggleTestID }: TaskItemProps) {
   const completed = task.status === 'completed';
   const iconName = iconMap[task.task_type ?? 'other'] ?? 'check';
+  const formattedDueDate = formatTaskDueDate(task.due_date);
 
   return (
     <View style={styles.item} testID={`task-item-${task.id}`}>
@@ -29,9 +31,9 @@ export function TaskItem({ task, onToggle, toggleTestID }: TaskItemProps) {
         <FontAwesome name={iconName} size={16} color={colors.info} />
       </View>
       <View style={styles.info}>
-        <Text style={styles.name}>{task.title}</Text>
+        <Text style={[styles.name, completed && styles.completedName]}>{task.title}</Text>
         <Text style={styles.status}>
-          {completed ? 'Completed' : task.due_date ? `Due ${task.due_date}` : 'Open'}
+          {completed ? 'Completed' : formattedDueDate ? `Due ${formattedDueDate}` : 'Open'}
         </Text>
       </View>
       <Pressable

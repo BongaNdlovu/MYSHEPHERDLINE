@@ -1,5 +1,14 @@
 import { Session, User } from '@supabase/supabase-js';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { envValidation } from '@/lib/core/env';
 import type { AppError } from '@/lib/core/errors';
@@ -37,22 +46,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef<Session | null>(null);
+  sessionRef.current = session;
 
   const refreshProfile = useCallback(async () => {
-    if (!session?.user?.id) {
+    const userId = sessionRef.current?.user?.id;
+    if (!userId) {
       setProfile(null);
       return;
     }
-    const next = await fetchProfile(session.user.id);
-    if (next && !isProfileActive(next)) {
-      const supabase = requireSupabase();
-      await supabase.auth.signOut();
-      await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+
+    try {
+      const next = await fetchProfile(userId);
+      if (next && !isProfileActive(next)) {
+        const supabase = requireSupabase();
+        await supabase.auth.signOut();
+        await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+        setProfile(null);
+        return;
+      }
+      setProfile(next);
+    } catch {
       setProfile(null);
-      return;
     }
-    setProfile(next);
-  }, [session?.user?.id]);
+  }, []);
 
   useEffect(() => {
     if (!envValidation.ok) {
@@ -60,17 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let active = true;
     const supabase = requireSupabase();
-    supabase.auth.getSession().then(({ data }) => {
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
       setSession(data.session);
       setLoading(false);
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
       setSession(nextSession);
+      setLoading(false);
     });
 
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -79,9 +104,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void refreshProfile();
-    void registerForPushNotifications(session.access_token);
+    void refreshProfile().catch(() => undefined);
+    void registerForPushNotifications(session.access_token).catch(() => null);
   }, [session?.user?.id, session?.access_token, refreshProfile]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const supabase = requireSupabase();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: fromAuthError(error) };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const supabase = requireSupabase();
+    await supabase.auth.signOut();
+    await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+    setProfile(null);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -90,19 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       refreshProfile,
-      signIn: async (email, password) => {
-        const supabase = requireSupabase();
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error: fromAuthError(error) };
-      },
-      signOut: async () => {
-        const supabase = requireSupabase();
-        await supabase.auth.signOut();
-        await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
-        setProfile(null);
-      },
+      signIn,
+      signOut,
     }),
-    [session, profile, loading, refreshProfile],
+    [session, profile, loading, refreshProfile, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

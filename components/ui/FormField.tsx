@@ -13,10 +13,10 @@ export function FormField({ label, style, fieldTestId, error, ...props }: FormFi
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        testID={fieldTestId}
         placeholderTextColor={colors.textMuted}
         style={[styles.input, error ? styles.inputError : null, style]}
         {...props}
+        testID={fieldTestId ?? props.testID}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>

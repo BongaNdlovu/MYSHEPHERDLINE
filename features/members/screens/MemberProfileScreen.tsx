@@ -6,9 +6,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, gradients, radii, spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin';
 import { useMember } from '@/features/members';
+import { getInitials } from '@/lib/core/names';
 
 export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,16 +24,11 @@ export default function MemberProfileScreen() {
     );
   }
 
-  const initials = member.full_name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(member.full_name);
 
   return (
     <ScrollView style={styles.screen} testID={testIds.memberProfile.screen}>
-      <LinearGradient colors={['#14532d', '#166534', '#15803d']} style={styles.header}>
+      <LinearGradient colors={[...gradients.profile]} style={styles.header}>
         <Pressable style={styles.iconButton} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color={colors.white} />
         </Pressable>

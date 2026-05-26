@@ -26,6 +26,12 @@ export const colors = {
   white: '#ffffff',
 } as const;
 
+export const gradients = {
+  header: [colors.primary, colors.primarySoft, '#15803d'] as const,
+  landing: [colors.primary, colors.primarySoft, colors.primaryLight] as const,
+  profile: [colors.primary, colors.primarySoft, '#15803d'] as const,
+} as const;
+
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -40,6 +46,7 @@ export const radii = {
   md: 14,
   lg: 16,
   xl: 20,
+  /** Matches xl visually today; kept for semantic chip/button usage. */
   pill: 20,
   round: 999,
 } as const;

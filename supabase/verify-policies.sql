@@ -68,6 +68,14 @@ select tablename, policyname, qual
 from pg_policies
 where schemaname = 'public'
   and tablename = 'visits'
-  and policyname = 'Visits readable by logger assignee or admin'
+  and policyname = 'Visits readable in tenant'
   and qual not like '%logged_by = auth.uid()%';
 -- Expect 0 rows
+
+-- 8. Confirm report RPC counts recent new converts only
+select pg_get_functiondef(p.oid) as definition
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname = 'worker_report_summary';
+-- Inspect definition includes "m.created_at >= v_since"

@@ -9,6 +9,13 @@ type RegisterPayload = {
   deviceName?: unknown;
 };
 
+export type PushDeliveryResult = {
+  requested: number;
+  sent: number;
+  failed: number;
+  batches: number;
+};
+
 export type DigestSendResult =
   | { sent: number; organizations: number; results: DigestOrgResult[] }
   | { error: string };
@@ -17,8 +24,16 @@ export type DigestOrgResult = {
   organizationId: string;
   tokenCount: number;
   summary: ReportSummary;
-  pushResult?: unknown;
+  pushDelivery?: PushDeliveryResult;
+  pushError?: string;
 };
+
+export type RegisterTokenResult =
+  | { ok: true }
+  | { error: string; status: 403 | 409 | 500 };
+
+const EXPO_PUSH_CHUNK_SIZE = 100;
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 export function parseRegisterPayload(body: unknown): { expoPushToken: string; deviceName: string | null } | { error: string } {
   if (!body || typeof body !== 'object') return { error: 'Invalid JSON body' };
@@ -36,12 +51,23 @@ export function parseRegisterPayload(body: unknown): { expoPushToken: string; de
   return { expoPushToken: payload.expoPushToken.trim(), deviceName };
 }
 
+function mapRegisterError(message: string): RegisterTokenResult {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('duplicate') || normalized.includes('unique') || normalized.includes('23505')) {
+    return { error: 'Push token already registered', status: 409 };
+  }
+  if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('42501')) {
+    return { error: 'Not allowed to register push token', status: 403 };
+  }
+  return { error: message, status: 500 };
+}
+
 export async function registerToken(
   supabase: SupabaseClient,
   userId: string,
   organizationId: string,
   payload: { expoPushToken: string; deviceName: string | null },
-) {
+): Promise<RegisterTokenResult> {
   const { error } = await supabase.from('push_tokens').upsert(
     {
       user_id: userId,
@@ -54,12 +80,83 @@ export async function registerToken(
     { onConflict: 'user_id,expo_push_token' },
   );
 
-  if (error) return { error: error.message };
-  return { ok: true as const };
+  if (error) return mapRegisterError(error.message);
+  return { ok: true };
 }
 
 function digestBody(summary: ReportSummary) {
   return `${summary.membersNeedingAttention} members need attention. ${summary.tasksOpen} open tasks.`;
+}
+
+function chunkTokens(tokens: string[], chunkSize = EXPO_PUSH_CHUNK_SIZE) {
+  const chunks: string[][] = [];
+  for (let index = 0; index < tokens.length; index += chunkSize) {
+    chunks.push(tokens.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+type ExpoTicket = { status?: string };
+
+function countSuccessfulTickets(payload: unknown, requested: number) {
+  if (!payload || typeof payload !== 'object') {
+    return { sent: 0, failed: requested };
+  }
+
+  const data = (payload as { data?: ExpoTicket[] }).data;
+  if (!Array.isArray(data)) {
+    return { sent: 0, failed: requested };
+  }
+
+  const sent = data.filter((ticket) => ticket.status === 'ok').length;
+  return { sent, failed: Math.max(requested - sent, 0) };
+}
+
+export async function sendExpoPushBatch(
+  expoPushTokens: string[],
+  summary: ReportSummary,
+): Promise<PushDeliveryResult | { error: string }> {
+  if (!expoPushTokens.length) {
+    return { requested: 0, sent: 0, failed: 0, batches: 0 };
+  }
+
+  const chunks = chunkTokens(expoPushTokens);
+  let requested = 0;
+  let sent = 0;
+  let failed = 0;
+
+  for (const chunk of chunks) {
+    requested += chunk.length;
+    const messages = chunk.map((token) => ({
+      to: token,
+      sound: 'default',
+      title: 'MyShepherdLine digest',
+      body: digestBody(summary),
+    }));
+
+    const response = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(messages),
+    });
+
+    if (!response.ok) {
+      return { error: `Expo push API returned ${response.status}` };
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return { error: 'Expo push API returned invalid JSON' };
+    }
+
+    const counts = countSuccessfulTickets(payload, chunk.length);
+    sent += counts.sent;
+    failed += counts.failed;
+  }
+
+  return { requested, sent, failed, batches: chunks.length };
 }
 
 export async function sendDigestForOrganization(
@@ -84,20 +181,13 @@ export async function sendDigestForOrganization(
 
   if (!expoPushTokens.length) return result;
 
-  const messages = expoPushTokens.map((token) => ({
-    to: token,
-    sound: 'default',
-    title: 'MyShepherdLine digest',
-    body: digestBody(summary),
-  }));
+  const delivery = await sendExpoPushBatch(expoPushTokens, summary);
+  if ('error' in delivery) {
+    result.pushError = delivery.error;
+    return result;
+  }
 
-  const response = await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(messages),
-  });
-
-  result.pushResult = await response.json();
+  result.pushDelivery = delivery;
   return result;
 }
 
@@ -149,7 +239,7 @@ export async function sendDigest(supabase: SupabaseClient, env: WorkerEnv): Prom
     const orgTokens = tokensByOrg.get(organizationId) ?? [];
     const orgResult = await sendDigestForOrganization(supabase, env, organizationId, orgTokens);
     results.push(orgResult);
-    sent += orgResult.tokenCount;
+    sent += orgResult.pushDelivery?.sent ?? 0;
   }
 
   return { sent, organizations: organizationIds.length, results };

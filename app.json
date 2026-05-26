@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/logo/myshepherdline-mark.svg",
+          "image": "./assets/images/icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#14532d"
         }

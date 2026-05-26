@@ -15,15 +15,16 @@ import type { TaskListRow } from '@/types/database';
 export default function TasksScreen() {
   const { data: tasks, loading, error, refresh, toggleTask, loadMore, hasMore, loadingMore } = useTasks();
   const { showToast } = useToast();
-  const { today, upcoming } = groupTasksByDueDate(tasks);
+  const { today, overdue, upcoming } = groupTasksByDueDate(tasks);
   const weekDays = buildWeekDayStrip();
 
   const sections = useMemo(
     () => [
+      { key: 'overdue', title: 'Overdue', badge: overdue.length, items: overdue },
       { key: 'today', title: 'Today', badge: today.length, items: today },
       { key: 'upcoming', title: 'Upcoming', badge: upcoming.length, items: upcoming },
     ],
-    [today, upcoming],
+    [overdue, today, upcoming],
   );
 
   const flatData = useMemo(
@@ -66,6 +67,14 @@ export default function TasksScreen() {
                     error={error}
                     isEmpty={!item.section.items.length}
                     emptyMessage="No open tasks due today."
+                    onRetry={() => void refresh()}
+                  />
+                ) : item.section.key === 'overdue' ? (
+                  <QueryStateView
+                    loading={loading}
+                    error={error}
+                    isEmpty={!item.section.items.length}
+                    emptyMessage="No overdue tasks."
                     onRetry={() => void refresh()}
                   />
                 ) : (

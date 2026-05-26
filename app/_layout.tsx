@@ -14,22 +14,21 @@ import { ToastProvider } from '@/lib/core/toast';
 
 export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const ready = loaded || Boolean(error);
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (ready) {
+      void SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [ready]);
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
-
-  if (!loaded) return null;
+  if (!ready) return null;
 
   if (!envValidation.ok) {
     return <ConfigErrorScreen validation={envValidation} />;

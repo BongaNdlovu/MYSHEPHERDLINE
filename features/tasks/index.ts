@@ -9,4 +9,4 @@ export {
   deleteTask,
   type TaskInput,
 } from './services/tasks.service';
-export { buildWeekDayStrip, groupTasksByDueDate, toDateKey } from './selectors/tasks';
+export { buildWeekDayStrip, formatTaskDueDate, groupTasksByDueDate, normalizeDueDateKey, toDateKey } from './selectors/tasks';

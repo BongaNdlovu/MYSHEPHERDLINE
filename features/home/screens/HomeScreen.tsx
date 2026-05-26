@@ -33,6 +33,7 @@ export default function HomeScreen() {
         subtitle="Members needing attention today"
         searchValue={query}
         onSearchChange={setQuery}
+        searchPlaceholder="Search members..."
       />
 
       <Pressable style={styles.alertBanner} onPress={() => router.push('/(tabs)/members')}>
@@ -40,13 +41,15 @@ export default function HomeScreen() {
           <Feather name="alert-circle" size={20} color={colors.white} />
         </View>
         <View style={styles.alertContent}>
-          <Text style={styles.alertTitle}>{attentionMembers.length} need follow-up</Text>
+          <Text style={styles.alertTitle}>
+            {membersLoading ? 'Loading follow-ups…' : `${attentionMembers.length} need follow-up`}
+          </Text>
           <Text style={styles.alertText}>Tap to review the full member list</Text>
         </View>
         <Feather name="chevron-right" size={18} color={colors.accent} />
       </Pressable>
 
-      <Card title="Needs Attention" badge={`${attentionMembers.length}`} >
+      <Card title="Needs Attention" badge={membersLoading ? undefined : `${attentionMembers.length}`} >
         <View testID={testIds.home.attentionList}>
         <QueryStateView
           loading={membersLoading}
@@ -66,7 +69,7 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      <Card title="Today's Tasks" badge={`${todayTasks.length}`}>
+      <Card title="Today's Tasks" badge={tasksLoading ? undefined : `${todayTasks.length}`}>
         <QueryStateView
           loading={tasksLoading}
           error={tasksError}

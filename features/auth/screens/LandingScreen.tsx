@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LogoMark } from '@/components/ui/LogoMark';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, gradients, radii, spacing } from '@/constants/theme';
 
 const features = [
   { icon: 'users' as const, text: 'Track congregation members' },
@@ -16,7 +16,7 @@ const features = [
 
 export default function LandingScreen() {
   return (
-    <LinearGradient colors={['#14532d', '#166534', '#22c55e']} style={styles.screen}>
+    <LinearGradient colors={[...gradients.landing]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <LogoMark size={140} />
@@ -107,14 +107,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   primaryButtonText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
-  secondaryButton: {
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    marginBottom: spacing.md,
-  },
   accessNote: {
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',

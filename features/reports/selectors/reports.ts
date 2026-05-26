@@ -3,7 +3,7 @@ import type { Member, ReportSummary, Task, Visit } from '@/types/database';
 
 export const DEFAULT_RECENT_ACTIVITY_DAYS = 7;
 
-type ReportMember = Pick<Member, 'risk_level' | 'status'>;
+type ReportMember = Pick<Member, 'risk_level' | 'status' | 'created_at'>;
 type ReportVisit = Pick<Visit, 'visit_type' | 'visited_at'>;
 type ReportTask = Pick<Task, 'status'>;
 
@@ -31,7 +31,9 @@ export function buildReportSummary(input: {
     { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
   );
 
-  visitBreakdown.newConverts = input.members.filter((member) => member.status === 'new').length;
+  visitBreakdown.newConverts = input.members.filter(
+    (member) => member.status === 'new' && new Date(member.created_at).getTime() >= since.getTime(),
+  ).length;
 
   return {
     membersNeedingAttention: membersNeedingAttention(input.members).length,

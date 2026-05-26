@@ -21,12 +21,10 @@ function createSupabaseClient() {
   });
 }
 
-export function requireSupabase() {
+export function requireSupabase(): SupabaseClient {
   if (!envValidation.ok) {
     throw new Error(`Supabase is not configured: ${envValidation.missing.join(', ')}`);
   }
   if (!client) client = createSupabaseClient();
   return client;
 }
-
-export const supabase = isSupabaseConfigured ? requireSupabase() : (null as never);

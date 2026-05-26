@@ -9,9 +9,11 @@ import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin';
 import { useAuth } from '@/lib/core/auth';
+import { useToast } from '@/lib/core/toast';
 
 export default function MoreScreen() {
   const { signOut } = useAuth();
+  const { showToast } = useToast();
   const { isAdmin } = useAdminAccess();
 
   return (
@@ -53,7 +55,11 @@ export default function MoreScreen() {
         <Pressable
           style={styles.shortcut}
           testID={testIds.more.signOut}
-          onPress={() => void signOut().then(() => router.replace('/landing'))}
+          onPress={() => {
+            void signOut()
+              .then(() => router.replace('/landing'))
+              .catch(() => showToast('Unable to sign out. Please try again.'));
+          }}
         >
           <Feather name="log-out" size={18} color={colors.primary} />
           <Text style={styles.shortcutText}>Sign Out</Text>

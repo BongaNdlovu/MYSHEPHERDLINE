@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -33,11 +33,23 @@ export default function LogVisitScreen() {
   const [followUp, setFollowUp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const backTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (backTimeoutRef.current) clearTimeout(backTimeoutRef.current);
+    };
+  }, []);
 
   const canSave = Boolean(member && user) && !saving;
 
   const onSave = async () => {
-    const guardMessage = validateVisitLog({ memberPresent: Boolean(member), userPresent: Boolean(user) });
+    const activeMember = member;
+    const activeUser = user;
+    const guardMessage = validateVisitLog({
+      memberPresent: Boolean(activeMember),
+      userPresent: Boolean(activeUser),
+    });
     if (guardMessage) {
       setSubmitError(guardMessage);
       return;
@@ -47,14 +59,14 @@ export default function LogVisitScreen() {
     setSaving(true);
     try {
       await createVisit({
-        memberId: member!.id,
-        userId: user!.id,
+        memberId: activeMember!.id,
+        userId: activeUser!.id,
         visitType,
         notes,
         followUpRequired: followUp,
       });
       showToast('Visit saved successfully.');
-      setTimeout(() => router.back(), 800);
+      backTimeoutRef.current = setTimeout(() => router.back(), 800);
     } catch (err) {
       setSubmitError(getUserMessage(toAppError(err, 'Unable to save visit.')));
     } finally {

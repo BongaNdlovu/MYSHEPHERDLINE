@@ -104,22 +104,26 @@ export async function createTask(input: TaskInput): Promise<Task> {
   return data as Task;
 }
 
-export async function updateTask(id: string, input: TaskInput): Promise<Task> {
-  const assigneeId = requireAssigneeId(input.assignee_id, 'task');
+export async function updateTask(id: string, input: Partial<TaskInput>): Promise<Task> {
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.title !== undefined) patch.title = input.title.trim();
+  if (input.description !== undefined) patch.description = input.description?.trim() || null;
+  if (input.assignee_id !== undefined) {
+    patch.assignee_id = requireAssigneeId(input.assignee_id, 'task');
+  }
+  if (input.member_id !== undefined) patch.member_id = input.member_id ?? null;
+  if (input.due_date !== undefined) patch.due_date = input.due_date ?? null;
+  if (input.status !== undefined) patch.status = input.status;
+  if (input.priority !== undefined) patch.priority = input.priority;
+  if (input.task_type !== undefined) patch.task_type = input.task_type?.trim() || null;
+
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('tasks')
-    .update({
-      title: input.title.trim(),
-      description: input.description?.trim() || null,
-      assignee_id: assigneeId,
-      member_id: input.member_id ?? null,
-      due_date: input.due_date ?? null,
-      status: input.status,
-      priority: input.priority,
-      task_type: input.task_type?.trim() || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', id)
     .select(TASK_DETAIL_COLUMNS)
     .single();
