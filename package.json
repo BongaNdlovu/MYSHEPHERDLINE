@@ -52,6 +52,8 @@
     "test:e2e:smoke": "maestro test .maestro/flows/01-landing-to-sign-in.yaml .maestro/flows/02-auth-sign-in-success.yaml .maestro/flows/10-sign-out.yaml",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run test:worker",
     "verify:win": "npm run typecheck && npm run lint && npm run test:win && npm run test:worker:win",
+    "test:load:health": "k6 run load-tests/k6/worker-health.js",
+    "test:load:reports": "k6 run load-tests/k6/worker-reports.js",
     "check:env": "node scripts/check-env.mjs",
     "setup:worker": "powershell -ExecutionPolicy Bypass -File scripts/setup-worker.ps1",
     "setup:supabase": "node scripts/open-supabase-sql.mjs"

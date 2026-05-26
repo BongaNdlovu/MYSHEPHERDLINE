@@ -1,10 +1,12 @@
-import type { Task } from '@/types/database';
+import type { Task, TaskListRow } from '@/types/database';
+
+type TaskLike = Task | TaskListRow;
 
 export function toDateKey(value: Date = new Date()) {
   return value.toISOString().slice(0, 10);
 }
 
-export function groupTasksByDueDate(tasks: Task[], todayKey = toDateKey()) {
+export function groupTasksByDueDate(tasks: TaskLike[], todayKey = toDateKey()) {
   const openTasks = tasks.filter((task) => task.status === 'open');
   const today = openTasks.filter((task) => task.due_date === todayKey);
   const upcoming = openTasks.filter((task) => task.due_date !== todayKey);

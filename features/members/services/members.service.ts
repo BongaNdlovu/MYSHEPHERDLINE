@@ -1,18 +1,73 @@
 import { requireAssigneeId } from '@/features/admin/selectors/assignees';
 import { fromSupabaseError } from '@/lib/core/errors';
+import {
+  DEFAULT_PAGE_SIZE,
+  hasMorePages,
+  pageRange,
+  type PageParams,
+  type PaginatedResult,
+} from '@/lib/core/pagination';
 import { requireSupabase } from '@/lib/core/supabase';
-import type { Member } from '@/types/database';
+import { getCurrentOrganizationId } from '@/lib/core/tenant';
+import type { Member, MemberListRow } from '@/types/database';
 
-export async function fetchMembers(): Promise<Member[]> {
+export const MEMBER_LIST_COLUMNS =
+  'id, organization_id, full_name, phone, risk_level, status, last_contact_at, assigned_to';
+
+export const MEMBER_DETAIL_COLUMNS = '*';
+
+export type MemberListQuery = PageParams & {
+  search?: string;
+  status?: Member['status'];
+  riskLevel?: Member['risk_level'];
+};
+
+export async function fetchMembersPage(
+  query: MemberListQuery = {},
+): Promise<PaginatedResult<MemberListRow>> {
   const supabase = requireSupabase();
-  const { data, error } = await supabase.from('members').select('*').order('full_name');
+  const page = query.page ?? 0;
+  const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+  const { from, to } = pageRange(page, pageSize);
+
+  let request = supabase
+    .from('members')
+    .select(MEMBER_LIST_COLUMNS, { count: 'exact' })
+    .order('full_name')
+    .range(from, to);
+
+  const search = query.search?.trim();
+  if (search) {
+    request = request.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (query.status) request = request.eq('status', query.status);
+  if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
+
+  const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load members.');
-  return (data ?? []) as Member[];
+
+  const items = (data ?? []) as MemberListRow[];
+  return {
+    items,
+    page,
+    pageSize,
+    hasMore: hasMorePages(items.length, pageSize),
+  };
+}
+
+/** @deprecated Prefer fetchMembersPage for list screens. */
+export async function fetchMembers(): Promise<MemberListRow[]> {
+  const first = await fetchMembersPage({ page: 0, pageSize: DEFAULT_PAGE_SIZE });
+  return first.items;
 }
 
 export async function fetchMemberById(id: string): Promise<Member | null> {
   const supabase = requireSupabase();
-  const { data, error } = await supabase.from('members').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase
+    .from('members')
+    .select(MEMBER_DETAIL_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
   if (error) throw fromSupabaseError(error, 'Unable to load member.');
   return (data as Member | null) ?? null;
 }
@@ -34,6 +89,7 @@ export async function createMember(input: MemberInput): Promise<Member> {
   const { data, error } = await supabase
     .from('members')
     .insert({
+      organization_id: await getCurrentOrganizationId(),
       full_name: input.full_name.trim(),
       phone: input.phone?.trim() || null,
       email: input.email?.trim() || null,
@@ -43,7 +99,7 @@ export async function createMember(input: MemberInput): Promise<Member> {
       notes: input.notes?.trim() || null,
       assigned_to: assignedTo,
     })
-    .select('*')
+    .select(MEMBER_DETAIL_COLUMNS)
     .single();
   if (error) throw fromSupabaseError(error, 'Unable to create member.');
   return data as Member;
@@ -66,7 +122,7 @@ export async function updateMember(id: string, input: MemberInput): Promise<Memb
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select('*')
+    .select(MEMBER_DETAIL_COLUMNS)
     .single();
   if (error) throw fromSupabaseError(error, 'Unable to update member.');
   return data as Member;

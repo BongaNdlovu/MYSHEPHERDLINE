@@ -1,7 +1,7 @@
 import { createServiceClient, isInternalDigestRequest, isOwner, resolveAuth } from './auth';
 import { validateWorkerEnv, type WorkerEnv } from './env';
 import { corsHeaders, json } from './http';
-import { createRequestContext, logAudit } from './logger';
+import { createRequestContext, logAudit, logRouteTiming } from './logger';
 import { parseRegisterPayload, registerToken, sendDigest } from './notifications';
 import { buildSummary } from './reports';
 import { clientRateLimitKey, isRateLimited } from './rate-limit';
@@ -27,6 +27,7 @@ function authErrorResponse(
 
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    const startedAt = Date.now();
     const requestContext = createRequestContext(request);
     const missing = validateWorkerEnv(env);
     if (missing.length) {
@@ -65,6 +66,13 @@ export default {
       const auth = await resolveAuth(request, env);
       if ('status' in auth) return authErrorResponse(request, env, requestContext, auth);
       const summary = await buildSummary(supabase, env, auth);
+      logRouteTiming(requestContext, {
+        status: 200,
+        durationMs: Date.now() - startedAt,
+        organizationId: auth.organizationId,
+        userId: auth.userId,
+        usedFallback: false,
+      });
       return json(request, env, summary, 200, { 'X-Request-Id': requestContext.requestId });
     }
 
@@ -86,7 +94,7 @@ export default {
         'X-Request-Id': requestContext.requestId,
       });
 
-      const result = await registerToken(supabase, auth.userId, parsed);
+      const result = await registerToken(supabase, auth.userId, auth.organizationId, parsed);
       if ('error' in result) return json(request, env, { error: result.error }, 500, {
         'X-Request-Id': requestContext.requestId,
       });
@@ -120,6 +128,7 @@ export default {
 
       logAudit(requestContext, 'digest_sent', {
         sent: result.sent,
+        organizations: result.organizations,
         internal,
         userId: auth && !('status' in auth) ? auth.userId : null,
       });

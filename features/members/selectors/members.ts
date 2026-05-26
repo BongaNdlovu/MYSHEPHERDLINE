@@ -1,8 +1,10 @@
-import type { Member } from '@/types/database';
+import type { Member, MemberListRow } from '@/types/database';
 
 export type MemberFilter = 'all' | 'risk' | 'inactive' | 'new';
 
-export function filterMembers(members: Member[], query: string, filter: MemberFilter) {
+type MemberLike = Member | MemberListRow;
+
+export function filterMembers(members: MemberLike[], query: string, filter: MemberFilter) {
   const lower = query.trim().toLowerCase();
   return members.filter((member) => {
     const matchesQuery =
@@ -19,7 +21,9 @@ export function filterMembers(members: Member[], query: string, filter: MemberFi
   });
 }
 
-export function membersNeedingAttention(members: Member[]) {
+type AttentionMember = { risk_level: Member['risk_level']; status: Member['status'] };
+
+export function membersNeedingAttention<T extends AttentionMember>(members: T[]): T[] {
   return members.filter(
     (member) =>
       member.risk_level === 'high' || member.status === 'inactive' || member.status === 'new',

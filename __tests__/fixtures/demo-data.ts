@@ -1,10 +1,12 @@
 import type { Member, Task, Visit } from '@/types/database';
 
 const now = '2026-05-26T10:00:00.000Z';
+const orgId = 'a0000000-0000-4000-8000-000000000001';
 
 export const fixtureMembers: Member[] = [
   {
     id: '1',
+    organization_id: orgId,
     full_name: 'Sarah Mkhize',
     phone: '+27 82 123 4567',
     email: 'sarah@example.com',
@@ -19,6 +21,7 @@ export const fixtureMembers: Member[] = [
   },
   {
     id: '2',
+    organization_id: orgId,
     full_name: 'Sipho Dlamini',
     phone: '+27 84 345 6789',
     email: null,
@@ -36,6 +39,7 @@ export const fixtureMembers: Member[] = [
 export const fixtureTasks: Task[] = [
   {
     id: 't1',
+    organization_id: orgId,
     title: 'Call member',
     description: null,
     assignee_id: 'user-1',
@@ -49,6 +53,7 @@ export const fixtureTasks: Task[] = [
   },
   {
     id: 't2',
+    organization_id: orgId,
     title: 'Visit family',
     description: null,
     assignee_id: null,
@@ -65,6 +70,7 @@ export const fixtureTasks: Task[] = [
 export const fixtureVisits: Visit[] = [
   {
     id: 'v1',
+    organization_id: orgId,
     member_id: '1',
     logged_by: 'user-1',
     visit_type: 'call',
@@ -75,6 +81,7 @@ export const fixtureVisits: Visit[] = [
   },
   {
     id: 'v2',
+    organization_id: orgId,
     member_id: '2',
     logged_by: 'user-1',
     visit_type: 'visit',

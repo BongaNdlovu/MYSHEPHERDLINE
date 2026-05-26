@@ -1,10 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/constants/theme';
-import type { Member, RiskLevel } from '@/types/database';
+import type { MemberListRow, RiskLevel } from '@/types/database';
 
 type MemberListItemProps = {
-  member: Member;
+  member: MemberListRow;
   onPress?: () => void;
   testID?: string;
 };

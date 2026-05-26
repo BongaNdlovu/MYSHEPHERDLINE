@@ -6,6 +6,7 @@ import type { Profile } from '@/types/database';
 function profile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: '1',
+    organization_id: 'a0000000-0000-4000-8000-000000000001',
     email: 'user@example.com',
     display_name: 'User',
     role: 'shepherd',

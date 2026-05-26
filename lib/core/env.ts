@@ -2,6 +2,7 @@ export type AppEnv = {
   supabaseUrl: string;
   supabasePublishableKey: string;
   workerApiUrl: string | null;
+  allowReportFallback: boolean;
 };
 
 export type EnvValidationResult =
@@ -26,12 +27,16 @@ export function validateAppEnv(
     return { ok: false, missing: ['Valid Supabase credentials (placeholder values detected)'] };
   }
 
+  const allowReportFallback =
+    source.EXPO_PUBLIC_ALLOW_REPORT_FALLBACK === 'true' || process.env.NODE_ENV === 'development';
+
   return {
     ok: true,
     env: {
       supabaseUrl,
       supabasePublishableKey,
       workerApiUrl: source.EXPO_PUBLIC_WORKER_API_URL?.trim() || null,
+      allowReportFallback,
     },
   };
 }

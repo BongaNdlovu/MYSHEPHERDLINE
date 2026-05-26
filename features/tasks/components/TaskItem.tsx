@@ -3,10 +3,10 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/constants/theme';
-import type { Task } from '@/types/database';
+import type { TaskListRow } from '@/types/database';
 
 type TaskItemProps = {
-  task: Task;
+  task: TaskListRow;
   onToggle?: () => void;
   toggleTestID?: string;
 };

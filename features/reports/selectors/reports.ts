@@ -3,10 +3,14 @@ import type { Member, ReportSummary, Task, Visit } from '@/types/database';
 
 export const DEFAULT_RECENT_ACTIVITY_DAYS = 7;
 
+type ReportMember = Pick<Member, 'risk_level' | 'status'>;
+type ReportVisit = Pick<Visit, 'visit_type' | 'visited_at'>;
+type ReportTask = Pick<Task, 'status'>;
+
 export function buildReportSummary(input: {
-  members: Member[];
-  visits: Visit[];
-  tasks: Task[];
+  members: ReportMember[];
+  visits: ReportVisit[];
+  tasks: ReportTask[];
   recentActivityDays?: number;
 }): ReportSummary {
   const recentActivityDays = input.recentActivityDays ?? DEFAULT_RECENT_ACTIVITY_DAYS;

@@ -16,13 +16,53 @@ describe('worker auth helpers', () => {
   });
 
   it('checks global scope for admin and owner', () => {
-    expect(hasGlobalScope({ userId: '1', role: 'admin', email: 'a@x.com', isActive: true })).toBe(true);
-    expect(hasGlobalScope({ userId: '1', role: 'owner', email: 'o@x.com', isActive: true })).toBe(true);
-    expect(hasGlobalScope({ userId: '1', role: 'shepherd', email: 's@x.com', isActive: true })).toBe(false);
+    expect(
+      hasGlobalScope({
+        userId: '1',
+        organizationId: 'org-1',
+        role: 'admin',
+        email: 'a@x.com',
+        isActive: true,
+      }),
+    ).toBe(true);
+    expect(
+      hasGlobalScope({
+        userId: '1',
+        organizationId: 'org-1',
+        role: 'owner',
+        email: 'o@x.com',
+        isActive: true,
+      }),
+    ).toBe(true);
+    expect(
+      hasGlobalScope({
+        userId: '1',
+        organizationId: 'org-1',
+        role: 'shepherd',
+        email: 's@x.com',
+        isActive: true,
+      }),
+    ).toBe(false);
   });
 
   it('checks owner role', () => {
-    expect(isOwner({ userId: '1', role: 'owner', email: 'o@x.com', isActive: true })).toBe(true);
-    expect(isOwner({ userId: '1', role: 'admin', email: 'a@x.com', isActive: true })).toBe(false);
+    expect(
+      isOwner({
+        userId: '1',
+        organizationId: 'org-1',
+        role: 'owner',
+        email: 'o@x.com',
+        isActive: true,
+      }),
+    ).toBe(true);
+    expect(
+      isOwner({
+        userId: '1',
+        organizationId: 'org-1',
+        role: 'admin',
+        email: 'a@x.com',
+        isActive: true,
+      }),
+    ).toBe(false);
   });
 });

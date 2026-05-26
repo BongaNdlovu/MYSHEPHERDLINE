@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { buildReportSummary } from '@/features/reports/selectors/reports';
 import { fetchLocalReportInputs, fetchWorkerSummary } from '@/features/reports/services/reports.service';
+import { getAppEnv } from '@/lib/core/env';
 import { useAuth } from '@/lib/core/auth';
 import type { AppError } from '@/lib/core/errors';
 import { createAppError, toAppError } from '@/lib/core/errors';
@@ -25,6 +26,7 @@ export function useReportSummary(): ReportState {
   const [source, setSource] = useState<'worker' | 'supabase' | null>(null);
   const [workerUnavailable, setWorkerUnavailable] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+  const allowFallback = getAppEnv().allowReportFallback;
 
   const refresh = useCallback(async () => {
     if (!session?.access_token) {
@@ -53,6 +55,21 @@ export function useReportSummary(): ReportState {
       setWorkerUnavailable(true);
     }
 
+    if (!allowFallback) {
+      setSummary(null);
+      setSource(null);
+      setError(
+        createAppError(
+          'config',
+          remote.reason === 'unconfigured'
+            ? 'Reports require the Worker API. Set EXPO_PUBLIC_WORKER_API_URL.'
+            : 'Report service is unavailable. Try again later.',
+        ),
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
       const inputs = await fetchLocalReportInputs();
       setSummary(buildReportSummary(inputs));
@@ -65,7 +82,7 @@ export function useReportSummary(): ReportState {
     } finally {
       setLoading(false);
     }
-  }, [session?.access_token]);
+  }, [allowFallback, session?.access_token]);
 
   useEffect(() => {
     void refresh();

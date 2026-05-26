@@ -10,8 +10,17 @@ export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type VisitType = 'visit' | 'call' | 'bible_study' | 'other';
 
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
+  organization_id: string;
   email: string;
   display_name: string;
   role: UserRole;
@@ -22,6 +31,7 @@ export interface Profile {
 
 export interface Member {
   id: string;
+  organization_id: string;
   full_name: string;
   phone: string | null;
   email: string | null;
@@ -35,8 +45,22 @@ export interface Member {
   updated_at: string;
 }
 
+/** List screen projection — smaller payload than full Member. */
+export type MemberListRow = Pick<
+  Member,
+  | 'id'
+  | 'organization_id'
+  | 'full_name'
+  | 'phone'
+  | 'risk_level'
+  | 'status'
+  | 'last_contact_at'
+  | 'assigned_to'
+>;
+
 export interface Visit {
   id: string;
+  organization_id: string;
   member_id: string;
   logged_by: string;
   visit_type: VisitType;
@@ -48,6 +72,7 @@ export interface Visit {
 
 export interface Task {
   id: string;
+  organization_id: string;
   title: string;
   description: string | null;
   assignee_id: string | null;
@@ -60,8 +85,23 @@ export interface Task {
   updated_at: string;
 }
 
+/** List screen projection — smaller payload than full Task. */
+export type TaskListRow = Pick<
+  Task,
+  | 'id'
+  | 'organization_id'
+  | 'title'
+  | 'due_date'
+  | 'status'
+  | 'priority'
+  | 'assignee_id'
+  | 'member_id'
+  | 'task_type'
+>;
+
 export interface PushToken {
   id: string;
+  organization_id: string;
   user_id: string;
   expo_push_token: string;
   device_name: string | null;

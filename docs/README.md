@@ -9,6 +9,7 @@ Entry point for MyShepherdLine project docs. Start here if you are onboarding or
 | Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) (includes error-handling ownership) |
 | Local setup and scripts | [../README.md](../README.md) |
 | Testing (unit, integration, E2E) | [testing/e2e-android.md](testing/e2e-android.md), [testing/verify-pipeline.md](testing/verify-pipeline.md) |
+| Capacity / 5k-user readiness | [testing/capacity-plan.md](testing/capacity-plan.md) |
 | Production security hardening | [security/production-hardening.md](security/production-hardening.md) |
 | **Step-by-step setup (start here)** | **[setup/step-by-step.md](setup/step-by-step.md)** |
 | POPIA / compliance drafts | [compliance/README.md](compliance/README.md) |
@@ -64,7 +65,9 @@ On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win` —
 See [security/production-hardening.md](security/production-hardening.md) for the full production sign-off list. Summary:
 
 1. **New Supabase project:** apply `supabase/schema.sql`, then `supabase/bootstrap-owner.sql`.
-   **Existing project:** apply `supabase/fix-rls-security.sql`, then `supabase/admin-access.sql`.
+   **Existing project:** apply `supabase/fix-rls-security.sql`, `supabase/admin-access.sql`, then
+   `supabase/organization-capacity-migration.sql`. Staging load tests: `supabase/seed-capacity-data.sql`
+   (staging only). Optional: `supabase/member-search-trgm.sql`.
    Run `supabase/verify-null-assignments.sql` before production cutover.
 2. Set `.env` from `.env.example` (Supabase URL and publishable key; optional Worker URL).
 3. Deploy Worker secrets, optional KV rate-limit namespace, and run `npm run deploy --workspace myshepherdline-worker`.

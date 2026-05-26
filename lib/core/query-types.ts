@@ -8,3 +8,10 @@ export type QueryState<T> = {
   lastLoadedAt: number | null;
   isStale: boolean;
 };
+
+export type PaginatedQueryState<T> = QueryState<T[]> & {
+  page: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMore: () => Promise<void>;
+};

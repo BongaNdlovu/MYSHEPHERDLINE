@@ -18,9 +18,10 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('revoke all on function public.handle_new_user() from anon, authenticated');
   });
 
-  it('scopes push token access to owner', () => {
-    expect(schema).toContain('Push tokens readable by owner');
-    expect(schema).toContain('using (user_id = auth.uid())');
+  it('scopes push token access to owner within tenant', () => {
+    expect(schema).toContain('Push tokens readable in tenant by owner');
+    expect(schema).toMatch(/user_id = auth\.uid\(\)/);
+    expect(schema).toContain('public.same_organization(organization_id)');
   });
 
   it('includes owner role and profile access controls', () => {
@@ -31,14 +32,15 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('create or replace function public.is_owner()');
   });
 
-  it('scopes read access by role and assignment without unassigned shepherd visibility', () => {
+  it('scopes read access by tenant, role, and assignment', () => {
     expect(schema).toContain('create or replace function public.is_admin()');
-    expect(schema).toContain('Profiles readable by self or admin');
-    expect(schema).toContain('Members readable by assignee or admin');
-    expect(schema).toContain('Visits readable by logger assignee or admin');
-    expect(schema).toContain('Tasks readable by assignee or admin');
+    expect(schema).toContain('Profiles readable in tenant by self or admin');
+    expect(schema).toContain('Members readable in tenant by assignee or admin');
+    expect(schema).toContain('public.same_organization(organization_id)');
+    expect(schema).toContain('Visits readable in tenant');
+    expect(schema).toContain('Tasks readable in tenant');
     expect(schema).toMatch(
-      /create policy "Visits readable by logger assignee or admin"[\s\S]*logged_by = auth\.uid\(\)/,
+      /create policy "Visits readable in tenant"[\s\S]*logged_by = auth\.uid\(\)/,
     );
     expect(schema).not.toContain('assigned_to is null');
     expect(schema).not.toContain('assignee_id is null');

@@ -1,21 +1,30 @@
 import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
+import { getAppEnv } from '@/lib/core/env';
 import { fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
-import type { Member, Task, Visit } from '@/types/database';
 
 export async function fetchWorkerSummary(accessToken: string) {
   return fetchWorkerReportSummary(accessToken);
 }
 
+/** Dev / break-glass only — not for production steady state. */
 export async function fetchLocalReportInputs(recentDays = 7) {
+  if (!getAppEnv().allowReportFallback) {
+    throw new Error('Local report fallback is disabled. Configure the Worker API for production reports.');
+  }
+
   const supabase = requireSupabase();
   const since = new Date();
   since.setDate(since.getDate() - recentDays);
 
+  const memberCols = 'id, risk_level, status, assigned_to';
+  const visitCols = 'visit_type, visited_at, logged_by, member_id';
+  const taskCols = 'status, assignee_id';
+
   const [membersResult, visitsResult, tasksResult] = await Promise.all([
-    supabase.from('members').select('*'),
-    supabase.from('visits').select('*').gte('visited_at', since.toISOString()),
-    supabase.from('tasks').select('*'),
+    supabase.from('members').select(memberCols),
+    supabase.from('visits').select(visitCols).gte('visited_at', since.toISOString()),
+    supabase.from('tasks').select(taskCols),
   ]);
 
   if (membersResult.error) throw fromSupabaseError(membersResult.error, 'Unable to load reports.');
@@ -23,9 +32,9 @@ export async function fetchLocalReportInputs(recentDays = 7) {
   if (tasksResult.error) throw fromSupabaseError(tasksResult.error, 'Unable to load reports.');
 
   return {
-    members: (membersResult.data ?? []) as Member[],
-    visits: (visitsResult.data ?? []) as Visit[],
-    tasks: (tasksResult.data ?? []) as Task[],
+    members: membersResult.data ?? [],
+    visits: visitsResult.data ?? [],
+    tasks: tasksResult.data ?? [],
     recentActivityDays: recentDays,
   };
 }

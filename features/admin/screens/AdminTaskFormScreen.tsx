@@ -13,7 +13,7 @@ import { listAssignableShepherds } from '@/features/admin/selectors/assignees';
 import {
   createTask,
   deleteTask,
-  fetchTasks,
+  fetchTaskById,
   updateTask,
   type TaskInput,
 } from '@/features/tasks/services/tasks.service';
@@ -45,9 +45,8 @@ export default function AdminTaskFormScreen() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    void fetchTasks()
-      .then((tasks) => {
-        const found = tasks.find((t) => t.id === id) ?? null;
+    void fetchTaskById(id)
+      .then((found) => {
         if (!found) {
           setLoadError(createAppError('not_found', 'Task not found.'));
           return;

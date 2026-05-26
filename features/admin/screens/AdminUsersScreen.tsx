@@ -1,12 +1,13 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OwnerRoute } from '@/features/admin';
 import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
 import { isOwnerRole } from '@/features/admin/selectors/guard';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
+import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
@@ -14,42 +15,49 @@ import { useToast } from '@/lib/core/toast';
 import type { Profile, UserRole } from '@/types/database';
 
 export default function AdminUsersScreen() {
-  const { data: profiles, loading, error, refresh, setRole, setAccess } = useAdminProfiles();
+  const { data: profiles, loading, error, refresh, setRole, setAccess, loadMore, hasMore, loadingMore } =
+    useAdminProfiles();
   const { showToast } = useToast();
 
   return (
     <OwnerRoute>
-      <ScrollView style={styles.screen} testID={testIds.admin.users.screen}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.back}>
-            <Feather name="chevron-left" size={24} color={colors.primary} />
-          </Pressable>
-          <AppHeader title="Users & Roles" subtitle="Approve access and assign roles" />
-        </View>
-
-        <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
-
-        {!loading && !error
-          ? profiles.map((profile) => (
-              <UserRow
-                key={profile.id}
-                profile={profile}
-                onRole={(role) =>
-                  void setRole(profile.id, role).then((result) => {
-                    if (result.error) showToast(result.error.message);
-                    else showToast('Role updated.');
-                  })
-                }
-                onAccess={(active) =>
-                  void setAccess(profile.id, active).then((result) => {
-                    if (result.error) showToast(result.error.message);
-                    else showToast(active ? 'Access enabled.' : 'Access deactivated.');
-                  })
-                }
-              />
-            ))
-          : null}
-      </ScrollView>
+      <View style={styles.screen} testID={testIds.admin.users.screen}>
+        <PaginatedFlatList
+          data={profiles}
+          keyExtractor={(profile) => profile.id}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={() => void loadMore()}
+          ListHeaderComponent={
+            <>
+              <View style={styles.topBar}>
+                <Pressable onPress={() => router.back()} style={styles.back}>
+                  <Feather name="chevron-left" size={24} color={colors.primary} />
+                </Pressable>
+                <AppHeader title="Users & Roles" subtitle="Approve access and assign roles" />
+              </View>
+              <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
+            </>
+          }
+          renderItem={({ item: profile }) => (
+            <UserRow
+              profile={profile}
+              onRole={(role) =>
+                void setRole(profile.id, role).then((result) => {
+                  if (result.error) showToast(result.error.message);
+                  else showToast('Role updated.');
+                })
+              }
+              onAccess={(active) =>
+                void setAccess(profile.id, active).then((result) => {
+                  if (result.error) showToast(result.error.message);
+                  else showToast(active ? 'Access enabled.' : 'Access deactivated.');
+                })
+              }
+            />
+          )}
+        />
+      </View>
     </OwnerRoute>
   );
 }
@@ -73,11 +81,7 @@ function UserRow({
         Role: {profile.role} | {profile.is_active ? 'Active' : 'Deactivated'}
       </Text>
       <View style={styles.actions}>
-        <Pressable
-          style={styles.chip}
-          disabled={isOwnerAccount}
-          onPress={() => onRole(nextRole)}
-        >
+        <Pressable style={styles.chip} disabled={isOwnerAccount} onPress={() => onRole(nextRole)}>
           <Text style={styles.chipText}>
             {profile.role === 'admin' ? 'Demote to shepherd' : 'Promote to admin'}
           </Text>
@@ -94,8 +98,7 @@ function UserRow({
         <Text style={styles.note}>Owner account — role and access are locked.</Text>
       ) : (
         <Text style={styles.note}>
-          New accounts are created in Supabase Auth by the owner, then appear here after first
-          sign-in.
+          New accounts are created in Supabase Auth by the owner, then appear here after first sign-in.
         </Text>
       )}
     </Card>

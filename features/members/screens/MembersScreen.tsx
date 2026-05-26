@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
+import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { FilterChips, MemberListItem, filterMembers, useMembers, type MemberFilter } from '@/features/members';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
@@ -16,49 +17,80 @@ const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'New', value: 'new' },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function MembersScreen() {
-  const { data: members, loading, error, refresh } = useMembers();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filter, setFilter] = useState<MemberFilter>('all');
 
-  const filtered = useMemo(() => filterMembers(members, query, filter), [members, query, filter]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const serverFilter = useMemo(() => {
+    if (filter === 'inactive') return { status: 'inactive' as const };
+    if (filter === 'new') return { status: 'new' as const };
+    if (filter === 'risk') return { riskLevel: 'high' as const };
+    return {};
+  }, [filter]);
+
+  const { data: members, loading, error, refresh, loadMore, hasMore, loadingMore } = useMembers({
+    search: debouncedQuery || undefined,
+    ...serverFilter,
+  });
+
+  const filtered = useMemo(
+    () => (filter === 'risk' ? filterMembers(members, '', 'risk') : members),
+    [filter, members],
+  );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.members.screen}>
-      <AppHeader
-        title="Members"
-        subtitle={`${filtered.length} in directory`}
-        searchValue={query}
-        onSearchChange={setQuery}
-        searchPlaceholder="Search directory..."
-        searchTestID={testIds.members.search}
-      />
-
-      <FilterChips
-        options={filterOptions}
-        value={filter}
-        onChange={setFilter}
-        testIdForValue={(value) => testIds.members.filter(value)}
-      />
-
-      <Card title="Congregation Directory">
-        <QueryStateView
-          loading={loading}
-          error={error}
-          isEmpty={!filtered.length}
-          emptyMessage="No members match your search or filter."
-          onRetry={() => void refresh()}
-        />
-        {filtered.map((member) => (
+    <View style={styles.screen} testID={testIds.members.screen}>
+      <PaginatedFlatList
+        data={filtered}
+        keyExtractor={(member) => member.id}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={() => void loadMore()}
+        ListHeaderComponent={
+          <>
+            <AppHeader
+              title="Members"
+              subtitle={`${filtered.length} in directory`}
+              searchValue={query}
+              onSearchChange={setQuery}
+              searchPlaceholder="Search directory..."
+              searchTestID={testIds.members.search}
+            />
+            <FilterChips
+              options={filterOptions}
+              value={filter}
+              onChange={setFilter}
+              testIdForValue={(value) => testIds.members.filter(value)}
+            />
+            <Card title="Congregation Directory">
+              <QueryStateView
+                loading={loading}
+                error={error}
+                isEmpty={!filtered.length}
+                emptyMessage="No members match your search or filter."
+                onRetry={() => void refresh()}
+              />
+            </Card>
+          </>
+        }
+        renderItem={({ item: member }) => (
           <MemberListItem
-            key={member.id}
             member={member}
             testID={testIds.members.member(member.id)}
             onPress={() => router.push(`/member/${member.id}`)}
           />
-        ))}
-      </Card>
-    </ScrollView>
+        )}
+        contentContainerStyle={styles.content}
+      />
+    </View>
   );
 }
 

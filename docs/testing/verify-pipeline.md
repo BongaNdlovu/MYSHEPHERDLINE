@@ -84,10 +84,25 @@ npm.cmd run verify
 | `__tests__/integration/` | Worker API client |
 | `worker/src/__tests__/` | Worker routes, auth, rate limit, reports, notifications |
 
+## Capacity gate (staging / pre-release)
+
+Capacity and performance budgets are **release-blocking on staging**, not on every commit.
+
+1. Apply `supabase/organization-capacity-migration.sql` on staging if not already applied.
+2. Run k6 load tests — see [capacity-plan.md](capacity-plan.md).
+3. Confirm p95/p99 latency and error rate thresholds before production rollout.
+
+```powershell
+$env:LOAD_BASE_URL = "https://your-worker.example.dev"
+$env:LOAD_AUTH_TOKEN = "<staging JWT>"
+npm.cmd run test:load:health
+npm.cmd run test:load:reports
+```
+
 ## Expected green output
 
-- App: 9 test files, 24+ tests
-- Worker: 5 test files, 15+ tests
+- App: 10+ test files, 27+ tests
+- Worker: 5 test files, 13+ tests
 - Lint: 0 errors, 0 warnings
 
 Worker route tests may print audit JSON to stdout during digest scenarios — that is expected.

@@ -1,53 +1,59 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useMembers } from '@/features/members';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
 export default function AdminMembersScreen() {
-  const { data: members, loading, error, refresh } = useMembers();
+  const { data: members, loading, error, refresh, loadMore, hasMore, loadingMore } = useMembers();
 
   return (
-    <ScrollView style={styles.screen} testID={testIds.admin.members.screen}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Feather name="chevron-left" size={24} color={colors.primary} />
-        </Pressable>
-        <AppHeader title="Members" subtitle="Create and maintain congregation members" />
-      </View>
-
-      <Pressable
-        style={styles.addButton}
-        testID={testIds.admin.members.add}
-        onPress={() => router.push('/admin/members/new')}
-      >
-        <Feather name="plus" size={18} color={colors.white} />
-        <Text style={styles.addText}>Add member</Text>
-      </Pressable>
-
-      <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
-
-      {!loading && !error
-        ? members.map((member) => (
+    <View style={styles.screen} testID={testIds.admin.members.screen}>
+      <PaginatedFlatList
+        data={members}
+        keyExtractor={(member) => member.id}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={() => void loadMore()}
+        ListHeaderComponent={
+          <>
+            <View style={styles.topBar}>
+              <Pressable onPress={() => router.back()} style={styles.back}>
+                <Feather name="chevron-left" size={24} color={colors.primary} />
+              </Pressable>
+              <AppHeader title="Members" subtitle="Create and maintain congregation members" />
+            </View>
             <Pressable
-              key={member.id}
-              style={styles.row}
-              testID={testIds.admin.members.item(member.id)}
-              onPress={() => router.push(`/admin/members/${member.id}`)}
+              style={styles.addButton}
+              testID={testIds.admin.members.add}
+              onPress={() => router.push('/admin/members/new')}
             >
-              <Text style={styles.name}>{member.full_name}</Text>
-              <Text style={styles.meta}>
-                {member.status} · {member.risk_level} risk
-              </Text>
-              <Feather name="chevron-right" size={18} color={colors.textMuted} />
+              <Feather name="plus" size={18} color={colors.white} />
+              <Text style={styles.addText}>Add member</Text>
             </Pressable>
-          ))
-        : null}
-    </ScrollView>
+            <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
+          </>
+        }
+        renderItem={({ item: member }) => (
+          <Pressable
+            style={styles.row}
+            testID={testIds.admin.members.item(member.id)}
+            onPress={() => router.push(`/admin/members/${member.id}`)}
+          >
+            <Text style={styles.name}>{member.full_name}</Text>
+            <Text style={styles.meta}>
+              {member.status} · {member.risk_level} risk
+            </Text>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Pressable>
+        )}
+      />
+    </View>
   );
 }
 

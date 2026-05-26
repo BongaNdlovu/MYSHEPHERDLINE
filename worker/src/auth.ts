@@ -6,6 +6,7 @@ export type UserRole = 'shepherd' | 'admin' | 'owner';
 
 export type AuthContext = {
   userId: string;
+  organizationId: string;
   role: UserRole;
   email: string;
   isActive: true;
@@ -41,7 +42,7 @@ export async function resolveAuth(request: Request, env: WorkerEnv): Promise<Aut
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, email, is_active')
+    .select('role, email, is_active, organization_id')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -49,8 +50,13 @@ export async function resolveAuth(request: Request, env: WorkerEnv): Promise<Aut
     return { status: 'inactive', userId: data.user.id };
   }
 
+  if (!profile?.organization_id) {
+    return { status: 'unauthorized' };
+  }
+
   return {
     userId: data.user.id,
+    organizationId: profile.organization_id,
     role: normalizeRole(profile?.role),
     email: profile?.email ?? data.user.email ?? '',
     isActive: true,

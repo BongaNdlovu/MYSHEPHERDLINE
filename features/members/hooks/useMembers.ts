@@ -1,36 +1,76 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchMemberById, fetchMembers } from '@/features/members/services/members.service';
+import {
+  fetchMemberById,
+  fetchMembersPage,
+  type MemberListQuery,
+} from '@/features/members/services/members.service';
 import type { AppError } from '@/lib/core/errors';
 import { createAppError, notFoundError, toAppError } from '@/lib/core/errors';
-import type { QueryState } from '@/lib/core/query-types';
-import type { Member } from '@/types/database';
+import type { PaginatedQueryState, QueryState } from '@/lib/core/query-types';
+import type { Member, MemberListRow } from '@/types/database';
 
-export function useMembers(): QueryState<Member[]> {
-  const [data, setData] = useState<Member[]>([]);
+export type UseMembersOptions = Omit<MemberListQuery, 'page'>;
+
+export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState<MemberListRow> {
+  const [data, setData] = useState<MemberListRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
+    if (append) setLoadingMore(true);
+    else {
+      setLoading(true);
+      setError(null);
+    }
+
     try {
-      setData(await fetchMembers());
+      const result = await fetchMembersPage({ ...optionsRef.current, page: pageToLoad });
+      setData((current) => (append ? [...current, ...result.items] : result.items));
+      setPage(result.page);
+      setHasMore(result.hasMore);
       setLastLoadedAt(Date.now());
     } catch (err) {
       setError(toAppError(err, 'Unable to load members.'));
-      setData([]);
+      if (!append) setData([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const refresh = useCallback(async () => {
+    await loadPage(0, false);
+  }, [loadPage]);
 
-  return { data, loading, error, refresh, lastLoadedAt, isStale: false };
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    await loadPage(page + 1, true);
+  }, [hasMore, loadPage, loading, loadingMore, page]);
+
+  useEffect(() => {
+    void loadPage(0, false);
+  }, [loadPage, options.search, options.status, options.riskLevel, options.pageSize]);
+
+  return {
+    data,
+    loading,
+    loadingMore,
+    error,
+    refresh,
+    loadMore,
+    page,
+    hasMore,
+    lastLoadedAt,
+    isStale: false,
+  };
 }
 
 export function useMember(id: string | undefined): QueryState<Member | null> {

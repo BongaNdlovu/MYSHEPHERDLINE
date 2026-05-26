@@ -10,7 +10,14 @@ export async function createVisit(input: {
   followUpRequired: boolean;
 }) {
   const supabase = requireSupabase();
+  const { data: member } = await supabase
+    .from('members')
+    .select('organization_id')
+    .eq('id', input.memberId)
+    .maybeSingle();
+
   const payload = {
+    organization_id: member?.organization_id,
     member_id: input.memberId,
     logged_by: input.userId,
     visit_type: input.visitType,
