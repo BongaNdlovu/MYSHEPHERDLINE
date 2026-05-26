@@ -79,6 +79,7 @@ npm.cmd run verify
 | Location | What it covers |
 | --- | --- |
 | `__tests__/security/` | Env fail-fast, RLS schema shape, admin route auth gates, secure auth storage |
+| `scripts/test-rls-negative-cases.mjs` | Live forbidden-query RLS checks against configured Supabase (staging gate) |
 | `__tests__/domain/assignment.test.ts` | Shepherd assignment helpers and validation |
 | `__tests__/domain/` | Pure selectors (members, tasks, reports) |
 | `__tests__/integration/` | Worker API client |
@@ -106,3 +107,24 @@ npm.cmd run test:load:reports
 - Lint: 0 errors, 0 warnings
 
 Worker route tests may print audit JSON to stdout during digest scenarios — that is expected.
+
+## Live RLS denial gate (staging / pre-release)
+
+Schema-string tests in `__tests__/security/rls-negative-cases.test.ts` do not execute real forbidden queries. For
+security-grade negative-path validation against your Supabase project:
+
+1. Apply `supabase/seed-e2e-data.sql` on the target project (E2E users + cross-assignee fixtures).
+2. Ensure `.env` points at that project with publishable key only (never service role in the app).
+
+```powershell
+npm.cmd run test:rls:live
+```
+
+Optional Vitest wrapper (same runner, skipped unless explicitly enabled):
+
+```powershell
+$env:RLS_LIVE_TESTS = "1"
+npm.cmd run test -- __tests__/security/rls-negative-cases.live.test.ts
+```
+
+This gate is **not** part of default `npm run verify` because it requires live credentials and seeded data.

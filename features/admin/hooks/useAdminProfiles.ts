@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchProfilesPage,
@@ -7,7 +7,7 @@ import {
 } from '@/features/admin/services/profiles.service';
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
-import type { PaginatedQueryState } from '@/lib/core/query-types';
+import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
 import type { Profile, UserRole } from '@/types/database';
 
 export function useAdminProfiles(): PaginatedQueryState<Profile> & {
@@ -84,6 +84,11 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
     }
   }, []);
 
+  const isStale = useMemo(
+    () => computeIsStale({ loading, loadingMore, error, lastLoadedAt, dataLength: data.length }),
+    [data.length, error, lastLoadedAt, loading, loadingMore],
+  );
+
   return {
     data,
     loading,
@@ -94,7 +99,7 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
     page,
     hasMore,
     lastLoadedAt,
-    isStale: false,
+    isStale,
     setRole,
     setAccess,
   };

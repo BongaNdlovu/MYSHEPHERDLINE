@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-describe('RLS negative-path policy coverage', () => {
+describe('RLS negative-path static policy coverage', () => {
   const schema = readFileSync(path.join(process.cwd(), 'supabase/schema.sql'), 'utf8');
   const routesTest = readFileSync(
     path.join(process.cwd(), 'worker/src/__tests__/routes.test.ts'),
@@ -35,3 +35,5 @@ describe('RLS negative-path policy coverage', () => {
     expect(routesTest).toMatch(/send-digest[\s\S]*403/);
   });
 });
+
+// Live forbidden-query execution: npm run test:rls:live (or RLS_LIVE_TESTS=1 npm run test -- __tests__/security/rls-negative-cases.live.test.ts)
