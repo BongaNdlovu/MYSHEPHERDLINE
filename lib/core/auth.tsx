@@ -2,6 +2,8 @@ import { Session, User } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { envValidation } from '@/lib/core/env';
+import type { AppError } from '@/lib/core/errors';
+import { fromAuthError } from '@/lib/core/errors';
 import { registerForPushNotifications } from '@/lib/core/notifications';
 import { SUPABASE_AUTH_STORAGE_KEY, supabaseAuthStorage } from '@/lib/core/supabase-storage';
 import { requireSupabase } from '@/lib/core/supabase';
@@ -12,8 +14,8 @@ type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AppError | null }>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ error: AppError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -79,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn: async (email, password) => {
         const supabase = requireSupabase();
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error: error?.message ?? null };
+        return { error: fromAuthError(error) };
       },
       signUp: async (email, password, displayName) => {
         const supabase = requireSupabase();
@@ -88,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           options: { data: { display_name: displayName } },
         });
-        return { error: error?.message ?? null };
+        return { error: fromAuthError(error) };
       },
       signOut: async () => {
         const supabase = requireSupabase();

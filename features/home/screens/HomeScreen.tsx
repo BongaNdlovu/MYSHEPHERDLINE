@@ -10,13 +10,16 @@ import { buildAttentionPreview } from '@/features/home/selectors/dashboard';
 import { MemberListItem, useMembers } from '@/features/members';
 import { groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
+import { getUserMessage } from '@/lib/core/errors';
+import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
 export default function HomeScreen() {
   const { profile } = useAuth();
-  const { data: members, loading: membersLoading, error: membersError } = useMembers();
-  const { data: tasks, loading: tasksLoading, error: tasksError, toggleTask } = useTasks();
+  const { showToast } = useToast();
+  const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } = useMembers();
+  const { data: tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks, toggleTask } = useTasks();
   const [query, setQuery] = useState('');
 
   const attentionMembers = useMemo(() => buildAttentionPreview(members, query), [members, query]);
@@ -50,6 +53,7 @@ export default function HomeScreen() {
           error={membersError}
           isEmpty={!attentionMembers.length}
           emptyMessage="No members currently flagged for follow-up."
+          onRetry={() => void refreshMembers()}
         />
         {attentionMembers.map((member) => (
           <MemberListItem
@@ -68,9 +72,18 @@ export default function HomeScreen() {
           error={tasksError}
           isEmpty={!todayTasks.length}
           emptyMessage="No open tasks due today."
+          onRetry={() => void refreshTasks()}
         />
         {todayTasks.map((task) => (
-          <TaskItem key={task.id} task={task} toggleTestID={testIds.tasks.toggle(task.id)} onToggle={() => void toggleTask(task)} />
+          <TaskItem
+            key={task.id}
+            task={task}
+            toggleTestID={testIds.tasks.toggle(task.id)}
+            onToggle={async () => {
+              const err = await toggleTask(task);
+              if (err) showToast(getUserMessage(err));
+            }}
+          />
         ))}
       </Card>
     </ScrollView>

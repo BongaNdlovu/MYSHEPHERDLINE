@@ -12,7 +12,7 @@ import { AuthProvider } from '@/lib/core/auth';
 import { envValidation } from '@/lib/core/env';
 import { ToastProvider } from '@/lib/core/toast';
 
-export { ErrorBoundary } from 'expo-router';
+export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 

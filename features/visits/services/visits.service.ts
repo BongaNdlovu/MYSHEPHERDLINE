@@ -1,3 +1,4 @@
+import { fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Visit } from '@/types/database';
 
@@ -19,12 +20,12 @@ export async function createVisit(input: {
   };
 
   const { error } = await supabase.from('visits').insert(payload);
-  if (error) return error.message;
+  if (error) throw fromSupabaseError(error, 'Unable to save visit.');
 
   const { error: memberError } = await supabase
     .from('members')
     .update({ last_contact_at: payload.visited_at })
     .eq('id', input.memberId);
 
-  return memberError?.message ?? null;
+  if (memberError) throw fromSupabaseError(memberError, 'Visit saved, but member contact date could not be updated.');
 }

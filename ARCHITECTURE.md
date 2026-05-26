@@ -115,13 +115,34 @@ features/members/selectors/members.ts
 
 ## Query and mutation patterns
 
-- **Lists/details:** use feature hooks returning `{ data, loading, error, refresh }` via `QueryState` from `lib/core/query-types.ts`
-- **UI feedback:** render loading/error/empty with `QueryStateView` from `components/ui/`
-- **Mutations:** hooks expose action methods (e.g. `toggleTask`) that call services and surface errors to `useToast()`
+- **Lists/details:** use feature hooks returning `{ data, loading, error, refresh, lastLoadedAt, isStale }` via `QueryState` from `lib/core/query-types.ts`
+- **Errors:** services throw normalized `AppError` values from `lib/core/errors.ts`; hooks catch with `toAppError()` and screens render through `QueryStateView` or inline form errors
+- **UI feedback:** render loading/error/empty with `QueryStateView` from `components/ui/`; pass `onRetry={() => refresh()}` for recoverable query failures
+- **Mutations:** validate inline with helpers from `lib/core/validation.ts`; show field errors on the form and use `InlineError` for submission failures; reserve `useToast()` for success and lightweight non-blocking feedback
+- **Fatal render errors:** Expo Router `ErrorBoundary` in `app/_layout.tsx` delegates to `components/ui/RouteErrorBoundary.tsx` and `FatalErrorScreen`
 
-## Worker
+## Error handling ownership
 
-The Worker under `worker/src/` is modular (`auth`, `reports`, `notifications`, `http`, `env`, `rate-limit`, `logger`). App-side report fetching tries the Worker first (`features/reports/services/reports.service.ts`) and falls back to local Supabase aggregation when the Worker URL is unset or unreachable.
+| Layer | Responsibility |
+| --- | --- |
+| `lib/core/errors.ts` | `AppError` model, Supabase/auth/HTTP mappers, user-safe messages |
+| `lib/core/validation.ts` | Client-side field validation for auth and visit forms |
+| Feature `services/` | Throw `AppError` via `fromSupabaseError()` — never return raw strings |
+| Feature `hooks/` | Catch service failures, expose `AppError \| null` in query state |
+| `components/ui/QueryStateView.tsx` | Loading, empty, retry, and category-specific query error UI |
+| `components/ui/InlineError.tsx` | Recoverable mutation/auth submission errors on forms |
+| `components/ui/ConfigErrorScreen.tsx` | Startup env/config failures (before auth/providers) |
+| `components/ui/FatalErrorScreen.tsx` | Unexpected render failures via route error boundary |
+
+Escalation rules:
+
+- **Inline query errors:** recoverable fetch failures on list/detail screens (`network`, `server`)
+- **Inline form errors:** validation and sign-in/sign-up/visit submission failures
+- **Toast only:** success confirmations and non-blocking mutation feedback (e.g. task toggle failure on home/tasks)
+- **Fatal boundary:** unexpected React render errors not tied to a known backend failure
+
+Report fetching tries the Worker first and falls back to local Supabase aggregation. When the Worker is configured but unreachable, `useReportSummary()` sets `workerUnavailable: true` and the reports screen shows a notice while displaying local fallback data.
+
 
 ## Security
 

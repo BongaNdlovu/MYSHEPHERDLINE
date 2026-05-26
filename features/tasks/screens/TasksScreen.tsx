@@ -4,11 +4,14 @@ import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { buildWeekDayStrip, groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
+import { getUserMessage } from '@/lib/core/errors';
+import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
 
 export default function TasksScreen() {
-  const { data: tasks, loading, error, toggleTask } = useTasks();
+  const { data: tasks, loading, error, refresh, toggleTask } = useTasks();
+  const { showToast } = useToast();
   const { today, upcoming } = groupTasksByDueDate(tasks);
   const weekDays = buildWeekDayStrip();
 
@@ -31,16 +34,39 @@ export default function TasksScreen() {
           error={error}
           isEmpty={!today.length}
           emptyMessage="No open tasks due today."
+          onRetry={() => void refresh()}
         />
         {today.map((task) => (
-          <TaskItem key={task.id} task={task} toggleTestID={testIds.tasks.toggle(task.id)} onToggle={() => void toggleTask(task)} />
+          <TaskItem
+            key={task.id}
+            task={task}
+            toggleTestID={testIds.tasks.toggle(task.id)}
+            onToggle={async () => {
+              const err = await toggleTask(task);
+              if (err) showToast(getUserMessage(err));
+            }}
+          />
         ))}
       </Card>
 
       <Card title="Upcoming" badge={`${upcoming.length}`}>
-        <QueryStateView loading={loading} error={error} isEmpty={!upcoming.length} emptyMessage="No upcoming tasks." />
+        <QueryStateView
+          loading={loading}
+          error={error}
+          isEmpty={!upcoming.length}
+          emptyMessage="No upcoming tasks."
+          onRetry={() => void refresh()}
+        />
         {upcoming.map((task) => (
-          <TaskItem key={task.id} task={task} toggleTestID={testIds.tasks.toggle(task.id)} onToggle={() => void toggleTask(task)} />
+          <TaskItem
+            key={task.id}
+            task={task}
+            toggleTestID={testIds.tasks.toggle(task.id)}
+            onToggle={async () => {
+              const err = await toggleTask(task);
+              if (err) showToast(getUserMessage(err));
+            }}
+          />
         ))}
       </Card>
     </ScrollView>

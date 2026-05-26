@@ -6,7 +6,7 @@ Entry point for MyShepherdLine project docs. Start here if you are onboarding or
 
 | Topic | Location |
 | --- | --- |
-| Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) |
+| Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) (includes error-handling ownership) |
 | Local setup and scripts | [../README.md](../README.md) |
 | Testing (unit, integration, E2E) | [testing/e2e-android.md](testing/e2e-android.md), [testing/verify-pipeline.md](testing/verify-pipeline.md) |
 | Production security hardening | [security/production-hardening.md](security/production-hardening.md) |
@@ -34,7 +34,7 @@ npm.cmd install
 - **Routes:** `app/` (thin re-exports only)
 - **Business features:** `features/` (auth, account, home, members, tasks, reports, visits, legal)
 - **App shell:** `lib/app-shell/` (auth redirect), `app/_layout.tsx`, `app/(tabs)/_layout.tsx`
-- **Shared infra:** `lib/core/` (env, Supabase, auth session, API, toast)
+- **Shared infra:** `lib/core/` (env, Supabase, auth session, API, toast, errors, validation)
 - **Shared UI:** `components/ui/`
 - **Types:** `types/`
 

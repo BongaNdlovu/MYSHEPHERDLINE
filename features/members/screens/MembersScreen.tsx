@@ -17,7 +17,7 @@ const filterOptions: { label: string; value: MemberFilter }[] = [
 ];
 
 export default function MembersScreen() {
-  const { data: members, loading, error } = useMembers();
+  const { data: members, loading, error, refresh } = useMembers();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<MemberFilter>('all');
 
@@ -47,6 +47,7 @@ export default function MembersScreen() {
           error={error}
           isEmpty={!filtered.length}
           emptyMessage="No members match your search or filter."
+          onRetry={() => void refresh()}
         />
         {filtered.map((member) => (
           <MemberListItem

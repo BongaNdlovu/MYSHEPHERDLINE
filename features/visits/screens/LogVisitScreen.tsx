@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
+import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useMember } from '@/features/members';
 import { createVisit } from '@/features/visits';
 import { useAuth } from '@/lib/core/auth';
+import { getUserMessage, toAppError } from '@/lib/core/errors';
+import { validateVisitLog } from '@/lib/core/validation';
 import { useToast } from '@/lib/core/toast';
 import type { VisitType } from '@/types/database';
 
@@ -22,44 +25,53 @@ const contactTypes: { label: string; value: VisitType }[] = [
 
 export default function LogVisitScreen() {
   const { memberId } = useLocalSearchParams<{ memberId: string }>();
-  const { data: member, loading, error } = useMember(memberId);
+  const { data: member, loading, error, refresh } = useMember(memberId);
   const { user } = useAuth();
   const { showToast } = useToast();
   const [visitType, setVisitType] = useState<VisitType>('visit');
   const [notes, setNotes] = useState('');
   const [followUp, setFollowUp] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const canSave = Boolean(member && user) && !saving;
 
   const onSave = async () => {
-    if (!member || !user) {
-      showToast('Sign in and select a valid member to log a visit.');
+    const guardMessage = validateVisitLog({ memberPresent: Boolean(member), userPresent: Boolean(user) });
+    if (guardMessage) {
+      setSubmitError(guardMessage);
       return;
     }
+
+    setSubmitError(null);
     setSaving(true);
-    const saveError = await createVisit({
-      memberId: member.id,
-      userId: user.id,
-      visitType,
-      notes,
-      followUpRequired: followUp,
-    });
-    setSaving(false);
-    if (saveError) {
-      showToast(saveError);
-      return;
+    try {
+      await createVisit({
+        memberId: member!.id,
+        userId: user!.id,
+        visitType,
+        notes,
+        followUpRequired: followUp,
+      });
+      showToast('Visit saved successfully.');
+      setTimeout(() => router.back(), 800);
+    } catch (err) {
+      setSubmitError(getUserMessage(toAppError(err, 'Unable to save visit.')));
+    } finally {
+      setSaving(false);
     }
-    showToast('Visit saved successfully.');
-    setTimeout(() => router.back(), 800);
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
       <AppHeader title="Log Visit" subtitle={member?.full_name ?? 'Member'} />
 
-      <QueryStateView loading={loading} error={error ?? (!member && !loading ? 'Member not found.' : null)} />
+      <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
 
       {member ? (
         <>
+          <InlineError message={submitError} />
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact type</Text>
             <View style={styles.typeRow}>
@@ -99,9 +111,17 @@ export default function LogVisitScreen() {
             <Text style={styles.followUpText}>Follow-up required</Text>
           </Pressable>
 
-          <Pressable style={styles.saveButton} testID={testIds.logVisit.save} onPress={onSave} disabled={saving}>
+          <Pressable
+            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+            testID={testIds.logVisit.save}
+            onPress={onSave}
+            disabled={!canSave}
+          >
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Visit'}</Text>
           </Pressable>
+          {!canSave && !saving ? (
+            <Text style={styles.helper}>Sign in and select a valid member before saving.</Text>
+          ) : null}
         </>
       ) : null}
     </ScrollView>
@@ -161,5 +181,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
+  saveButtonDisabled: { opacity: 0.55 },
   saveButtonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  helper: {
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    fontSize: 13,
+  },
 });

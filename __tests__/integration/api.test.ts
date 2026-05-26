@@ -19,9 +19,9 @@ describe('api integration', () => {
     vi.unstubAllGlobals();
   });
 
-  it('returns null when report fetch fails', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
-    await expect(fetchReportSummary('token')).resolves.toBeNull();
+  it('returns structured failure when report fetch fails', async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 503 } as Response);
+    await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'server' });
   });
 
   it('returns summary on successful report fetch', async () => {
@@ -30,16 +30,20 @@ describe('api integration', () => {
       json: async () => ({ tasksOpen: 2, membersNeedingAttention: 1 }),
     } as Response);
     const summary = await fetchReportSummary('token');
-    expect(summary?.tasksOpen).toBe(2);
+    expect(summary.ok).toBe(true);
+    if (summary.ok) {
+      expect(summary.data.tasksOpen).toBe(2);
+    }
   });
 
   it('registers push token and surfaces worker errors', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
+      status: 401,
       json: async () => ({ error: 'Unauthorized' }),
     } as Response);
     const result = await registerPushToken('token', 'ExpoPushToken[abc]', 'Pixel');
-    expect(result.error).toBe('Unauthorized');
+    expect(result.error?.category).toBe('auth');
   });
 
   it('checks worker health', async () => {

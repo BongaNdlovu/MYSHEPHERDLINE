@@ -5,18 +5,20 @@ import { colors, radii, spacing } from '@/constants/theme';
 type FormFieldProps = TextInputProps & {
   label: string;
   fieldTestId?: string;
+  error?: string;
 };
 
-export function FormField({ label, style, fieldTestId, ...props }: FormFieldProps) {
+export function FormField({ label, style, fieldTestId, error, ...props }: FormFieldProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         testID={fieldTestId}
         placeholderTextColor={colors.textMuted}
-        style={[styles.input, style]}
+        style={[styles.input, error ? styles.inputError : null, style]}
         {...props}
       />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
@@ -39,4 +41,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  inputError: { borderColor: colors.accent },
+  error: { color: colors.accent, fontSize: 12, fontWeight: '600', marginTop: spacing.xs },
 });

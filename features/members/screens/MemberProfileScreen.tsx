@@ -12,16 +12,13 @@ import { useToast } from '@/lib/core/toast';
 
 export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: member, loading, error } = useMember(id);
+  const { data: member, loading, error, refresh } = useMember(id);
   const { showToast } = useToast();
 
   if (loading || error || !member) {
     return (
       <View style={styles.loading}>
-        <QueryStateView
-          loading={loading}
-          error={error ?? (!member && !loading ? 'Member not found.' : null)}
-        />
+        <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
       </View>
     );
   }

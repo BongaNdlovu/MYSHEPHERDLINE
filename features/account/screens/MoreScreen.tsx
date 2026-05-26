@@ -2,7 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { accountQuickActions } from '@/features/account';
+import { accountQuickActions } from '../selectors/quick-actions';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { testIds } from '@/constants/testIds';

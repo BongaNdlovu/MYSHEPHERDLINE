@@ -1,4 +1,5 @@
 import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
+import { fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Member, Task, Visit } from '@/types/database';
 
@@ -17,9 +18,9 @@ export async function fetchLocalReportInputs(recentDays = 7) {
     supabase.from('tasks').select('*'),
   ]);
 
-  if (membersResult.error) throw new Error(membersResult.error.message);
-  if (visitsResult.error) throw new Error(visitsResult.error.message);
-  if (tasksResult.error) throw new Error(tasksResult.error.message);
+  if (membersResult.error) throw fromSupabaseError(membersResult.error, 'Unable to load reports.');
+  if (visitsResult.error) throw fromSupabaseError(visitsResult.error, 'Unable to load reports.');
+  if (tasksResult.error) throw fromSupabaseError(tasksResult.error, 'Unable to load reports.');
 
   return {
     members: (membersResult.data ?? []) as Member[],
