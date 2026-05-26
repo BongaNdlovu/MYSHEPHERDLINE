@@ -1,5 +1,9 @@
--- Run this in Supabase SQL Editor to fix database linter security warnings.
--- Safe to run on an existing project (drops and replaces the flagged policies).
+-- Role model migration: owner | admin | shepherd, assigned-only shepherds, owner-only user management.
+-- Run in Supabase SQL Editor on existing projects after schema.sql / fix-rls-security.sql.
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('shepherd', 'admin', 'owner'));
 
 create or replace function public.is_owner()
 returns boolean
@@ -33,14 +37,38 @@ $$;
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to authenticated;
 
-drop policy if exists "Profiles are readable by authenticated users" on public.profiles;
+create or replace function public.enforce_profile_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role or new.is_active is distinct from old.is_active then
+    if not public.is_owner() then
+      raise exception 'Only owner can change roles or access status';
+    end if;
+  end if;
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_profile_update() from public;
+revoke all on function public.enforce_profile_update() from anon, authenticated;
+
+drop policy if exists "Admins can update any profile" on public.profiles;
+drop policy if exists "Owner can update any profile" on public.profiles;
+create policy "Owner can update any profile"
+  on public.profiles for update to authenticated
+  using (public.is_owner())
+  with check (public.is_owner());
+
 drop policy if exists "Profiles readable by self or admin" on public.profiles;
 create policy "Profiles readable by self or admin"
   on public.profiles for select to authenticated
   using (id = auth.uid() or public.is_admin());
 
-drop policy if exists "Members writable by authenticated users" on public.members;
-drop policy if exists "Members readable by authenticated users" on public.members;
 drop policy if exists "Members readable by assignee or admin" on public.members;
 create policy "Members readable by assignee or admin"
   on public.members for select to authenticated
@@ -57,13 +85,31 @@ create policy "Members updatable by assignee or admin"
   using (assigned_to = auth.uid() or public.is_admin())
   with check (assigned_to = auth.uid() or public.is_admin());
 
-drop policy if exists "Members deletable by admin" on public.members;
-create policy "Members deletable by admin"
-  on public.members for delete to authenticated
-  using (public.is_admin());
+drop policy if exists "Visits readable by logger assignee or admin" on public.visits;
+create policy "Visits readable by logger assignee or admin"
+  on public.visits for select to authenticated
+  using (
+    public.is_admin()
+    or exists (
+      select 1 from public.members m
+      where m.id = member_id and m.assigned_to = auth.uid()
+    )
+  );
 
-drop policy if exists "Tasks writable by authenticated users" on public.tasks;
-drop policy if exists "Tasks readable by authenticated users" on public.tasks;
+drop policy if exists "Visits insertable by logger with member access" on public.visits;
+create policy "Visits insertable by logger with member access"
+  on public.visits for insert to authenticated
+  with check (
+    logged_by = auth.uid()
+    and (
+      public.is_admin()
+      or exists (
+        select 1 from public.members m
+        where m.id = member_id and m.assigned_to = auth.uid()
+      )
+    )
+  );
+
 drop policy if exists "Tasks readable by assignee or admin" on public.tasks;
 create policy "Tasks readable by assignee or admin"
   on public.tasks for select to authenticated
@@ -80,38 +126,7 @@ create policy "Tasks updatable by assignee or admin"
   using (assignee_id = auth.uid() or public.is_admin())
   with check (assignee_id = auth.uid() or public.is_admin());
 
-drop policy if exists "Tasks deletable by admin" on public.tasks;
-create policy "Tasks deletable by admin"
-  on public.tasks for delete to authenticated
-  using (public.is_admin());
-
-drop policy if exists "Visits readable by authenticated users" on public.visits;
-drop policy if exists "Visits readable by logger assignee or admin" on public.visits;
-create policy "Visits readable by logger assignee or admin"
-  on public.visits for select to authenticated
-  using (
-    public.is_admin()
-    or exists (
-      select 1 from public.members m
-      where m.id = member_id and m.assigned_to = auth.uid()
-    )
-  );
-
-drop policy if exists "Visits insertable by authenticated users" on public.visits;
-drop policy if exists "Visits insertable by logger with member access" on public.visits;
-create policy "Visits insertable by logger with member access"
-  on public.visits for insert to authenticated
-  with check (
-    logged_by = auth.uid()
-    and (
-      public.is_admin()
-      or exists (
-        select 1 from public.members m
-        where m.id = member_id and m.assigned_to = auth.uid()
-      )
-    )
-  );
-
--- Trigger-only function: block direct RPC calls from anon/authenticated.
-revoke all on function public.handle_new_user() from public;
-revoke all on function public.handle_new_user() from anon, authenticated;
+-- Promote designated owner (safe to re-run).
+update public.profiles
+set role = 'owner', is_active = true, updated_at = now()
+where lower(email) = lower('Fanelesibonge50@gmail.com');

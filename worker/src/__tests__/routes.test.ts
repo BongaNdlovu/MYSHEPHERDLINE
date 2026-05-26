@@ -1,9 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authMocks = vi.hoisted(() => ({
-  getAuthContext: vi.fn(),
+  resolveAuth: vi.fn(),
   createServiceClient: vi.fn(),
-  isAdmin: vi.fn(),
+  isOwner: vi.fn(),
   isInternalDigestRequest: vi.fn(),
 }));
 
@@ -45,7 +45,7 @@ describe('worker routes', () => {
     });
     notificationMocks.registerToken.mockResolvedValue({ ok: true });
     notificationMocks.sendDigest.mockResolvedValue({ sent: 1 });
-    authMocks.isAdmin.mockReturnValue(false);
+    authMocks.isOwner.mockReturnValue(false);
     authMocks.isInternalDigestRequest.mockReturnValue(false);
   });
 
@@ -55,13 +55,29 @@ describe('worker routes', () => {
   });
 
   it('rejects unauthenticated report requests', async () => {
-    authMocks.getAuthContext.mockResolvedValue(null);
+    authMocks.resolveAuth.mockResolvedValue({ status: 'unauthorized' });
     const response = await worker.fetch(new Request('https://worker.test/reports/summary'), env);
     expect(response.status).toBe(401);
   });
 
+  it('rejects inactive users', async () => {
+    authMocks.resolveAuth.mockResolvedValue({ status: 'inactive', userId: 'u1' });
+    const response = await worker.fetch(
+      new Request('https://worker.test/reports/summary', {
+        headers: { Authorization: 'Bearer token' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(403);
+  });
+
   it('returns summary for authenticated users', async () => {
-    authMocks.getAuthContext.mockResolvedValue({ userId: 'u1', role: 'shepherd' });
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
     const response = await worker.fetch(
       new Request('https://worker.test/reports/summary', {
         headers: { Authorization: 'Bearer token' },
@@ -72,8 +88,14 @@ describe('worker routes', () => {
     expect(reportMocks.buildSummary).toHaveBeenCalled();
   });
 
-  it('rejects digest send for non-admin users', async () => {
-    authMocks.getAuthContext.mockResolvedValue({ userId: 'u1', role: 'shepherd' });
+  it('rejects digest send for non-owner users', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      role: 'admin',
+      email: 'a@test.local',
+      isActive: true,
+    });
+    authMocks.isOwner.mockReturnValue(false);
     const response = await worker.fetch(
       new Request('https://worker.test/notifications/send-digest', {
         method: 'POST',
@@ -82,6 +104,25 @@ describe('worker routes', () => {
       env,
     );
     expect(response.status).toBe(403);
+  });
+
+  it('allows digest send for owner users', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      role: 'owner',
+      email: 'o@test.local',
+      isActive: true,
+    });
+    authMocks.isOwner.mockReturnValue(true);
+    const response = await worker.fetch(
+      new Request('https://worker.test/notifications/send-digest', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(notificationMocks.sendDigest).toHaveBeenCalled();
   });
 
   it('allows digest send with cron secret', async () => {
@@ -98,7 +139,12 @@ describe('worker routes', () => {
   });
 
   it('rejects invalid register payloads', async () => {
-    authMocks.getAuthContext.mockResolvedValue({ userId: 'u1', role: 'shepherd' });
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
     notificationMocks.parseRegisterPayload.mockReturnValue({ error: 'expoPushToken is required' });
     const response = await worker.fetch(
       new Request('https://worker.test/notifications/register', {

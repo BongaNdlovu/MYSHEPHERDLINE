@@ -1,4 +1,4 @@
-import { createServiceClient, getAuthContext, isAdmin, isInternalDigestRequest } from './auth';
+import { createServiceClient, isInternalDigestRequest, isOwner, resolveAuth } from './auth';
 import { validateWorkerEnv, type WorkerEnv } from './env';
 import { corsHeaders, json } from './http';
 import { createRequestContext, logAudit } from './logger';
@@ -7,6 +7,23 @@ import { buildSummary } from './reports';
 import { clientRateLimitKey, isRateLimited } from './rate-limit';
 
 export type { WorkerEnv } from './env';
+
+function authErrorResponse(
+  request: Request,
+  env: WorkerEnv,
+  requestContext: ReturnType<typeof createRequestContext>,
+  auth: Awaited<ReturnType<typeof resolveAuth>>,
+) {
+  if ('status' in auth && auth.status === 'inactive') {
+    logAudit(requestContext, 'inactive_user_rejected', { userId: auth.userId });
+    return json(request, env, { error: 'Account deactivated' }, 403, {
+      'X-Request-Id': requestContext.requestId,
+    });
+  }
+  return json(request, env, { error: 'Unauthorized' }, 401, {
+    'X-Request-Id': requestContext.requestId,
+  });
+}
 
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
@@ -45,19 +62,15 @@ export default {
     }
 
     if (url.pathname === '/reports/summary' && request.method === 'GET') {
-      const context = await getAuthContext(request, env);
-      if (!context) return json(request, env, { error: 'Unauthorized' }, 401, {
-        'X-Request-Id': requestContext.requestId,
-      });
-      const summary = await buildSummary(supabase, env, context);
+      const auth = await resolveAuth(request, env);
+      if ('status' in auth) return authErrorResponse(request, env, requestContext, auth);
+      const summary = await buildSummary(supabase, env, auth);
       return json(request, env, summary, 200, { 'X-Request-Id': requestContext.requestId });
     }
 
     if (url.pathname === '/notifications/register' && request.method === 'POST') {
-      const context = await getAuthContext(request, env);
-      if (!context) return json(request, env, { error: 'Unauthorized' }, 401, {
-        'X-Request-Id': requestContext.requestId,
-      });
+      const auth = await resolveAuth(request, env);
+      if ('status' in auth) return authErrorResponse(request, env, requestContext, auth);
 
       let body: unknown;
       try {
@@ -73,27 +86,31 @@ export default {
         'X-Request-Id': requestContext.requestId,
       });
 
-      const result = await registerToken(supabase, context.userId, parsed);
+      const result = await registerToken(supabase, auth.userId, parsed);
       if ('error' in result) return json(request, env, { error: result.error }, 500, {
         'X-Request-Id': requestContext.requestId,
       });
 
-      logAudit(requestContext, 'push_token_registered', { userId: context.userId });
+      logAudit(requestContext, 'push_token_registered', { userId: auth.userId });
       return json(request, env, { ok: true }, 200, { 'X-Request-Id': requestContext.requestId });
     }
 
     if (url.pathname === '/notifications/send-digest' && request.method === 'POST') {
       const internal = isInternalDigestRequest(request, env);
-      const context = internal ? null : await getAuthContext(request, env);
+      const auth = internal ? null : await resolveAuth(request, env);
 
-      if (!internal && (!context || !isAdmin(context))) {
-        logAudit(requestContext, 'digest_send_forbidden', {
-          userId: context?.userId ?? null,
-          internal,
-        });
-        return json(request, env, { error: 'Forbidden' }, 403, {
-          'X-Request-Id': requestContext.requestId,
-        });
+      if (!internal) {
+        if (auth && 'status' in auth) return authErrorResponse(request, env, requestContext, auth);
+        if (!auth || !isOwner(auth)) {
+          logAudit(requestContext, 'digest_send_forbidden', {
+            userId: auth && !('status' in auth) ? auth.userId : null,
+            internal,
+            role: auth && !('status' in auth) ? auth.role : null,
+          });
+          return json(request, env, { error: 'Forbidden' }, 403, {
+            'X-Request-Id': requestContext.requestId,
+          });
+        }
       }
 
       const result = await sendDigest(supabase, env);
@@ -104,7 +121,7 @@ export default {
       logAudit(requestContext, 'digest_sent', {
         sent: result.sent,
         internal,
-        userId: context?.userId ?? null,
+        userId: auth && !('status' in auth) ? auth.userId : null,
       });
       return json(request, env, result, 200, { 'X-Request-Id': requestContext.requestId });
     }

@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { isAppAdmin, isProfileActive, normalizeEmail, PRIMARY_ADMIN_EMAIL } from '@/lib/core/admin';
+import {
+  isAppAdmin,
+  isOperationalAdmin,
+  isOwner,
+  isProfileActive,
+  normalizeEmail,
+  OWNER_EMAIL,
+} from '@/lib/core/admin';
 import type { Profile } from '@/types/database';
 
 function profile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: '1',
-    email: PRIMARY_ADMIN_EMAIL,
-    display_name: 'Admin',
-    role: 'admin',
+    email: OWNER_EMAIL,
+    display_name: 'Owner',
+    role: 'owner',
     is_active: true,
     created_at: '',
     updated_at: '',
@@ -16,21 +23,40 @@ function profile(overrides: Partial<Profile> = {}): Profile {
   };
 }
 
+describe('isOwner', () => {
+  it('allows owner role', () => {
+    expect(isOwner(profile())).toBe(true);
+  });
+
+  it('blocks admin and shepherd roles', () => {
+    expect(isOwner(profile({ role: 'admin' }))).toBe(false);
+    expect(isOwner(profile({ role: 'shepherd' }))).toBe(false);
+  });
+
+  it('blocks inactive owner', () => {
+    expect(isOwner(profile({ is_active: false }))).toBe(false);
+  });
+});
+
+describe('isOperationalAdmin', () => {
+  it('allows owner and admin roles', () => {
+    expect(isOperationalAdmin(profile({ role: 'owner' }))).toBe(true);
+    expect(isOperationalAdmin(profile({ role: 'admin', email: 'ops@example.com' }))).toBe(true);
+  });
+
+  it('blocks shepherd role', () => {
+    expect(isOperationalAdmin(profile({ role: 'shepherd' }))).toBe(false);
+  });
+
+  it('blocks inactive admins', () => {
+    expect(isOperationalAdmin(profile({ role: 'admin', is_active: false }))).toBe(false);
+  });
+});
+
 describe('isAppAdmin', () => {
-  it('allows primary admin email with admin role', () => {
-    expect(isAppAdmin(profile())).toBe(true);
-  });
-
-  it('blocks admin role with wrong email', () => {
-    expect(isAppAdmin(profile({ email: 'other@example.com' }))).toBe(false);
-  });
-
-  it('blocks correct email with shepherd role', () => {
+  it('matches isOperationalAdmin', () => {
+    expect(isAppAdmin(profile({ role: 'admin', email: 'ops@example.com' }))).toBe(true);
     expect(isAppAdmin(profile({ role: 'shepherd' }))).toBe(false);
-  });
-
-  it('is case-insensitive for email', () => {
-    expect(isAppAdmin(profile({ email: 'fanelesibonge50@gmail.com' }))).toBe(true);
   });
 });
 

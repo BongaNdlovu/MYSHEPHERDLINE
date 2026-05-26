@@ -1,4 +1,4 @@
-export type UserRole = 'shepherd' | 'admin';
+export type UserRole = 'shepherd' | 'admin' | 'owner';
 
 export type RiskLevel = 'high' | 'medium' | 'low';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isAdmin, isInternalDigestRequest, isValidExpoPushToken } from '../auth';
+import { hasGlobalScope, isInternalDigestRequest, isOwner, isValidExpoPushToken } from '../auth';
 
 describe('worker auth helpers', () => {
   it('validates expo push token format', () => {
@@ -15,8 +15,14 @@ describe('worker auth helpers', () => {
     expect(isInternalDigestRequest(request, { DIGEST_CRON_SECRET: 'secret-value' } as never)).toBe(true);
   });
 
-  it('checks admin role', () => {
-    expect(isAdmin({ userId: '1', role: 'admin' })).toBe(true);
-    expect(isAdmin({ userId: '1', role: 'shepherd' })).toBe(false);
+  it('checks global scope for admin and owner', () => {
+    expect(hasGlobalScope({ userId: '1', role: 'admin', email: 'a@x.com', isActive: true })).toBe(true);
+    expect(hasGlobalScope({ userId: '1', role: 'owner', email: 'o@x.com', isActive: true })).toBe(true);
+    expect(hasGlobalScope({ userId: '1', role: 'shepherd', email: 's@x.com', isActive: true })).toBe(false);
+  });
+
+  it('checks owner role', () => {
+    expect(isOwner({ userId: '1', role: 'owner', email: 'o@x.com', isActive: true })).toBe(true);
+    expect(isOwner({ userId: '1', role: 'admin', email: 'a@x.com', isActive: true })).toBe(false);
   });
 });

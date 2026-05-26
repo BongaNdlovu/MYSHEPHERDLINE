@@ -9,5 +9,5 @@ export { default as AdminReportsScreen } from './screens/AdminReportsScreen';
 export { default as AdminControlsScreen } from './screens/AdminControlsScreen';
 export { useAdminAccess } from './hooks/useAdminAccess';
 export { useAdminProfiles } from './hooks/useAdminProfiles';
-export { isAppAdmin, PRIMARY_ADMIN_EMAIL } from './selectors/guard';
-export { adminMenuItems } from './selectors/admin-menu';
+export { isAppAdmin, isOperationalAdmin, isOwner, OWNER_EMAIL, PRIMARY_ADMIN_EMAIL } from './selectors/guard';
+export { adminMenuItems, visibleAdminMenuItems } from './selectors/admin-menu';

@@ -1,6 +1,6 @@
 appId: ${E2E_APP_ID}
 env:
   E2E_APP_ID: com.myshepherdline.app
-  E2E_EMAIL: shepherd@test.example
+  E2E_EMAIL: shepherd@test.local
   E2E_PASSWORD: ChangeMe123!
   E2E_MEMBER_NAME: Sarah

@@ -25,17 +25,19 @@ This runs, in order:
 | `npm.cmd run lint` | ESLint |
 | `npm.cmd run test` | App tests |
 | `npm.cmd run test:win` | App tests with single-fork pool (Windows fallback) |
-| `npm.cmd run test:worker` | Worker typecheck + tests |
-| `npm.cmd run verify:win` | Full gate using Windows-friendly test pool |
+| `npm.cmd run test:worker:win` | Worker typecheck + tests (Windows-friendly pool) |
+| `npm.cmd run verify:win` | Full gate using Windows-friendly test pools |
 
 ## Windows `spawn EPERM` troubleshooting
 
-Some Windows environments block Vitest from spawning child processes (esbuild worker pools). Symptom:
+Some Windows environments block Vitest from spawning child processes when loading TypeScript configs through esbuild. Symptom:
 
 ```
 Error: spawn EPERM
   at ... vitest.config.ts
 ```
+
+The repo uses plain `vitest.config.mjs` files to avoid TS config transpilation. If EPERM persists, use the Windows fallback commands below.
 
 ### Fix 1: Use the repo fallback (recommended)
 

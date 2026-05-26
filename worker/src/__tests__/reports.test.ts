@@ -10,8 +10,9 @@ describe('worker report aggregation', () => {
           return {
             select: async () => ({
               data: [
-                { risk_level: 'high', status: 'inactive', assigned_to: 'user-1' },
-                { risk_level: 'low', status: 'active', assigned_to: 'user-2' },
+                { id: 'm1', risk_level: 'high', status: 'inactive', assigned_to: 'user-1' },
+                { id: 'm2', risk_level: 'low', status: 'active', assigned_to: 'user-2' },
+                { id: 'm3', risk_level: 'low', status: 'active', assigned_to: null },
               ],
             }),
           };
@@ -21,8 +22,58 @@ describe('worker report aggregation', () => {
             select: () => ({
               gte: async () => ({
                 data: [
-                  { visit_type: 'call', visited_at: new Date().toISOString(), logged_by: 'user-1' },
-                  { visit_type: 'visit', visited_at: new Date().toISOString(), logged_by: 'user-2' },
+                  { visit_type: 'call', visited_at: new Date().toISOString(), logged_by: 'user-1', member_id: 'm1' },
+                  { visit_type: 'visit', visited_at: new Date().toISOString(), logged_by: 'user-2', member_id: 'm2' },
+                  { visit_type: 'visit', visited_at: new Date().toISOString(), logged_by: 'user-1', member_id: 'm3' },
+                ],
+              }),
+            }),
+          };
+        }
+        return {
+          select: async () => ({
+            data: [
+              { status: 'open', assignee_id: 'user-1' },
+              { status: 'open', assignee_id: 'user-2' },
+              { status: 'open', assignee_id: null },
+            ],
+          }),
+        };
+      },
+    };
+
+    const summary = await buildSummary(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never, {
+      userId: 'user-1',
+      role: 'shepherd',
+      email: 's@test.local',
+      isActive: true,
+    });
+
+    expect(summary.membersNeedingAttention).toBe(1);
+    expect(summary.visitsCompleted).toBe(1);
+    expect(summary.tasksOpen).toBe(1);
+  });
+
+  it('returns global summaries for admin and owner', async () => {
+    const supabase = {
+      from(table: string) {
+        if (table === 'members') {
+          return {
+            select: async () => ({
+              data: [
+                { id: 'm1', risk_level: 'high', status: 'inactive', assigned_to: 'user-1' },
+                { id: 'm2', risk_level: 'low', status: 'active', assigned_to: 'user-2' },
+              ],
+            }),
+          };
+        }
+        if (table === 'visits') {
+          return {
+            select: () => ({
+              gte: async () => ({
+                data: [
+                  { visit_type: 'call', visited_at: new Date().toISOString(), logged_by: 'user-1', member_id: 'm1' },
+                  { visit_type: 'visit', visited_at: new Date().toISOString(), logged_by: 'user-2', member_id: 'm2' },
                 ],
               }),
             }),
@@ -40,12 +91,14 @@ describe('worker report aggregation', () => {
     };
 
     const summary = await buildSummary(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never, {
-      userId: 'user-1',
-      role: 'shepherd',
+      userId: 'admin-1',
+      role: 'admin',
+      email: 'a@test.local',
+      isActive: true,
     });
 
     expect(summary.membersNeedingAttention).toBe(1);
-    expect(summary.visitsCompleted).toBe(1);
-    expect(summary.tasksOpen).toBe(1);
+    expect(summary.visitsCompleted).toBe(2);
+    expect(summary.tasksOpen).toBe(2);
   });
 });

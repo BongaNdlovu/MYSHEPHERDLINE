@@ -1,10 +1,13 @@
--- Admin-managed access: is_active on profiles, admin profile updates, role guard.
+-- Admin-managed access: is_active on profiles, owner profile updates, role guard.
 -- Run after schema.sql / fix-rls-security.sql on existing projects.
 
 alter table public.profiles
   add column if not exists is_active boolean not null default true;
 
--- Prevent non-admins from elevating role or toggling access on their own row.
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('shepherd', 'admin', 'owner'));
+
 create or replace function public.enforce_profile_update()
 returns trigger
 language plpgsql
@@ -12,12 +15,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.uid() = new.id and not public.is_admin() then
-    if new.role is distinct from old.role then
-      raise exception 'Cannot change role';
-    end if;
-    if new.is_active is distinct from old.is_active then
-      raise exception 'Cannot change access status';
+  if new.role is distinct from old.role or new.is_active is distinct from old.is_active then
+    if not public.is_owner() then
+      raise exception 'Only owner can change roles or access status';
     end if;
   end if;
   new.updated_at = now();
@@ -34,12 +34,13 @@ create trigger enforce_profile_update
   for each row execute function public.enforce_profile_update();
 
 drop policy if exists "Admins can update any profile" on public.profiles;
-create policy "Admins can update any profile"
+drop policy if exists "Owner can update any profile" on public.profiles;
+create policy "Owner can update any profile"
   on public.profiles for update to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.is_owner())
+  with check (public.is_owner());
 
--- Promote designated admin (run once; safe to re-run).
+-- Promote designated owner (run once; safe to re-run).
 update public.profiles
-set role = 'admin', is_active = true, updated_at = now()
+set role = 'owner', is_active = true, updated_at = now()
 where lower(email) = lower('Fanelesibonge50@gmail.com');

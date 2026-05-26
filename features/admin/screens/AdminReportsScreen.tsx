@@ -51,7 +51,7 @@ export default function AdminReportsScreen() {
           </Text>
         ) : null}
         <Text style={styles.note}>
-          Push digest triggers run from the Cloudflare Worker cron route with admin or cron secret
+          Push digest triggers run from the Cloudflare Worker cron route with owner or cron secret
           auth. Configure secrets in the Worker dashboard — not in app code.
         </Text>
       </Card>

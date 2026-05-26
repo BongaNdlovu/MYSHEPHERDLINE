@@ -23,18 +23,22 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('using (user_id = auth.uid())');
   });
 
-  it('includes admin profile access controls', () => {
+  it('includes owner role and profile access controls', () => {
+    expect(schema).toContain("check (role in ('shepherd', 'admin', 'owner'))");
     expect(schema).toContain('is_active boolean not null default true');
-    expect(schema).toContain('Admins can update any profile');
+    expect(schema).toContain('Owner can update any profile');
     expect(schema).toContain('enforce_profile_update');
+    expect(schema).toContain('create or replace function public.is_owner()');
   });
 
-  it('scopes read access by role and assignment', () => {
+  it('scopes read access by role and assignment without unassigned shepherd visibility', () => {
     expect(schema).toContain('create or replace function public.is_admin()');
     expect(schema).toContain('Profiles readable by self or admin');
     expect(schema).toContain('Members readable by assignee or admin');
     expect(schema).toContain('Visits readable by logger assignee or admin');
     expect(schema).toContain('Tasks readable by assignee or admin');
+    expect(schema).not.toContain('assigned_to is null');
+    expect(schema).not.toContain('assignee_id is null');
     expect(schema).not.toMatch(
       /create policy "Members readable by authenticated users"\s+on public\.members for select to authenticated using \(true\)/,
     );

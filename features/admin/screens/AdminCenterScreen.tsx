@@ -2,16 +2,20 @@ import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { AdminMenuCard } from '@/features/admin/components/AdminMenuCard';
-import { adminMenuItems } from '@/features/admin/selectors/admin-menu';
+import { useAdminAccess } from '@/features/admin/hooks/useAdminAccess';
+import { visibleAdminMenuItems } from '@/features/admin/selectors/admin-menu';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
 
 export default function AdminCenterScreen() {
+  const { isOwner } = useAdminAccess();
+  const items = visibleAdminMenuItems(isOwner);
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.admin.center}>
       <AppHeader title="Admin Center" subtitle="Manage users, members, tasks, and operations" />
-      {adminMenuItems.map((item) => (
+      {items.map((item) => (
         <AdminMenuCard
           key={item.id}
           item={item}

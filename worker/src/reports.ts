@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { AuthContext } from './auth';
+import { hasGlobalScope, type AuthContext } from './auth';
 import { getRecentActivityDays, type WorkerEnv } from './env';
 
 export type ReportSummary = {
@@ -16,8 +16,8 @@ export type ReportSummary = {
   };
 };
 
-type MemberRow = { risk_level: string; status: string; assigned_to: string | null };
-type VisitRow = { visit_type: string; visited_at: string; logged_by: string };
+type MemberRow = { id: string; risk_level: string; status: string; assigned_to: string | null };
+type VisitRow = { visit_type: string; visited_at: string; logged_by: string; member_id: string };
 type TaskRow = { status: string; assignee_id: string | null };
 
 function memberNeedsAttention(member: MemberRow) {
@@ -25,10 +25,8 @@ function memberNeedsAttention(member: MemberRow) {
 }
 
 function scopeMembers(members: MemberRow[], context: AuthContext) {
-  if (context.role === 'admin') return members;
-  return members.filter(
-    (member) => member.assigned_to === null || member.assigned_to === context.userId,
-  );
+  if (hasGlobalScope(context)) return members;
+  return members.filter((member) => member.assigned_to === context.userId);
 }
 
 export async function buildSummary(
@@ -41,19 +39,20 @@ export async function buildSummary(
   since.setDate(since.getDate() - recentActivityDays);
 
   const [membersResult, visitsResult, tasksResult] = await Promise.all([
-    supabase.from('members').select('risk_level, status, assigned_to'),
-    supabase.from('visits').select('visit_type, visited_at, logged_by').gte('visited_at', since.toISOString()),
+    supabase.from('members').select('id, risk_level, status, assigned_to'),
+    supabase.from('visits').select('visit_type, visited_at, logged_by, member_id').gte('visited_at', since.toISOString()),
     supabase.from('tasks').select('status, assignee_id'),
   ]);
 
   const members = scopeMembers((membersResult.data ?? []) as MemberRow[], context);
-  const visits = ((visitsResult.data ?? []) as VisitRow[]).filter(
-    (visit) => context.role === 'admin' || visit.logged_by === context.userId,
-  );
+  const assignedMemberIds = new Set(members.map((member) => member.id));
+
+  const visits = ((visitsResult.data ?? []) as VisitRow[]).filter((visit) => {
+    if (hasGlobalScope(context)) return true;
+    return assignedMemberIds.has(visit.member_id);
+  });
   const tasks = ((tasksResult.data ?? []) as TaskRow[]).filter(
-    (task) =>
-      task.status === 'open' &&
-      (context.role === 'admin' || task.assignee_id === null || task.assignee_id === context.userId),
+    (task) => task.status === 'open' && (hasGlobalScope(context) || task.assignee_id === context.userId),
   );
 
   const visitBreakdown = visits.reduce(

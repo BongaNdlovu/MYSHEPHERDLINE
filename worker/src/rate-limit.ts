@@ -62,11 +62,7 @@ export async function isRateLimited(
   const windowMs = options.windowMs ?? WINDOW_MS;
 
   if (options.kv) {
-    try {
-      return await isRateLimitedKv(options.kv, key, maxRequests, windowMs);
-    } catch {
-      return isRateLimitedMemory(key, maxRequests, windowMs);
-    }
+    return await isRateLimitedKv(options.kv, key, maxRequests, windowMs);
   }
   return isRateLimitedMemory(key, maxRequests, windowMs);
 }

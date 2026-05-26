@@ -17,8 +17,8 @@
 
 do $$
 declare
-  shepherd_id uuid := 'REPLACE_SHEPHERD_USER_ID';
-  admin_id uuid := 'REPLACE_ADMIN_USER_ID';
+  shepherd_id uuid := '0d5c7343-34b6-49fa-9071-23b7937d424a';
+  admin_id uuid := '910cea30-c473-4bc5-a607-5eb78b3a9ab7';
   member_sarah uuid;
   member_sipho uuid;
 begin

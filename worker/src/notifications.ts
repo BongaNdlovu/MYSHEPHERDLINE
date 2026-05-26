@@ -46,7 +46,12 @@ export async function registerToken(
 }
 
 export async function sendDigest(supabase: SupabaseClient, env: WorkerEnv) {
-  const summary = await buildSummary(supabase, env, { userId: 'system', role: 'admin' });
+  const summary = await buildSummary(supabase, env, {
+    userId: 'system',
+    role: 'owner',
+    email: '',
+    isActive: true,
+  });
   const { data: tokens, error } = await supabase
     .from('push_tokens')
     .select('expo_push_token')

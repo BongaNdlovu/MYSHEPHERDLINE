@@ -16,7 +16,6 @@ type AuthContextValue = {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: AppError | null }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error: AppError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -25,7 +24,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const supabase = requireSupabase();
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, display_name, role, is_active, created_at, updated_at')
+    .eq('id', userId)
+    .maybeSingle();
   if (error || !data) return null;
   return data as Profile;
 }
@@ -90,15 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn: async (email, password) => {
         const supabase = requireSupabase();
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error: fromAuthError(error) };
-      },
-      signUp: async (email, password, displayName) => {
-        const supabase = requireSupabase();
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { display_name: displayName } },
-        });
         return { error: fromAuthError(error) };
       },
       signOut: async () => {

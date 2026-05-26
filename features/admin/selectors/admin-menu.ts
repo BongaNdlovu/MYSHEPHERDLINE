@@ -9,6 +9,7 @@ export type AdminMenuItem = {
     | '/admin/tasks'
     | '/admin/reports'
     | '/admin/controls';
+  ownerOnly?: boolean;
 };
 
 export const adminMenuItems: AdminMenuItem[] = [
@@ -18,6 +19,7 @@ export const adminMenuItems: AdminMenuItem[] = [
     subtitle: 'Manage access and shepherd roles',
     icon: 'users',
     route: '/admin/users',
+    ownerOnly: true,
   },
   {
     id: 'members',
@@ -43,8 +45,13 @@ export const adminMenuItems: AdminMenuItem[] = [
   {
     id: 'controls',
     title: 'App Controls',
-    subtitle: 'Legal links and admin documentation',
+    subtitle: 'Legal links and compliance references',
     icon: 'settings',
     route: '/admin/controls',
+    ownerOnly: true,
   },
 ];
+
+export function visibleAdminMenuItems(isOwner: boolean) {
+  return adminMenuItems.filter((item) => !item.ownerOnly || isOwner);
+}
