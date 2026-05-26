@@ -68,36 +68,127 @@ alter table public.visits enable row level security;
 alter table public.tasks enable row level security;
 alter table public.push_tokens enable row level security;
 
+-- Drop legacy/overly-permissive policies from earlier installs
+drop policy if exists "Members writable by authenticated users" on public.members;
+drop policy if exists "Tasks writable by authenticated users" on public.tasks;
+
+drop policy if exists "Profiles are readable by authenticated users" on public.profiles;
 create policy "Profiles are readable by authenticated users"
   on public.profiles for select to authenticated using (true);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update to authenticated using (auth.uid() = id);
 
+drop policy if exists "Users can insert own profile" on public.profiles;
 create policy "Users can insert own profile"
   on public.profiles for insert to authenticated with check (auth.uid() = id);
 
+drop policy if exists "Members readable by authenticated users" on public.members;
 create policy "Members readable by authenticated users"
   on public.members for select to authenticated using (true);
 
-create policy "Members writable by authenticated users"
-  on public.members for all to authenticated using (true) with check (true);
+drop policy if exists "Members insertable by authenticated users" on public.members;
+create policy "Members insertable by authenticated users"
+  on public.members for insert to authenticated
+  with check (
+    assigned_to is null
+    or assigned_to = auth.uid()
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
 
+drop policy if exists "Members updatable by assignee or admin" on public.members;
+create policy "Members updatable by assignee or admin"
+  on public.members for update to authenticated
+  using (
+    assigned_to is null
+    or assigned_to = auth.uid()
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  )
+  with check (
+    assigned_to is null
+    or assigned_to = auth.uid()
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+drop policy if exists "Members deletable by admin" on public.members;
+create policy "Members deletable by admin"
+  on public.members for delete to authenticated
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+drop policy if exists "Visits readable by authenticated users" on public.visits;
 create policy "Visits readable by authenticated users"
   on public.visits for select to authenticated using (true);
 
+drop policy if exists "Visits insertable by authenticated users" on public.visits;
 create policy "Visits insertable by authenticated users"
   on public.visits for insert to authenticated with check (logged_by = auth.uid());
 
+drop policy if exists "Tasks readable by authenticated users" on public.tasks;
 create policy "Tasks readable by authenticated users"
   on public.tasks for select to authenticated using (true);
 
-create policy "Tasks writable by authenticated users"
-  on public.tasks for all to authenticated using (true) with check (true);
+drop policy if exists "Tasks insertable by authenticated users" on public.tasks;
+create policy "Tasks insertable by authenticated users"
+  on public.tasks for insert to authenticated
+  with check (
+    assignee_id is null
+    or assignee_id = auth.uid()
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
 
+drop policy if exists "Tasks updatable by assignee or admin" on public.tasks;
+create policy "Tasks updatable by assignee or admin"
+  on public.tasks for update to authenticated
+  using (
+    assignee_id = auth.uid()
+    or assignee_id is null
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  )
+  with check (
+    assignee_id = auth.uid()
+    or assignee_id is null
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+drop policy if exists "Tasks deletable by admin" on public.tasks;
+create policy "Tasks deletable by admin"
+  on public.tasks for delete to authenticated
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+drop policy if exists "Push tokens readable by owner" on public.push_tokens;
 create policy "Push tokens readable by owner"
   on public.push_tokens for select to authenticated using (user_id = auth.uid());
 
+drop policy if exists "Push tokens writable by owner" on public.push_tokens;
 create policy "Push tokens writable by owner"
   on public.push_tokens for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
@@ -119,6 +210,9 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function public.handle_new_user() from public;
+revoke all on function public.handle_new_user() from anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
