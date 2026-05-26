@@ -71,7 +71,7 @@ npm.cmd run test:e2e
 - Supabase auth sessions persist via `expo-secure-store` on native (chunked for large payloads) and `localStorage` on web.
 - RLS read policies scope profiles, members, visits, and tasks by role/assignment; apply `supabase/schema.sql` or `supabase/fix-rls-security.sql` on existing projects, then `supabase/admin-access.sql` for admin-managed access.
 - Admin Center is gated by `profile.role = admin` and the primary admin email (`lib/core/admin.ts`). Set credentials only in Supabase Auth — never in app code or SQL.
-- Worker `/notifications/send-digest` requires admin auth or `X-Cron-Secret`; sensitive actions emit structured audit logs with `X-Request-Id`.
+- Worker `/notifications/send-digest` requires owner auth or `X-Cron-Secret`; sensitive actions emit structured audit logs with `X-Request-Id`.
 - Worker rate limiting uses in-memory buckets in dev; bind a Cloudflare KV namespace as `RATE_LIMIT` for production.
 - Worker reports are role-scoped for shepherds.
 - Demo data is test-only under `__tests__/fixtures/`.

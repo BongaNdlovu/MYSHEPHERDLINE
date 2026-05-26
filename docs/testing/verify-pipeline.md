@@ -32,7 +32,7 @@ This runs, in order:
 
 Some Windows environments block Vitest from spawning child processes when loading TypeScript configs through esbuild. Symptom:
 
-```
+```text
 Error: spawn EPERM
   at ... vitest.config.ts
 ```
