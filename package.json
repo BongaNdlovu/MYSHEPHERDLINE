@@ -35,7 +35,8 @@
     "eslint": "^9.29.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~6.0.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.94.0"
   },
   "scripts": {
     "start": "expo start",
@@ -48,7 +49,9 @@
     "test:worker": "npm --prefix worker test",
     "test:e2e": "maestro test .maestro/flows",
     "test:e2e:smoke": "maestro test .maestro/flows/01-landing-to-sign-in.yaml .maestro/flows/02-auth-sign-in-success.yaml .maestro/flows/10-sign-out.yaml",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run test:worker"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run test:worker",
+    "deploy": "npx expo export -p web && wrangler deploy",
+    "preview": "npx expo export -p web && wrangler dev"
   },
   "private": true
 }
