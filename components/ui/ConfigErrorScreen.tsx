@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/constants/theme';
-import type { EnvValidationResult } from '@/lib/config/env';
+import type { EnvValidationResult } from '@/lib/core/env';
 
 export function ConfigErrorScreen({ validation }: { validation: Extract<EnvValidationResult, { ok: false }> }) {
   return (

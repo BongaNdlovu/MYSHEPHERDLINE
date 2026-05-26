@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { checkWorkerHealth, fetchReportSummary, registerPushToken } from '@/lib/api';
+import { checkWorkerHealth, fetchReportSummary, registerPushToken } from '@/lib/core/api';
 
-vi.mock('@/lib/config/env', () => ({
+vi.mock('@/lib/core/env', () => ({
   getAppEnv: () => ({
     supabaseUrl: 'https://abc.supabase.co',
     supabasePublishableKey: 'key',

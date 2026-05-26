@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateAppEnv } from '@/lib/config/env';
+import { validateAppEnv } from '@/lib/core/env';
 
 describe('validateAppEnv', () => {
   it('fails when required keys are missing', () => {

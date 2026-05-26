@@ -1,4 +1,4 @@
-import { membersNeedingAttention } from '@/lib/domain/members';
+import { membersNeedingAttention } from '@/features/members/selectors/members';
 import type { Member, ReportSummary, Task, Visit } from '@/types/database';
 
 export const DEFAULT_RECENT_ACTIVITY_DAYS = 7;

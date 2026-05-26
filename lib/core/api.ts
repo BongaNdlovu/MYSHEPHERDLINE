@@ -1,4 +1,4 @@
-import { getAppEnv } from '@/lib/config/env';
+import { getAppEnv } from '@/lib/core/env';
 import type { ReportSummary } from '@/types/database';
 
 function workerUrl(path: string) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupTasksByDueDate, toDateKey } from '@/lib/domain/tasks';
+import { groupTasksByDueDate, toDateKey } from '@/features/tasks/selectors/tasks';
 import { fixtureTasks } from '@/__tests__/fixtures/demo-data';
 
 describe('tasks domain', () => {

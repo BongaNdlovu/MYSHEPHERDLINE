@@ -3,8 +3,8 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { registerPushToken } from '@/lib/api';
-import { getAppEnv } from '@/lib/config/env';
+import { registerPushToken } from '@/lib/core/api';
+import { getAppEnv } from '@/lib/core/env';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

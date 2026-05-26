@@ -1,9 +1,9 @@
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { envValidation } from '@/lib/config/env';
-import { registerForPushNotifications } from '@/lib/notifications';
-import { requireSupabase } from '@/lib/supabase';
+import { envValidation } from '@/lib/core/env';
+import { registerForPushNotifications } from '@/lib/core/notifications';
+import { requireSupabase } from '@/lib/core/supabase';
 import type { Profile } from '@/types/database';
 
 type AuthContextValue = {

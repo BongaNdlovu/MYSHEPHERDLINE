@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import { useToast } from '@/lib/toast';
+import { useToast } from '@/lib/core/toast';
 
 export function ToastSnackbar() {
   const { message } = useToast();

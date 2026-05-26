@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { envValidation, getAppEnv } from '@/lib/config/env';
+import { envValidation, getAppEnv } from '@/lib/core/env';
 
-export { envValidation } from '@/lib/config/env';
+export { envValidation } from '@/lib/core/env';
 export const isSupabaseConfigured = envValidation.ok;
 
 let client: SupabaseClient | null = null;

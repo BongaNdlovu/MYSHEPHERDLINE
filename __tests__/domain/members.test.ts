@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterMembers, membersNeedingAttention } from '@/lib/domain/members';
+import { filterMembers, membersNeedingAttention } from '@/features/members/selectors/members';
 import { fixtureMembers } from '@/__tests__/fixtures/demo-data';
 
 describe('members domain', () => {

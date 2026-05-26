@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { buildReportSummary } from '@/lib/domain/reports';
-import { fetchReportSummary } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import { requireSupabase } from '@/lib/supabase';
-import type { Member, ReportSummary, Task, Visit } from '@/types/database';
+import { buildReportSummary } from '@/features/reports/selectors/reports';
+import { fetchLocalReportInputs, fetchWorkerSummary } from '@/features/reports/services/reports.service';
+import { useAuth } from '@/lib/core/auth';
+import type { ReportSummary } from '@/types/database';
 
 type ReportState = {
   summary: ReportSummary | null;
@@ -33,7 +32,7 @@ export function useReportSummary(): ReportState {
     setLoading(true);
     setError(null);
 
-    const remote = await fetchReportSummary(session.access_token);
+    const remote = await fetchWorkerSummary(session.access_token);
     if (remote) {
       setSummary(remote);
       setSource('worker');
@@ -42,29 +41,8 @@ export function useReportSummary(): ReportState {
     }
 
     try {
-      const supabase = requireSupabase();
-      const recentDays = 7;
-      const since = new Date();
-      since.setDate(since.getDate() - recentDays);
-
-      const [membersResult, visitsResult, tasksResult] = await Promise.all([
-        supabase.from('members').select('*'),
-        supabase.from('visits').select('*').gte('visited_at', since.toISOString()),
-        supabase.from('tasks').select('*'),
-      ]);
-
-      if (membersResult.error) throw new Error(membersResult.error.message);
-      if (visitsResult.error) throw new Error(visitsResult.error.message);
-      if (tasksResult.error) throw new Error(tasksResult.error.message);
-
-      setSummary(
-        buildReportSummary({
-          members: (membersResult.data ?? []) as Member[],
-          visits: (visitsResult.data ?? []) as Visit[],
-          tasks: (tasksResult.data ?? []) as Task[],
-          recentActivityDays: recentDays,
-        }),
-      );
+      const inputs = await fetchLocalReportInputs();
+      setSummary(buildReportSummary(inputs));
       setSource('supabase');
     } catch (err) {
       setSummary(null);

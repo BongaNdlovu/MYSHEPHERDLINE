@@ -1,4 +1,4 @@
-import { requireSupabase } from '@/lib/supabase';
+import { requireSupabase } from '@/lib/core/supabase';
 import type { Visit } from '@/types/database';
 
 export async function createVisit(input: {

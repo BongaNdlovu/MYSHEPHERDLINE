@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReportSummary } from '@/lib/domain/reports';
+import { buildReportSummary } from '@/features/reports/selectors/reports';
 import { fixtureMembers, fixtureTasks, fixtureVisits } from '@/__tests__/fixtures/demo-data';
 
 describe('reports domain', () => {

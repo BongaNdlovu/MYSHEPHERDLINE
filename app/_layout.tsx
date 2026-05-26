@@ -5,12 +5,12 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
-import { ConfigErrorScreen } from '@/components/ConfigErrorScreen';
-import { ToastSnackbar } from '@/components/ToastSnackbar';
+import { ConfigErrorScreen } from '@/components/ui/ConfigErrorScreen';
+import { ToastSnackbar } from '@/components/ui/ToastSnackbar';
 import { colors } from '@/constants/theme';
-import { envValidation } from '@/lib/config/env';
-import { AuthProvider } from '@/lib/auth';
-import { ToastProvider } from '@/lib/toast';
+import { AuthProvider } from '@/lib/core/auth';
+import { envValidation } from '@/lib/core/env';
+import { ToastProvider } from '@/lib/core/toast';
 
 export { ErrorBoundary } from 'expo-router';
 

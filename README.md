@@ -61,7 +61,23 @@ npm.cmd run test:e2e
 
 ## Compliance
 
-Operational POPIA/PAIA drafts live in `docs/compliance/`. In-app privacy/terms screens are under `app/legal/`. Legal review is required before production launch.
+Operational POPIA/PAIA drafts live in `docs/compliance/`. In-app privacy/terms screens are under `features/legal/` (routed via `app/legal/`). Legal review is required before production launch.
+
+## Project layout
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full guide. Quick map:
+
+| Path | Purpose |
+|---|---|
+| `app/` | Expo Router URLs — thin re-exports only |
+| `features/` | Business features (auth, members, tasks, reports, visits, legal, home) |
+| `components/ui/` | Shared UI primitives |
+| `lib/core/` | Env, Supabase, auth, API, toast |
+| `types/` | Backend/domain types |
+| `worker/` | Cloudflare Worker API |
+| `__tests__/` | Unit/integration tests and fixtures |
+
+**Where to add code:** new screens go in `features/<name>/screens/`; routes in `app/` should only re-export them. Data fetching goes in feature `hooks/` → `services/` → Supabase/Worker.
 
 ## EAS
 
