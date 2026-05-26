@@ -4,6 +4,7 @@ export interface WorkerEnv {
   RECENT_ACTIVITY_DAYS?: string;
   DIGEST_CRON_SECRET?: string;
   ALLOWED_ORIGINS?: string;
+  RATE_LIMIT?: KVNamespace;
 }
 
 export function validateWorkerEnv(env: WorkerEnv) {

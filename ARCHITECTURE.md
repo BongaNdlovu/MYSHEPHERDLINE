@@ -121,7 +121,20 @@ features/members/selectors/members.ts
 
 ## Worker
 
-The Worker under `worker/src/` is modular (`auth`, `reports`, `notifications`, `http`, `env`, `rate-limit`). App-side report fetching tries the Worker first (`features/reports/services/reports.service.ts`) and falls back to local Supabase aggregation when the Worker URL is unset or unreachable.
+The Worker under `worker/src/` is modular (`auth`, `reports`, `notifications`, `http`, `env`, `rate-limit`, `logger`). App-side report fetching tries the Worker first (`features/reports/services/reports.service.ts`) and falls back to local Supabase aggregation when the Worker URL is unset or unreachable.
+
+## Security
+
+Production controls and migration steps: [docs/security/production-hardening.md](docs/security/production-hardening.md).
+
+| Layer | Control |
+| --- | --- |
+| Mobile auth | `expo-secure-store` session adapter (`lib/core/supabase-storage.ts`) |
+| Database | RLS on all core tables; reads scoped by role/assignment (`supabase/schema.sql`) |
+| Worker | Bearer auth + admin/cron gate for digest; optional KV rate limits; audit logs |
+| App env | Fail-fast when Supabase vars missing (`lib/core/env.ts`) |
+
+Shepherd-facing queries rely on RLS — services do not filter client-side for authorization. Worker summaries apply an additional role scope in `worker/src/reports.ts` when using the service role.
 
 ## Tests
 

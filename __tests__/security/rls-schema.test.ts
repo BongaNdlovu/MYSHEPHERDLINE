@@ -22,4 +22,21 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('Push tokens readable by owner');
     expect(schema).toContain('using (user_id = auth.uid())');
   });
+
+  it('scopes read access by role and assignment', () => {
+    expect(schema).toContain('create or replace function public.is_admin()');
+    expect(schema).toContain('Profiles readable by self or admin');
+    expect(schema).toContain('Members readable by assignee or admin');
+    expect(schema).toContain('Visits readable by logger assignee or admin');
+    expect(schema).toContain('Tasks readable by assignee or admin');
+    expect(schema).not.toMatch(
+      /create policy "Members readable by authenticated users"\s+on public\.members for select to authenticated using \(true\)/,
+    );
+    expect(schema).not.toMatch(
+      /create policy "Visits readable by authenticated users"\s+on public\.visits for select to authenticated using \(true\)/,
+    );
+    expect(schema).not.toMatch(
+      /create policy "Tasks readable by authenticated users"\s+on public\.tasks for select to authenticated using \(true\)/,
+    );
+  });
 });

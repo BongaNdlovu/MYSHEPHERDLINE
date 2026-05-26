@@ -8,7 +8,9 @@ Entry point for MyShepherdLine project docs. Start here if you are onboarding or
 | --- | --- |
 | Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) |
 | Local setup and scripts | [../README.md](../README.md) |
-| Testing (unit, integration, E2E) | [testing/e2e-android.md](testing/e2e-android.md) |
+| Testing (unit, integration, E2E) | [testing/e2e-android.md](testing/e2e-android.md), [testing/verify-pipeline.md](testing/verify-pipeline.md) |
+| Production security hardening | [security/production-hardening.md](security/production-hardening.md) |
+| **Step-by-step setup (start here)** | **[setup/step-by-step.md](setup/step-by-step.md)** |
 | POPIA / compliance drafts | [compliance/README.md](compliance/README.md) |
 | Worker deployment | [../README.md#setup](../README.md) (Setup section) |
 
@@ -55,13 +57,15 @@ Run everything:
 npm.cmd run verify
 ```
 
-## Compliance docs
-
-Operational POPIA/PAIA working documents are under [compliance/](compliance/). These are drafts and require legal review before production launch.
+On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win` — see [testing/verify-pipeline.md](testing/verify-pipeline.md).
 
 ## Deployment checklist
 
-1. Apply `supabase/schema.sql` to your Supabase project.
+See [security/production-hardening.md](security/production-hardening.md) for the full production sign-off list. Summary:
+
+1. **New Supabase project:** apply `supabase/schema.sql`. **Existing project:** apply `supabase/fix-rls-security.sql`.
 2. Set `.env` from `.env.example` (Supabase URL and publishable key; optional Worker URL).
-3. Deploy Worker secrets and run `npm run deploy --workspace myshepherdline-worker`.
-4. Build the app with EAS when ready (`README.md` EAS section).
+3. Deploy Worker secrets, optional KV rate-limit namespace, and run `npm run deploy --workspace myshepherdline-worker`.
+4. Run `npm.cmd run verify` (or `verify:win` on Windows if needed).
+5. Run Android E2E smoke when Maestro and a preview build are available.
+6. Build the app with EAS when ready (`README.md` EAS section).

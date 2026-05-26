@@ -12,6 +12,7 @@ Android-first end-to-end tests using [Maestro](https://maestro.mobile.dev/).
 4. `.env` configured with valid Supabase credentials
 5. Test shepherd account created in Supabase Auth
 6. At least one member matching `E2E_MEMBER_NAME` in the database for member/visit flows
+7. After scoped RLS is applied, that member should be **unassigned or assigned to the test shepherd** — otherwise member/visit flows will show empty results
 
 ## Environment variables
 

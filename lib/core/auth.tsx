@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { envValidation } from '@/lib/core/env';
 import { registerForPushNotifications } from '@/lib/core/notifications';
+import { SUPABASE_AUTH_STORAGE_KEY, supabaseAuthStorage } from '@/lib/core/supabase-storage';
 import { requireSupabase } from '@/lib/core/supabase';
 import type { Profile } from '@/types/database';
 
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         const supabase = requireSupabase();
         await supabase.auth.signOut();
+        await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
         setProfile(null);
       },
     }),

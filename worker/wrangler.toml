@@ -6,4 +6,9 @@ compatibility_date = "2025-05-25"
 RECENT_ACTIVITY_DAYS = "7"
 ALLOWED_ORIGINS = ""
 
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "e23495d886034bc191af036d76129197"
+preview_id = "1e740872c43a457aadb6b15cee15f513"
+
 # Set via wrangler secret put DIGEST_CRON_SECRET

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authMocks = vi.hoisted(() => ({
   getAuthContext: vi.fn(),
@@ -21,8 +21,6 @@ vi.mock('../auth', () => authMocks);
 vi.mock('../reports', () => reportMocks);
 vi.mock('../notifications', () => notificationMocks);
 
-import worker from '../index';
-
 const env = {
   SUPABASE_URL: 'https://abc.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
@@ -31,6 +29,12 @@ const env = {
 } as const;
 
 describe('worker routes', () => {
+  let worker: typeof import('../index').default;
+
+  beforeAll(async () => {
+    worker = (await import('../index')).default;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     authMocks.createServiceClient.mockReturnValue({});
