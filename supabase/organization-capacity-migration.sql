@@ -122,6 +122,15 @@ create policy "Profiles readable in tenant by self or admin"
     and (id = auth.uid() or public.is_admin())
   );
 
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile"
+  on public.profiles for update to authenticated
+  using (auth.uid() = id)
+  with check (
+    auth.uid() = id
+    and organization_id = public.current_organization_id()
+  );
+
 drop policy if exists "Members readable by assignee or admin" on public.members;
 create policy "Members readable in tenant by assignee or admin"
   on public.members for select to authenticated
@@ -362,3 +371,33 @@ $$;
 revoke all on function public.worker_report_summary(uuid, uuid, text, integer) from public;
 revoke all on function public.worker_report_summary(uuid, uuid, text, integer) from anon, authenticated;
 grant execute on function public.worker_report_summary(uuid, uuid, text, integer) to service_role;
+
+create or replace function public.enforce_profile_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.organization_id is distinct from old.organization_id then
+    raise exception 'Organization changes require operator intervention';
+  end if;
+
+  if new.role is distinct from old.role or new.is_active is distinct from old.is_active then
+    if not public.is_owner() then
+      raise exception 'Only owner can change roles or access status';
+    end if;
+  end if;
+
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_profile_update() from public;
+revoke all on function public.enforce_profile_update() from anon, authenticated;
+
+drop trigger if exists enforce_profile_update on public.profiles;
+create trigger enforce_profile_update
+  before update on public.profiles
+  for each row execute function public.enforce_profile_update();

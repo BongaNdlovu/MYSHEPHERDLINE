@@ -30,6 +30,10 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('Owner can update any profile');
     expect(schema).toContain('enforce_profile_update');
     expect(schema).toContain('create or replace function public.is_owner()');
+    expect(schema).toContain('Organization changes require operator intervention');
+    expect(schema).toMatch(
+      /create policy "Users can update own profile"[\s\S]*organization_id = public\.current_organization_id\(\)/,
+    );
   });
 
   it('scopes read access by tenant, role, and assignment', () => {
