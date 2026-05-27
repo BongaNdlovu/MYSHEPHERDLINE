@@ -1,5 +1,10 @@
 export type FieldErrors<T extends Record<string, string>> = Partial<Record<keyof T, string>>;
 
+/** Escape `%`, `_`, and `\` for safe use inside PostgREST `.ilike` patterns. */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, '\\$&');
+}
+
 export function hasFieldErrors<T extends Record<string, string>>(errors: FieldErrors<T>): boolean {
   return Object.values(errors).some(Boolean);
 }

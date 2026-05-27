@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchTasksPage,
@@ -7,7 +7,7 @@ import {
 } from '@/features/tasks/services/tasks.service';
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
-import type { PaginatedQueryState } from '@/lib/core/query-types';
+import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
 import type { TaskListRow } from '@/types/database';
 
 export type UseTasksOptions = Omit<TaskListQuery, 'page'>;
@@ -25,6 +25,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const togglingRef = useRef(new Set<string>());
   const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(() => new Set());
   const optionsRef = useRef(options);
@@ -62,8 +63,13 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   }, [loadPage]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
-    await loadPage(page + 1, true);
+    if (loading || loadingMore || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    try {
+      await loadPage(page + 1, true);
+    } finally {
+      loadingMoreRef.current = false;
+    }
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
   const isTaskToggling = useCallback((taskId: string) => togglingIds.has(taskId), [togglingIds]);
@@ -101,6 +107,11 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     void loadPage(0, false);
   }, [loadPage, options.status, options.assigneeId, options.pageSize]);
 
+  const isStale = useMemo(
+    () => computeIsStale({ loading, loadingMore, error, lastLoadedAt, dataLength: data.length }),
+    [data.length, error, lastLoadedAt, loading, loadingMore],
+  );
+
   return {
     data,
     loading,
@@ -111,7 +122,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     page,
     hasMore,
     lastLoadedAt,
-    isStale: false,
+    isStale,
     toggleTask,
     isTaskToggling,
   };

@@ -9,6 +9,8 @@ import {
   shouldRedirectFromAdminLayout,
 } from '@/features/admin/selectors/route-guards';
 
+export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function AdminLayout() {
   const { loading, isAdmin } = useAdminAccess();
   const segments = useSegments();

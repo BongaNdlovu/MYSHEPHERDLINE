@@ -31,7 +31,13 @@ export default function AdminUsersScreen() {
           ListHeaderComponent={
             <>
               <View style={styles.topBar}>
-                <Pressable onPress={() => router.back()} style={styles.back}>
+                <Pressable
+                  onPress={() => {
+                    if (router.canGoBack()) router.back();
+                    else router.replace('/admin');
+                  }}
+                  style={styles.back}
+                >
                   <Feather name="chevron-left" size={24} color={colors.primary} />
                 </Pressable>
                 <AppHeader title="Users & Roles" subtitle="Approve access and assign roles" />

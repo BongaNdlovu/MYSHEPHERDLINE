@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildSummary } from '../reports';
+import { buildSummary, reportCacheKeyForTests, resetReportCache } from '../reports';
 
 describe('worker report aggregation', () => {
   it('uses tenant-scoped RPC and caches per organization', async () => {
@@ -36,6 +36,34 @@ describe('worker report aggregation', () => {
       p_role: 'shepherd',
       p_recent_days: 7,
     });
+  });
+
+  it('shares cache entries for admin and owner roles in the same org', () => {
+    resetReportCache();
+    const recentDays = 7;
+    const adminKey = reportCacheKeyForTests(
+      {
+        userId: 'admin-1',
+        organizationId: 'org-1',
+        role: 'admin',
+        email: 'a@test.local',
+        isActive: true,
+      },
+      recentDays,
+    );
+    const ownerKey = reportCacheKeyForTests(
+      {
+        userId: 'owner-1',
+        organizationId: 'org-1',
+        role: 'owner',
+        email: 'o@test.local',
+        isActive: true,
+      },
+      recentDays,
+    );
+
+    expect(adminKey).toBe(ownerKey);
+    expect(adminKey).toBe('global:org-1:7');
   });
 
   it('throws when RPC fails', async () => {

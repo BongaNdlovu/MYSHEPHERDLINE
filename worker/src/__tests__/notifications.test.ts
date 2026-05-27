@@ -77,7 +77,7 @@ describe('expo push batching', () => {
       visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
     });
 
-    expect(result).toEqual({ requested: 150, sent: 150, failed: 0, batches: 2 });
+    expect(result).toEqual({ requested: 150, sent: 150, failed: 0, batches: 2, deactivated: 0 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -98,6 +98,7 @@ describe('expo push batching', () => {
       sent: 0,
       failed: 1,
       batches: 0,
+      deactivated: 0,
       error: 'Expo push API returned 429',
     });
   });
@@ -126,8 +127,42 @@ describe('expo push batching', () => {
       sent: 100,
       failed: 50,
       batches: 1,
+      deactivated: 0,
       error: 'Expo push API returned 503',
     });
+  });
+
+  it('continues sending later chunks when an earlier chunk fails', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? '[]')) as unknown[];
+      if (body.length === 100) {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        json: async () => ({ data: Array.from({ length: body.length }, () => ({ status: 'ok' })) }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const tokens = Array.from({ length: 150 }, (_, index) => `ExpoPushToken[${index}]`);
+    const result = await sendExpoPushBatch(tokens, {
+      membersNeedingAttention: 1,
+      visitsCompleted: 1,
+      tasksOpen: 1,
+      recentActivityDays: 7,
+      visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
+    });
+
+    expect(result).toEqual({
+      requested: 150,
+      sent: 50,
+      failed: 100,
+      batches: 1,
+      deactivated: 0,
+      error: 'Expo push API returned 500',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('returns structured errors for network failures', async () => {
@@ -147,6 +182,7 @@ describe('expo push batching', () => {
       sent: 0,
       failed: 1,
       batches: 0,
+      deactivated: 0,
       error: 'Expo push network failure',
     });
   });
@@ -224,7 +260,13 @@ describe('per-organization digest', () => {
       expect(result.sent).toBe(2);
       expect(result.results).toHaveLength(2);
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(result.results[0].pushDelivery).toEqual({ requested: 1, sent: 1, failed: 0, batches: 1 });
+      expect(result.results[0].pushDelivery).toEqual({
+        requested: 1,
+        sent: 1,
+        failed: 0,
+        batches: 1,
+        deactivated: 0,
+      });
     }
   });
 

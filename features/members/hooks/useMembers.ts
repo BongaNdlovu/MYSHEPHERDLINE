@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchMemberById,
@@ -7,7 +7,7 @@ import {
 } from '@/features/members/services/members.service';
 import type { AppError } from '@/lib/core/errors';
 import { notFoundError, toAppError } from '@/lib/core/errors';
-import type { PaginatedQueryState, QueryState } from '@/lib/core/query-types';
+import { computeIsStale, type PaginatedQueryState, type QueryState } from '@/lib/core/query-types';
 import type { Member, MemberListRow } from '@/types/database';
 
 export type UseMembersOptions = Omit<MemberListQuery, 'page'>;
@@ -20,6 +20,7 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
@@ -51,13 +52,23 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
   }, [loadPage]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
-    await loadPage(page + 1, true);
+    if (loading || loadingMore || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    try {
+      await loadPage(page + 1, true);
+    } finally {
+      loadingMoreRef.current = false;
+    }
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
   useEffect(() => {
     void loadPage(0, false);
   }, [loadPage, options.search, options.status, options.riskLevel, options.pageSize]);
+
+  const isStale = useMemo(
+    () => computeIsStale({ loading, loadingMore, error, lastLoadedAt, dataLength: data.length }),
+    [data.length, error, lastLoadedAt, loading, loadingMore],
+  );
 
   return {
     data,
@@ -69,7 +80,7 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
     page,
     hasMore,
     lastLoadedAt,
-    isStale: false,
+    isStale,
   };
 }
 
@@ -109,5 +120,10 @@ export function useMember(id: string | undefined): QueryState<Member | null> {
     void refresh();
   }, [refresh]);
 
-  return { data, loading, error, refresh, lastLoadedAt, isStale: false };
+  const isStale = useMemo(
+    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: data ? 1 : 0 }),
+    [data, error, lastLoadedAt, loading],
+  );
+
+  return { data, loading, error, refresh, lastLoadedAt, isStale };
 }

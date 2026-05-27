@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LogoMark } from '@/components/ui/LogoMark';
 import { testIds } from '@/constants/testIds';
@@ -15,9 +16,11 @@ const features = [
 ];
 
 export default function LandingScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
     <LinearGradient colors={[...gradients.landing]} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
         <View style={styles.hero}>
           <LogoMark size={140} />
           <Text testID={testIds.landing.title} style={styles.title}>MyShepherdLine</Text>
@@ -60,7 +63,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 32,
-    paddingTop: 60,
+    paddingTop: spacing.lg,
     paddingBottom: 48,
     justifyContent: 'flex-end',
   },

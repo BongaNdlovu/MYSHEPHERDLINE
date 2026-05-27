@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, gradients, radii, spacing } from '@/constants/theme';
 
@@ -23,8 +24,13 @@ export function AppHeader({
   searchPlaceholder = 'Search...',
   searchTestID,
 }: AppHeaderProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <LinearGradient colors={[...gradients.header]} style={styles.header}>
+    <LinearGradient
+      colors={[...gradients.header]}
+      style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+    >
       <View style={styles.topRow}>
         <View style={styles.titleWrap}>
           <Text style={styles.title}>{title}</Text>
@@ -50,7 +56,6 @@ export function AppHeader({
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 52,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
   },

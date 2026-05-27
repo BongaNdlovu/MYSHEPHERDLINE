@@ -1,9 +1,10 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
+import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
@@ -19,6 +20,7 @@ import {
 } from '@/features/tasks/services/tasks.service';
 import { createAppError } from '@/lib/core/errors';
 import { validateDueDate } from '@/lib/core/validation';
+import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useToast } from '@/lib/core/toast';
 import type { TaskPriority, TaskStatus } from '@/types/database';
 
@@ -48,6 +50,7 @@ export default function AdminTaskFormScreen() {
   const [dueDateError, setDueDateError] = useState<string | undefined>();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  useAndroidBackNavigation(goBackOrTasksList);
 
   const loadTask = useCallback(() => {
     if (!id) return;
@@ -139,7 +142,7 @@ export default function AdminTaskFormScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} testID={testIds.admin.tasks.form}>
+    <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={testIds.admin.tasks.form}>
       <Pressable onPress={goBackOrTasksList} style={styles.back}>
         <Feather name="chevron-left" size={24} color={colors.primary} />
       </Pressable>
@@ -220,12 +223,13 @@ export default function AdminTaskFormScreen() {
           <Text style={styles.dangerText}>Delete task</Text>
         </Pressable>
       ) : null}
-    </ScrollView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  formContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
   centered: { flex: 1, justifyContent: 'center', padding: spacing.xl },
   back: { marginBottom: spacing.md },
   heading: { fontSize: 22, fontWeight: '800', color: colors.primary, marginBottom: spacing.lg },

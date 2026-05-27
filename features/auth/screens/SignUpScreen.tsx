@@ -1,13 +1,21 @@
 import { Link, router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { FormScreen } from '@/components/ui/FormScreen';
 
 import { LogoMark } from '@/components/ui/LogoMark';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
 export default function SignUpScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView contentContainerStyle={styles.content} testID={testIds.auth.signUpRestricted}>
+    <FormScreen
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl }]}
+      testID={testIds.auth.signUpRestricted}
+    >
       <LogoMark size={88} />
       <Text style={styles.title}>Admin-managed access</Text>
       <Text style={styles.subtitle}>
@@ -24,12 +32,12 @@ export default function SignUpScreen() {
           <Text style={styles.link}>Return to welcome</Text>
         </Pressable>
       </Link>
-    </ScrollView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.xxl, paddingTop: 72, flexGrow: 1 },
+  content: { padding: spacing.xxl, flexGrow: 1 },
   title: { fontSize: 28, fontWeight: '800', color: colors.primary, marginTop: spacing.xl },
   subtitle: { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xxl, lineHeight: 22 },
   button: {

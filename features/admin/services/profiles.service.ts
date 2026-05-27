@@ -29,12 +29,6 @@ export async function fetchProfilesPage(query: PageParams = {}): Promise<Paginat
   return { items, page, pageSize, hasMore: hasMorePages(items.length, pageSize) };
 }
 
-/** @deprecated Prefer fetchProfilesPage. */
-export async function fetchProfiles(): Promise<Profile[]> {
-  const first = await fetchProfilesPage();
-  return first.items;
-}
-
 export async function updateProfileRole(userId: string, role: Profile['role']): Promise<Profile> {
   const supabase = requireSupabase();
   const { data, error } = await supabase

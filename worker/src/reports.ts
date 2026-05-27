@@ -23,7 +23,11 @@ const CACHE_TTL_MS = 60_000;
 const CACHE_MAX_ENTRIES = 200;
 
 function cacheKey(context: AuthContext, recentDays: number) {
-  return `${context.organizationId}:${context.userId}:${context.role}:${recentDays}`;
+  const roleScope =
+    context.role === 'admin' || context.role === 'owner'
+      ? `global:${context.organizationId}`
+      : `${context.organizationId}:${context.userId}:${context.role}`;
+  return `${roleScope}:${recentDays}`;
 }
 
 function pruneReportCache(now = Date.now()) {
@@ -82,4 +86,9 @@ export async function buildSummary(
 /** @internal test helper */
 export function resetReportCache() {
   reportCache.clear();
+}
+
+/** @internal test helper */
+export function reportCacheKeyForTests(context: AuthContext, recentDays: number) {
+  return cacheKey(context, recentDays);
 }

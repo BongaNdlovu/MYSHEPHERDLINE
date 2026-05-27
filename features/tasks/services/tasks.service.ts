@@ -59,12 +59,6 @@ export async function fetchTaskById(id: string): Promise<Task | null> {
   return (data as Task | null) ?? null;
 }
 
-/** @deprecated Prefer fetchTasksPage for list screens. */
-export async function fetchTasks(): Promise<TaskListRow[]> {
-  const first = await fetchTasksPage({ page: 0, pageSize: DEFAULT_PAGE_SIZE });
-  return first.items;
-}
-
 export async function updateTaskStatus(taskId: string, status: Task['status']) {
   const supabase = requireSupabase();
   const { error } = await supabase.from('tasks').update({ status }).eq('id', taskId);

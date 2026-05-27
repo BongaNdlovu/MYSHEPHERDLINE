@@ -1,15 +1,17 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
+import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useMember } from '@/features/members';
 import { createVisit } from '@/features/visits';
+import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useAuth } from '@/lib/core/auth';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { validateVisitLog } from '@/lib/core/validation';
@@ -34,6 +36,7 @@ export default function LogVisitScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  useAndroidBackNavigation();
   const mountedRef = useRef(true);
   const navigatedRef = useRef(false);
   const backTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,7 +89,7 @@ export default function LogVisitScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
+    <FormScreen style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
       <AppHeader title="Log Visit" subtitle={member?.full_name ?? 'Member'} />
 
       <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
@@ -155,7 +158,7 @@ export default function LogVisitScreen() {
           ) : null}
         </>
       ) : null}
-    </ScrollView>
+    </FormScreen>
   );
 }
 

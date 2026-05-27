@@ -4,7 +4,6 @@ export { MemberListItem } from './components/MemberListItem';
 export { FilterChips } from './components/FilterChips';
 export { useMembers, useMember } from './hooks/useMembers';
 export {
-  fetchMembers,
   fetchMemberById,
   createMember,
   updateMember,

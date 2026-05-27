@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
@@ -12,6 +13,7 @@ import { useMember } from '@/features/members';
 import { getInitials } from '@/lib/core/names';
 
 export default function MemberProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, loading, error, refresh } = useMember(id);
   const { isAdmin } = useAdminAccess();
@@ -28,12 +30,12 @@ export default function MemberProfileScreen() {
 
   return (
     <ScrollView style={styles.screen} testID={testIds.memberProfile.screen}>
-      <LinearGradient colors={[...gradients.profile]} style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
+      <LinearGradient colors={[...gradients.profile]} style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <Pressable style={[styles.iconButton, { top: insets.top + spacing.md }]} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color={colors.white} />
         </Pressable>
         <Pressable
-          style={[styles.iconButton, styles.editButton]}
+          style={[styles.iconButton, styles.editButton, { top: insets.top + spacing.md }]}
           onPress={() => {
             if (isAdmin) router.push(`/admin/members/${member.id}`);
           }}
@@ -89,14 +91,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: spacing.xl },
   header: {
-    paddingTop: 52,
     paddingBottom: 32,
     alignItems: 'center',
     position: 'relative',
   },
   iconButton: {
     position: 'absolute',
-    top: 52,
     left: 16,
     width: 40,
     height: 40,

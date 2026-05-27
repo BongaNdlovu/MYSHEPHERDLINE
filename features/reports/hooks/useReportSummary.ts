@@ -51,9 +51,7 @@ export function useReportSummary(): ReportState {
       return;
     }
 
-    if (remote.reason !== 'unconfigured') {
-      setWorkerUnavailable(true);
-    }
+    setWorkerUnavailable(true);
 
     if (!allowFallback) {
       setSummary(null);

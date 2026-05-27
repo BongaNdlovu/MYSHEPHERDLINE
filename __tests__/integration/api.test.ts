@@ -24,10 +24,24 @@ describe('api integration', () => {
     await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'server' });
   });
 
+  it('rejects malformed report payloads', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ tasksOpen: 'bad' }),
+    } as Response);
+    await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'invalid_response' });
+  });
+
   it('returns summary on successful report fetch', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ tasksOpen: 2, membersNeedingAttention: 1 }),
+      json: async () => ({
+        tasksOpen: 2,
+        membersNeedingAttention: 1,
+        visitsCompleted: 4,
+        recentActivityDays: 7,
+        visitBreakdown: { visits: 1, calls: 1, bibleStudies: 1, newConverts: 1 },
+      }),
     } as Response);
     const summary = await fetchReportSummary('token');
     expect(summary.ok).toBe(true);

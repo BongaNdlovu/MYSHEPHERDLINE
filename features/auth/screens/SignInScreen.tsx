@@ -1,6 +1,9 @@
 import { Link, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { FormScreen } from '@/components/ui/FormScreen';
 
 import { FormField } from '@/components/ui/FormField';
 import { InlineError } from '@/components/ui/InlineError';
@@ -12,6 +15,7 @@ import { getUserMessage } from '@/lib/core/errors';
 import { hasFieldErrors, validateSignIn } from '@/lib/core/validation';
 
 export default function SignInScreen() {
+  const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,8 +58,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <FormScreen style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl }]}>
         <LogoMark size={88} />
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to continue shepherding your congregation.</Text>
@@ -103,14 +106,13 @@ export default function SignInScreen() {
             <Text style={styles.link}>Need an account? Request access</Text>
           </Pressable>
         </Link>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.xxl, paddingTop: 72 },
+  content: { padding: spacing.xxl },
   title: { fontSize: 28, fontWeight: '800', color: colors.primary, marginTop: spacing.xl },
   subtitle: { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xxl },
   button: {

@@ -1,9 +1,10 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
+import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
@@ -17,6 +18,7 @@ import {
   useMember,
   type MemberInput,
 } from '@/features/members';
+import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useToast } from '@/lib/core/toast';
 import { validateOptionalEmail, validateOptionalPhone } from '@/lib/core/validation';
 import type { MemberStatus, RiskLevel } from '@/types/database';
@@ -51,6 +53,7 @@ export default function AdminMemberFormScreen() {
   const [saving, setSaving] = useState(false);
   const [formReady, setFormReady] = useState(!isEdit);
   const formInitializedRef = useRef(false);
+  useAndroidBackNavigation(goBackOrMembersList);
 
   useEffect(() => {
     if (!isEdit || !member || formInitializedRef.current) return;
@@ -141,7 +144,7 @@ export default function AdminMemberFormScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} testID={testIds.admin.members.form}>
+    <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={testIds.admin.members.form}>
       <Pressable onPress={goBackOrMembersList} style={styles.back}>
         <Feather name="chevron-left" size={24} color={colors.primary} />
       </Pressable>
@@ -232,12 +235,13 @@ export default function AdminMemberFormScreen() {
           <Text style={styles.dangerText}>Delete member</Text>
         </Pressable>
       ) : null}
-    </ScrollView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  formContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
   centered: { flex: 1, justifyContent: 'center', padding: spacing.xl },
   back: { marginBottom: spacing.md },
   title: { fontSize: 22, fontWeight: '800', color: colors.primary, marginBottom: spacing.lg },

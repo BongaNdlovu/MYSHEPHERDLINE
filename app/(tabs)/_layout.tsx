@@ -1,10 +1,19 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { testIds } from '@/constants/testIds';
-import { colors } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
+
+export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
+const TAB_BAR_CONTENT_HEIGHT = 56;
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, spacing.sm);
+  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + bottomInset;
+
   return (
     <Tabs
       screenOptions={{
@@ -14,8 +23,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: 'rgba(255,255,255,0.95)',
           borderTopColor: colors.border,
-          paddingTop: 8,
-          height: 72,
+          paddingTop: spacing.sm,
+          paddingBottom: bottomInset,
+          height: tabBarHeight,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}

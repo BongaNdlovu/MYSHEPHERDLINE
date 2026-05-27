@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasFieldErrors, validateDueDate, validateOptionalEmail, validateOptionalPhone, validateSignIn, validateSignUp, validateVisitLog } from '@/lib/core/validation';
+import {
+  escapeLikePattern,
+  hasFieldErrors,
+  validateDueDate,
+  validateOptionalEmail,
+  validateOptionalPhone,
+  validateSignIn,
+  validateSignUp,
+  validateVisitLog,
+} from '@/lib/core/validation';
 
 describe('validation', () => {
   it('requires sign-in fields', () => {
@@ -32,6 +41,12 @@ describe('validation', () => {
     expect(validateOptionalEmail('')).toBeUndefined();
     expect(validateOptionalPhone('abc')).toContain('valid phone');
     expect(validateOptionalPhone('+27 82 123 4567')).toBeUndefined();
+  });
+
+  it('escapes LIKE wildcard characters in search patterns', () => {
+    expect(escapeLikePattern('100%')).toBe('100\\%');
+    expect(escapeLikePattern('a_b')).toBe('a\\_b');
+    expect(escapeLikePattern('path\\to')).toBe('path\\\\to');
   });
 
   it('validates optional task due dates', () => {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/core/pagination';
 import { requireSupabase } from '@/lib/core/supabase';
 import { getCurrentOrganizationId } from '@/lib/core/tenant';
+import { escapeLikePattern } from '@/lib/core/validation';
 import type { Member, MemberListRow } from '@/types/database';
 
 export const MEMBER_LIST_COLUMNS =
@@ -38,7 +39,8 @@ export async function fetchMembersPage(
 
   const search = query.search?.trim();
   if (search) {
-    request = request.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+    const pattern = `%${escapeLikePattern(search)}%`;
+    request = request.or(`full_name.ilike.${pattern},phone.ilike.${pattern}`);
   }
   if (query.status) request = request.eq('status', query.status);
   if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
@@ -53,12 +55,6 @@ export async function fetchMembersPage(
     pageSize,
     hasMore: hasMorePages(items.length, pageSize),
   };
-}
-
-/** @deprecated Prefer fetchMembersPage for list screens. */
-export async function fetchMembers(): Promise<MemberListRow[]> {
-  const first = await fetchMembersPage({ page: 0, pageSize: DEFAULT_PAGE_SIZE });
-  return first.items;
 }
 
 export async function fetchMemberById(id: string): Promise<Member | null> {

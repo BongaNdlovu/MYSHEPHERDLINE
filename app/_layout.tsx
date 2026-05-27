@@ -1,9 +1,11 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConfigErrorScreen } from '@/components/ui/ConfigErrorScreen';
 import { ToastSnackbar } from '@/components/ui/ToastSnackbar';
@@ -31,28 +33,36 @@ export default function RootLayout() {
   if (!ready) return null;
 
   if (!envValidation.ok) {
-    return <ConfigErrorScreen validation={envValidation} />;
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <ConfigErrorScreen validation={envValidation} />
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="landing" />
-            <Stack.Screen name="sign-in" />
-            <Stack.Screen name="sign-up" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="member/[id]" />
-            <Stack.Screen name="log-visit/[memberId]" />
-            <Stack.Screen name="legal/privacy" />
-            <Stack.Screen name="legal/terms" />
-            <Stack.Screen name="admin" />
-          </Stack>
-          <ToastSnackbar />
-        </View>
-      </ToastProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <AuthProvider>
+        <ToastProvider>
+          <View style={{ flex: 1, backgroundColor: colors.bg }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="landing" />
+              <Stack.Screen name="sign-in" />
+              <Stack.Screen name="sign-up" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="member/[id]" />
+              <Stack.Screen name="log-visit/[memberId]" />
+              <Stack.Screen name="legal/privacy" />
+              <Stack.Screen name="legal/terms" />
+              <Stack.Screen name="admin" />
+            </Stack>
+            <ToastSnackbar />
+          </View>
+        </ToastProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
