@@ -7,6 +7,7 @@ import {
 } from '@/features/members/services/members.service';
 import type { AppError } from '@/lib/core/errors';
 import { notFoundError, toAppError } from '@/lib/core/errors';
+import { appendUniquePage } from '@/lib/core/paginated-state';
 import { computeIsStale, type PaginatedQueryState, type QueryState } from '@/lib/core/query-types';
 import type { Member, MemberListRow } from '@/types/database';
 
@@ -21,10 +22,13 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const loadingMoreRef = useRef(false);
+  const requestIdRef = useRef(0);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
+    const requestId = ++requestIdRef.current;
+
     if (append) setLoadingMore(true);
     else {
       setLoading(true);
@@ -33,15 +37,21 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
 
     try {
       const result = await fetchMembersPage({ ...optionsRef.current, page: pageToLoad });
-      setData((current) => (append ? [...current, ...result.items] : result.items));
+      if (requestId !== requestIdRef.current) return;
+
+      setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
       setPage(result.page);
       setHasMore(result.hasMore);
       setLastLoadedAt(Date.now());
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+
       setError(toAppError(err, 'Unable to load members.'));
       if (!append) setData([]);
       setHasMore(false);
     } finally {
+      if (requestId !== requestIdRef.current) return;
+
       setLoading(false);
       setLoadingMore(false);
     }

@@ -33,7 +33,7 @@ export async function fetchMembersPage(
 
   let request = supabase
     .from('members')
-    .select(MEMBER_LIST_COLUMNS, { count: 'exact' })
+    .select(MEMBER_LIST_COLUMNS)
     .order('full_name')
     .range(from, to);
 

@@ -2,8 +2,12 @@ import type { Task, TaskListRow } from '@/types/database';
 
 type TaskLike = Task | TaskListRow;
 
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0');
+}
+
 export function toDateKey(value: Date = new Date()) {
-  return value.toISOString().slice(0, 10);
+  return `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`;
 }
 
 export function normalizeDueDateKey(dueDate: string | null | undefined) {
@@ -43,7 +47,9 @@ export function groupTasksByDueDate(tasks: TaskLike[], todayKey = toDateKey()) {
 
 export function buildWeekDayStrip(reference = new Date()) {
   const start = new Date(reference);
-  start.setDate(reference.getDate() - reference.getDay() + 1);
+  const weekDay = reference.getDay();
+  const mondayOffset = weekDay === 0 ? -6 : 1 - weekDay;
+  start.setDate(reference.getDate() + mondayOffset);
   const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return labels.map((label, index) => {
     const date = new Date(start);

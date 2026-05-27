@@ -29,7 +29,7 @@ export async function fetchTasksPage(query: TaskListQuery = {}): Promise<Paginat
 
   let request = supabase
     .from('tasks')
-    .select(TASK_LIST_COLUMNS, { count: 'exact' })
+    .select(TASK_LIST_COLUMNS)
     .order('due_date', { ascending: true, nullsFirst: false })
     .range(from, to);
 

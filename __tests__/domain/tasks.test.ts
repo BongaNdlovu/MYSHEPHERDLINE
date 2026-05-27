@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildWeekDayStrip,
   formatTaskDueDate,
   groupTasksByDueDate,
   normalizeDueDateKey,
@@ -36,7 +37,15 @@ describe('tasks domain', () => {
   });
 
   it('creates stable date keys', () => {
-    expect(toDateKey(new Date('2026-05-26T15:00:00.000Z'))).toBe('2026-05-26');
+    expect(toDateKey(new Date(2026, 4, 26, 15, 0, 0))).toBe('2026-05-26');
+  });
+
+  it('builds Monday-based week strips even on Sundays', () => {
+    const week = buildWeekDayStrip(new Date(2026, 4, 31, 12, 0, 0));
+
+    expect(week[0]?.dateKey).toBe('2026-05-25');
+    expect(week[6]?.dateKey).toBe('2026-05-31');
+    expect(week[6]?.isToday).toBe(true);
   });
 });
 

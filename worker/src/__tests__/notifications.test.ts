@@ -1,4 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  listDigestOrganizationIds,
+  parseRegisterPayload,
+  registerToken,
+  sendDigest,
+  sendDigestForOrganization,
+  sendExpoPushBatch,
+} from '../notifications';
 
 const mockSummary = vi.hoisted(() => ({
   membersNeedingAttention: 2,
@@ -11,15 +19,6 @@ const mockSummary = vi.hoisted(() => ({
 vi.mock('../reports', () => ({
   buildSummary: vi.fn().mockResolvedValue(mockSummary),
 }));
-
-import {
-  listDigestOrganizationIds,
-  parseRegisterPayload,
-  registerToken,
-  sendDigest,
-  sendDigestForOrganization,
-  sendExpoPushBatch,
-} from '../notifications';
 
 afterEach(() => {
   vi.unstubAllGlobals();

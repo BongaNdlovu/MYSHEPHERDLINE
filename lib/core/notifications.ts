@@ -29,6 +29,9 @@ export async function registerForPushNotifications(
     if (!getAppEnv().workerApiUrl) {
       return { token: null, error: 'Worker API URL is not configured.' };
     }
+    if (Platform.OS === 'web') {
+      return { token: null, error: 'Push notifications are only supported on Android and iOS.' };
+    }
     if (!Device.isDevice) {
       return { token: null, error: 'Push notifications require a physical device.' };
     }

@@ -7,6 +7,7 @@ import {
 } from '@/features/tasks/services/tasks.service';
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
+import { appendUniquePage } from '@/lib/core/paginated-state';
 import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
 import type { TaskListRow } from '@/types/database';
 
@@ -26,6 +27,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const loadingMoreRef = useRef(false);
+  const requestIdRef = useRef(0);
   const togglingRef = useRef(new Set<string>());
   const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(() => new Set());
   const optionsRef = useRef(options);
@@ -36,6 +38,8 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   }, []);
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
+    const requestId = ++requestIdRef.current;
+
     if (append) setLoadingMore(true);
     else {
       setLoading(true);
@@ -44,15 +48,21 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
 
     try {
       const result = await fetchTasksPage({ ...optionsRef.current, page: pageToLoad });
-      setData((current) => (append ? [...current, ...result.items] : result.items));
+      if (requestId !== requestIdRef.current) return;
+
+      setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
       setPage(result.page);
       setHasMore(result.hasMore);
       setLastLoadedAt(Date.now());
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+
       setError(toAppError(err, 'Unable to load tasks.'));
       if (!append) setData([]);
       setHasMore(false);
     } finally {
+      if (requestId !== requestIdRef.current) return;
+
       setLoading(false);
       setLoadingMore(false);
     }
