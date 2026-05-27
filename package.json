@@ -60,8 +60,8 @@
     "check:env": "node scripts/check-env.mjs",
     "setup:worker": "powershell -ExecutionPolicy Bypass -File scripts/setup-worker.ps1",
     "setup:supabase": "node scripts/open-supabase-sql.mjs",
-    "deploy": "npx expo export -p web && wrangler deploy",
-    "preview": "npx expo export -p web && wrangler dev"
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "private": true,
   "workspaces": [

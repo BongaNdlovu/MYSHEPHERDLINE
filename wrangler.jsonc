@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "myshepherdline",
   "compatibility_date": "2026-05-26",
+  "build": {
+    "command": "npx expo export --platform web"
+  },
   "observability": {
     "enabled": true
   },
