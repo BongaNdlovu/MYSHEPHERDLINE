@@ -40,4 +40,6 @@ Reference retention schedule.
 - [ ] Proceed with conditions
 - [ ] Do not proceed
 
-Sign-off: `[LEGAL / IO / LEADERSHIP]`
+For a pre-filled internal-tool draft, see [impact-assessment-internal-tool.md](./impact-assessment-internal-tool.md).
+
+Sign-off: [legal-review-signoff.md](./legal-review-signoff.md)

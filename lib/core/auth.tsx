@@ -52,12 +52,38 @@ async function fetchProfile(userId: string): Promise<FetchProfileResult> {
   return { kind: 'ok', profile: data as Profile };
 }
 
+const DEACTIVATED_ACCOUNT_MESSAGE =
+  'Your account is not active. Contact your congregation administrator for access.';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(envValidation.ok);
   const lastRegisteredPushUserIdRef = useRef<string | null>(null);
   const pushRegistrationInFlightUserIdRef = useRef<string | null>(null);
+
+  const clearInactiveSession = useCallback(async () => {
+    const supabase = requireSupabase();
+    await supabase.auth.signOut();
+    await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+    setProfile(null);
+    setSession(null);
+  }, []);
+
+  const applyProfileResult = useCallback(
+    async (result: FetchProfileResult): Promise<AppError | null> => {
+      if (result.kind === 'error') {
+        return result.error;
+      }
+      if (result.kind === 'missing' || !isProfileActive(result.profile)) {
+        await clearInactiveSession();
+        return createAppError('auth', DEACTIVATED_ACCOUNT_MESSAGE);
+      }
+      setProfile(result.profile);
+      return null;
+    },
+    [clearInactiveSession],
+  );
 
   const refreshProfile = useCallback(async () => {
     const userId = session?.user?.id;
@@ -69,24 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('[auth] refreshProfile failed:', result.error.message);
         return;
       }
-      if (result.kind === 'missing') {
-        setProfile(null);
+      if (result.kind === 'missing' || !isProfileActive(result.profile)) {
+        await clearInactiveSession();
         return;
       }
-
-      const next = result.profile;
-      if (!isProfileActive(next)) {
-        const supabase = requireSupabase();
-        await supabase.auth.signOut();
-        await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
-        setProfile(null);
-        return;
-      }
-      setProfile(next);
+      setProfile(result.profile);
     } catch (err) {
       console.warn('[auth] refreshProfile unexpected error:', err);
     }
-  }, [session?.user?.id]);
+  }, [clearInactiveSession, session?.user?.id]);
 
   useEffect(() => {
     if (!envValidation.ok) return;
@@ -165,16 +182,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [session?.user?.id, session?.access_token, refreshProfile]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      const supabase = requireSupabase();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: fromAuthError(error) };
-    } catch (err) {
-      console.warn('[auth] signIn failed:', err);
-      return { error: createAppError('unknown', 'Unable to sign in. Please try again.') };
-    }
-  }, []);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const supabase = requireSupabase();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          return { error: fromAuthError(error) };
+        }
+        const userId = data.user?.id;
+        if (!userId) {
+          return { error: createAppError('auth', 'Unable to sign in. Please try again.') };
+        }
+        return { error: await applyProfileResult(await fetchProfile(userId)) };
+      } catch (err) {
+        console.warn('[auth] signIn failed:', err);
+        return { error: createAppError('unknown', 'Unable to sign in. Please try again.') };
+      }
+    },
+    [applyProfileResult],
+  );
 
   const signOut = useCallback(async () => {
     try {

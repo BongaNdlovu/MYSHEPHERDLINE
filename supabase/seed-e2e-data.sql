@@ -19,12 +19,16 @@ declare
   member_sipho uuid;
 begin
   update public.profiles
-  set role = 'admin', display_name = 'Test Admin'
+  set role = 'admin', display_name = 'Test Admin', is_active = true
   where id = admin_id;
 
   update public.profiles
-  set display_name = 'Test Shepherd'
+  set display_name = 'Test Shepherd', is_active = true
   where id = shepherd_id;
+
+  update public.profiles
+  set is_active = true
+  where id = shepherd2_id;
 
   -- Sarah: assigned to shepherd2 (shepherd1 must NOT see her — assigned-only)
   insert into public.members (full_name, phone, email, address, risk_level, status, assigned_to)

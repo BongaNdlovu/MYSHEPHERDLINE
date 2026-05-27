@@ -1,6 +1,8 @@
 # MyShepherdLine
 
-Expo + React Native + TypeScript app for congregation shepherding.
+Expo + React Native + TypeScript **internal shepherd tool** for one congregation — visit logging, member care, and
+follow-up tasks for provisioned staff. Not a public member portal. See
+[docs/product-scope.md](docs/product-scope.md).
 
 ## Stack
 
@@ -47,7 +49,13 @@ npm.cmd run android
 npm.cmd run verify
 ```
 
-Runs TypeScript, ESLint, app unit/integration tests, and Worker tests.
+Runs TypeScript, ESLint, lockfile/audit checks, app unit/integration tests, and Worker tests.
+
+Optional live security gate (requires `.env` + seeded Supabase):
+
+```powershell
+npm.cmd run test:rls:live
+```
 
 Windows fallback if Vitest reports `spawn EPERM`:
 
@@ -70,8 +78,10 @@ npm.cmd run test:e2e
 - App fails fast when Supabase env vars are missing (no placeholder client in production mode).
 - Supabase auth sessions persist via `expo-secure-store` on native (chunked for large payloads) and `localStorage`
   on web.
-- RLS read policies scope profiles, members, visits, and tasks by role/assignment; apply `supabase/schema.sql` or
-  `supabase/fix-rls-security.sql` on existing projects, then `supabase/admin-access.sql` for admin-managed access.
+- RLS enforces role/assignment scoping and **blocks inactive users**; apply `supabase/schema.sql` on new projects or
+  `supabase/security-hardening-migration.sql` on existing projects.
+- New Auth users receive **inactive** profiles until the owner activates them in Admin → Users & Roles.
+- Disable public signup in Supabase (see [docs/security/production-hardening.md](docs/security/production-hardening.md)).
 - Admin Center is gated by `profile.role` (`admin` or `owner`) via `useAdminAccess()`. Set credentials only in Supabase
   Auth — never in app code or SQL.
 - Worker `/notifications/send-digest` requires owner auth or `X-Cron-Secret`; sensitive actions emit structured audit
@@ -83,8 +93,13 @@ npm.cmd run test:e2e
 
 ## Compliance
 
-Operational POPIA/PAIA drafts live in `docs/compliance/`. In-app privacy/terms screens are under `features/legal/`
-(routed via `app/legal/`). Legal review is required before production launch.
+Operational POPIA/PAIA drafts: [docs/compliance/README.md](docs/compliance/README.md). In-app privacy/terms:
+`features/legal/` (routed via `app/legal/`).
+
+**Production requires** qualified counsel to complete
+[docs/compliance/legal-review-signoff.md](docs/compliance/legal-review-signoff.md). Public visitor registration, prayer
+requests, events/forms, and CSV export are **out of scope** for v1 — see
+[docs/product-scope.md](docs/product-scope.md).
 
 ## Project layout
 

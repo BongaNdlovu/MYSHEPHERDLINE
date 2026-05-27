@@ -8,5 +8,6 @@
 - [ ] Approve retention schedule and deletion process
 - [ ] Approve breach notification runbook and contact tree
 - [ ] Train authorized shepherds/admins on confidentiality and POPIA duties
-- [ ] Complete personal information impact assessment for religious-context data
-- [ ] Obtain legal sign-off before production launch
+- [ ] Complete [impact-assessment-internal-tool.md](./impact-assessment-internal-tool.md) with counsel
+- [ ] Complete [legal-review-signoff.md](./legal-review-signoff.md) before production launch
+- [ ] Confirm out-of-scope public flows (visitor/prayer/event/CSV intake) remain on congregation processes outside the app

@@ -18,6 +18,27 @@ describe('RLS schema expectations', () => {
     expect(schema).toContain('revoke all on function public.handle_new_user() from anon, authenticated');
   });
 
+  it('requires owner activation for self-service signups', () => {
+    expect(schema).toMatch(
+      /create or replace function public\.handle_new_user\(\)[\s\S]*is_active,\s*organization_id\)[\s\S]*false,/,
+    );
+  });
+
+  it('blocks inactive users at the database layer', () => {
+    expect(schema).toContain('create or replace function public.is_active_user()');
+    expect(schema).toMatch(
+      /create or replace function public\.is_admin\(\)[\s\S]*and p\.is_active = true/,
+    );
+    expect(schema).toMatch(
+      /create or replace function public\.is_owner\(\)[\s\S]*and p\.is_active = true/,
+    );
+    expect(schema).toMatch(
+      /create or replace function public\.current_organization_id\(\)[\s\S]*and p\.is_active = true/,
+    );
+    expect(schema).toContain('create or replace function public.log_visit(');
+    expect(schema).toContain('log_operational_audit_event');
+  });
+
   it('scopes push token access to owner within tenant', () => {
     expect(schema).toContain('Push tokens readable in tenant by owner');
     expect(schema).toMatch(/user_id = auth\.uid\(\)/);

@@ -1,5 +1,9 @@
 # Architecture
 
+MyShepherdLine is an **internal shepherd tool** for one congregation: provisioned staff log visits, manage assigned
+members, and run follow-up tasks. It is not a public visitor or prayer-request platform. See
+[docs/product-scope.md](docs/product-scope.md).
+
 MyShepherdLine uses a **hybrid feature-first** layout: business features live together under `features/`, while shared
 infrastructure stays centralized under `lib/core/` and reusable UI primitives under `components/ui/`.
 
@@ -174,9 +178,21 @@ Modules:
 Access model:
 
 - Public landing no longer promotes open self-service sign-up; `/sign-up` explains admin-provisioned accounts.
-- New auth users still get a `profiles` row from `handle_new_user`, but role/access changes require an admin.
-- Apply `supabase/admin-access.sql` on existing projects for `is_active` and owner profile updates.
+- New auth users get an **inactive** `profiles` row from `handle_new_user`; owners activate access in Admin → Users & Roles.
+- Apply `supabase/security-hardening-migration.sql` on existing projects for inactive-user RLS, atomic visit
+  logging, and audit expansion.
 - Promote the owner with `supabase/bootstrap-owner.sql` (not in reusable schema).
+- **Single organization (v1):** all users belong to the default org; multi-church onboarding is intentionally out of scope.
+
+## Compliance
+
+Operational drafts: [docs/compliance/README.md](docs/compliance/README.md).
+
+Production launch requires counsel to complete
+[docs/compliance/legal-review-signoff.md](docs/compliance/legal-review-signoff.md).
+
+Public-facing flows (visitor registration, prayer requests, CSV export) are documented as out of scope in
+[docs/product-scope.md](docs/product-scope.md).
 
 ## Security
 

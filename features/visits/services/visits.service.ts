@@ -10,39 +10,20 @@ export async function createVisit(input: {
   followUpRequired: boolean;
 }) {
   const supabase = requireSupabase();
-  const { data: member, error: memberLookupError } = await supabase
-    .from('members')
-    .select('organization_id')
-    .eq('id', input.memberId)
-    .maybeSingle();
+  const { error } = await supabase.rpc('log_visit', {
+    p_member_id: input.memberId,
+    p_visit_type: input.visitType,
+    p_notes: input.notes,
+    p_follow_up_required: input.followUpRequired,
+  });
 
-  if (memberLookupError) {
-    throw fromSupabaseError(memberLookupError, 'Unable to save visit.');
-  }
-
-  if (!member?.organization_id) {
-    throw createAppError('not_found', 'Member not found.');
-  }
-
-  const payload = {
-    organization_id: member.organization_id,
-    member_id: input.memberId,
-    logged_by: input.userId,
-    visit_type: input.visitType,
-    notes: input.notes,
-    follow_up_required: input.followUpRequired,
-    visited_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabase.from('visits').insert(payload);
-  if (error) throw fromSupabaseError(error, 'Unable to save visit.');
-
-  const { error: memberError } = await supabase
-    .from('members')
-    .update({ last_contact_at: payload.visited_at })
-    .eq('id', input.memberId);
-
-  if (memberError) {
-    throw fromSupabaseError(memberError, 'Visit saved, but member contact date could not be updated.');
+  if (error) {
+    if (error.message.includes('Member not found')) {
+      throw createAppError('not_found', 'Member not found.');
+    }
+    if (error.message.includes('Account deactivated')) {
+      throw createAppError('auth', 'Your account is deactivated. Contact your administrator.');
+    }
+    throw fromSupabaseError(error, 'Unable to save visit.');
   }
 }

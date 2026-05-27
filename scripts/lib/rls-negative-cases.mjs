@@ -34,6 +34,8 @@ export function resolveRlsLiveConfig(source = process.env) {
     shepherdPassword: env.E2E_PASSWORD?.trim() || 'ChangeMe123!',
     adminEmail: env.E2E_ADMIN_EMAIL?.trim() || 'admin@test.local',
     adminPassword: env.E2E_ADMIN_PASSWORD?.trim() || env.E2E_PASSWORD?.trim() || 'ChangeMe123!',
+    inactiveEmail: env.E2E_INACTIVE_EMAIL?.trim() || '',
+    inactivePassword: env.E2E_INACTIVE_PASSWORD?.trim() || env.E2E_PASSWORD?.trim() || 'ChangeMe123!',
     otherMemberName: env.RLS_OTHER_MEMBER_NAME?.trim() || 'Sarah Mkhize',
     adminTaskTitle: env.RLS_ADMIN_TASK_TITLE?.trim() || 'Admin backlog review',
   };
@@ -161,6 +163,56 @@ export async function runRlsNegativeCases(config) {
     failures.push(`shepherd admin-task lookup errored: ${adminTaskError.message}`);
   } else {
     assert(!adminTask, `shepherd could read admin-only task: ${config.adminTaskTitle}`);
+  }
+
+  const probeClient = createClient(config.url, config.key, { auth: { persistSession: false } });
+  const probeEmail = `rls-probe-${Date.now()}@example.invalid`;
+  const { data: signupData, error: signupError } = await probeClient.auth.signUp({
+    email: probeEmail,
+    password: 'ProbeOnly123!',
+  });
+
+  if (!signupError && signupData.user) {
+    failures.push(
+      'public signup succeeded — disable signup in Supabase Dashboard (Authentication → Providers → Email) or run scripts/disable-public-signup.mjs',
+    );
+  }
+
+  if (config.inactiveEmail) {
+    const { client: inactiveClient } = await signIn(
+      config.url,
+      config.key,
+      config.inactiveEmail,
+      config.inactivePassword,
+    );
+
+    const { data: inactiveMembers, error: inactiveMembersError } = await inactiveClient
+      .from('members')
+      .select('id')
+      .limit(1);
+
+    if (inactiveMembersError) {
+      assert(
+        inactiveMembersError.message.length > 0,
+        `inactive user member read should be denied (got: ${inactiveMembersError.message})`,
+      );
+    } else {
+      assert(
+        (inactiveMembers ?? []).length === 0,
+        `inactive user could read congregation members: ${JSON.stringify(inactiveMembers)}`,
+      );
+    }
+
+    const { error: inactiveVisitError } = await inactiveClient.rpc('log_visit', {
+      p_member_id: '00000000-0000-4000-8000-000000000001',
+      p_visit_type: 'call',
+      p_notes: 'inactive probe',
+      p_follow_up_required: false,
+    });
+    assert(
+      Boolean(inactiveVisitError),
+      'inactive user log_visit RPC succeeded (RLS/security definer bypass)',
+    );
   }
 
   return {

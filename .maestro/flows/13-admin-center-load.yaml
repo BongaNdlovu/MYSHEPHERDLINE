@@ -1,0 +1,17 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/admin-login.yaml
+- tapOn:
+    id: tab-more
+- assertVisible:
+    id: admin-entry
+- tapOn:
+    id: admin-entry
+- assertVisible:
+    id: admin-center
+- assertVisible:
+    id: admin-menu-members
+- assertVisible:
+    id: admin-menu-tasks
+- assertVisible:
+    id: admin-menu-reports

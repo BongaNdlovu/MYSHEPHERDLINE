@@ -12,10 +12,12 @@ npm.cmd run verify
 
 This runs, in order:
 
-1. `typecheck` — Expo app TypeScript (`tsc --noEmit`)
-2. `lint` — ESLint across the repo
-3. `test` — Vitest unit/integration tests in `__tests__/`
-4. `test:worker` — Worker typecheck + Vitest in `worker/src/__tests__/`
+1. `typecheck` — Expo app TypeScript
+2. `lint` — ESLint (excludes `dist/` and `worker/dist/`)
+3. `check:lockfiles` — single root lockfile hygiene
+4. `check:audit` — fails on high/critical npm advisories; warns on known Expo moderate issues
+5. `test` — Vitest in `__tests__/`
+6. `test:worker` — Worker typecheck + Vitest
 
 ## Individual commands
 
@@ -102,9 +104,10 @@ npm.cmd run test:load:reports
 
 ## Expected green output
 
-- App: 10+ test files, 27+ tests
-- Worker: 5 test files, 13+ tests
-- Lint: 0 errors, 0 warnings
+- App: 25 test files, 115+ tests (1 live RLS test skipped by default)
+- Worker: 7 test files, 44 tests
+- Lint: 0 errors
+- Audit: 0 high/critical (moderate Expo-chain advisories may warn)
 
 Worker route tests may print audit JSON to stdout during digest scenarios — that is expected.
 

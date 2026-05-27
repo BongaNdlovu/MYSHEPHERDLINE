@@ -3,4 +3,6 @@ env:
   E2E_APP_ID: com.myshepherdline.app
   E2E_EMAIL: shepherd@test.local
   E2E_PASSWORD: ChangeMe123!
+  E2E_ADMIN_EMAIL: admin@test.local
+  E2E_ADMIN_PASSWORD: ChangeMe123!
   E2E_MEMBER_NAME: Sarah

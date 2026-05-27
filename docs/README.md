@@ -6,14 +6,16 @@ Entry point for MyShepherdLine project docs. Start here if you are onboarding or
 
 | Topic | Location |
 | --- | --- |
-| Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) (includes error-handling ownership) |
+| **Product scope (internal tool, out-of-scope flows)** | **[product-scope.md](product-scope.md)** |
+| Architecture and code layout | [../ARCHITECTURE.md](../ARCHITECTURE.md) |
 | Local setup and scripts | [../README.md](../README.md) |
 | Testing (unit, integration, E2E) | [testing/e2e-android.md](testing/e2e-android.md), [testing/verify-pipeline.md](testing/verify-pipeline.md) |
 | Capacity / 5k-user readiness | [testing/capacity-plan.md](testing/capacity-plan.md) |
 | Production security hardening | [security/production-hardening.md](security/production-hardening.md) |
-| **Step-by-step setup (start here)** | **[setup/step-by-step.md](setup/step-by-step.md)** |
-| POPIA / compliance drafts | [compliance/README.md](compliance/README.md) |
-| Worker deployment | [../README.md#setup](../README.md) (Setup section) |
+| **Step-by-step setup** | [setup/step-by-step.md](setup/step-by-step.md) |
+| POPIA / compliance | [compliance/README.md](compliance/README.md) |
+| Legal sign-off (before launch) | [compliance/legal-review-signoff.md](compliance/legal-review-signoff.md) |
+| Worker deployment | [../README.md](../README.md) (Setup section) |
 
 ## Repository packages
 
@@ -48,9 +50,10 @@ import { MoreScreen } from '@/features/account';
 
 ## Testing docs
 
-- **App unit/integration tests:** `__tests__/` at repo root (cross-cutting config, security, domain selectors)
-- **Worker unit tests:** co-located under `worker/src/__tests__/`
-- **Android E2E:** `.maestro/flows/` - see [testing/e2e-android.md](testing/e2e-android.md)
+- **App unit/integration tests:** `__tests__/` at repo root
+- **Worker unit tests:** `worker/src/__tests__/`
+- **Android E2E:** `.maestro/flows/` — see [testing/e2e-android.md](testing/e2e-android.md)
+- **Live RLS gate:** `npm run test:rls:live` — see [testing/verify-pipeline.md](testing/verify-pipeline.md)
 
 Run everything:
 
@@ -58,19 +61,17 @@ Run everything:
 npm.cmd run verify
 ```
 
-On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win` — see [testing/verify-pipeline.md](testing/verify-pipeline.md).
+On Windows, if Vitest fails with `spawn EPERM`, use `npm.cmd run verify:win`.
 
 ## Deployment checklist
 
-See [security/production-hardening.md](security/production-hardening.md) for the full production sign-off list. Summary:
+See [security/production-hardening.md](security/production-hardening.md) for the full sign-off list. Summary:
 
 1. **New Supabase project:** apply `supabase/schema.sql`, then `supabase/bootstrap-owner.sql`.
-   **Existing project:** apply `supabase/fix-rls-security.sql`, `supabase/admin-access.sql`, then
-   `supabase/organization-capacity-migration.sql`. Staging load tests: `supabase/seed-capacity-data.sql`
-   (staging only). Optional: `supabase/member-search-trgm.sql`.
-   Run `supabase/verify-null-assignments.sql` before production cutover.
-2. Set `.env` from `.env.example` (Supabase URL and publishable key; optional Worker URL).
-3. Deploy Worker secrets, optional KV rate-limit namespace, and run `npm run deploy --workspace myshepherdline-worker`.
-4. Run `npm.cmd run verify` (or `verify:win` on Windows if needed).
-5. Run Android E2E smoke when Maestro and a preview build are available.
-6. Build the app with EAS when ready (`README.md` EAS section).
+   **Existing project:** apply `supabase/security-hardening-migration.sql` (after `fix-rls-security.sql` only if never applied).
+2. Disable public signup; run `npm run test:rls:live`.
+3. Set `.env` from `.env.example`.
+4. Deploy Worker secrets and `npm run deploy --workspace myshepherdline-worker`.
+5. Run `npm.cmd run verify`.
+6. Complete [compliance/legal-review-signoff.md](compliance/legal-review-signoff.md) with counsel.
+7. Run E2E smoke when Maestro and a preview build are available.

@@ -1,5 +1,8 @@
 # 5,000-user capacity plan
 
+**Note:** Production v1 targets a **single congregation** (one default organization). Multi-org figures below are
+forward-looking for a possible later phase — see [product-scope.md](../product-scope.md).
+
 Production target for shared-backend deployments:
 
 | Dimension | Target |

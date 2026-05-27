@@ -23,16 +23,33 @@ Then run `supabase/bootstrap-owner.sql` for the owner account.
 
 ### Existing project (already has tables)
 
-Run the incremental patches in order:
+Run the security hardening migration:
 
 ```sql
--- Paste contents of supabase/fix-rls-security.sql
--- Then supabase/admin-access.sql if not already applied
+-- Paste contents of supabase/security-hardening-migration.sql
 ```
 
-Re-apply visit read policy if shepherds lose visit history after reassignment (`logged_by = auth.uid()` on select).
+This adds inactive-user RLS enforcement, inactive-by-default signup provisioning, atomic `log_visit()`, and expanded
+audit triggers.
 
-This adds `public.is_admin()` and replaces permissive read policies with scoped ones.
+For older installs that never received tenant helpers, run `supabase/fix-rls-security.sql` first, then the security
+hardening migration.
+
+### Disable public signup (required)
+
+The UI hides sign-up, but `/auth/v1/signup` remains open until disabled server-side.
+
+**Dashboard:** Authentication → Providers → Email → turn off **Allow new users to sign up**.
+
+**Management API** (with a personal access token):
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN = "<token-from-dashboard-account-tokens>"
+$env:SUPABASE_PROJECT_REF = "<project-ref>"
+npm run setup:auth-signup-off
+```
+
+Verify with `npm run test:rls:live` — the script fails if public signup still succeeds.
 
 ### Verify RLS in Supabase
 
@@ -40,7 +57,7 @@ After applying SQL, confirm policies in **Authentication → Policies** (or SQL)
 
 | Table | Expected read scope |
 | --- | --- |
-| `profiles` | Own row or admin |
+| `profiles` | Own row or admin; inactive users blocked from tenant data |
 | `members` | Assigned to self, or admin/owner (global) |
 | `visits` | Logged by self, member currently assigned to self, or admin/owner |
 | `tasks` | Assigned to self, or admin/owner (global) |
@@ -77,7 +94,17 @@ Repo gate for schema shape:
 
 ```powershell
 npm.cmd run test -- __tests__/security/rls-schema.test.ts
+npm.cmd run test:rls:live
 ```
+
+Optional inactive-user probe: create `inactive@test.local` in Supabase Auth, leave `profiles.is_active = false`, set
+`E2E_INACTIVE_EMAIL` in `.env`, and re-run live RLS tests.
+
+## Single-organization scope (v1)
+
+Production v1 targets **one congregation** using the default organization row. The schema retains `organizations` for
+future multi-site work, but org switching and self-serve invites are out of scope. See
+[../product-scope.md](../product-scope.md).
 
 ## 2. Mobile app
 
@@ -159,6 +186,9 @@ Full gate:
 npm.cmd run verify
 ```
 
+`verify` includes `check:audit`, which **fails on high/critical** npm advisories but allows known moderate Expo-chain
+issues. Do not run `npm audit fix --force` (downgrades Expo SDK).
+
 If Vitest fails with `spawn EPERM` on Windows (common in restricted sandboxes), use:
 
 ```powershell
@@ -175,21 +205,25 @@ Minimal smoke after security changes:
 
 ```powershell
 npm.cmd run test:e2e:smoke
+npm.cmd run test:e2e:admin
 ```
 
-Flows covered: landing → sign-in → sign-out.
-
-For member/visit flows, seed a member assigned to the test shepherd matching `E2E_MEMBER_NAME`.
+Smoke covers landing → sign-in → reports → sign-out → shepherd admin guard. Admin flows cover Admin Center, members
+list, and admin reports (requires `E2E_ADMIN_*` credentials on a preview build).
 
 ## 6. Production launch sign-off
 
 - [ ] `npm.cmd run verify` green on CI or maintainer machine
+- [ ] `npm.cmd run test:rls:live` green (includes signup-disabled check)
+- [ ] Public signup disabled in Supabase Auth
 - [ ] RLS manual checks passed for shepherd and admin
 - [ ] Worker health OK; digest cron configured
 - [ ] KV rate limit bound (or accepted risk documented)
 - [ ] No service-role or cron secrets in the mobile app or git
 - [ ] E2E smoke passed on preview build (or manual test script completed)
-- [ ] Compliance docs reviewed by qualified counsel
+- [ ] Compliance docs reviewed and [legal-review-signoff.md](../compliance/legal-review-signoff.md) completed by
+  qualified counsel
+- [ ] Product scope acknowledged: public visitor/prayer/event/CSV flows are out of scope for v1
 
 ## Rollback
 

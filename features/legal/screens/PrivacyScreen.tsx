@@ -4,20 +4,28 @@ import { colors, spacing } from '@/constants/theme';
 
 export const options = { headerShown: true, title: 'Privacy Policy' };
 
-const privacyContent = `MyShepherdLine Privacy Notice (Draft)
+const privacyContent = `MyShepherdLine Privacy Notice (Draft — Internal Shepherd Tool)
 
-Responsible party: Your congregation / church administration must confirm the legal entity name and Information Officer details before production launch.
+Scope: This app is for authorized congregation staff only. It is not a public website and does not accept visitor registrations, prayer requests, or event sign-ups.
+
+Responsible party: Your congregation must confirm the legal entity name and Information Officer details before production launch.
 
 What we process:
 - Shepherd account details (name, email)
-- Congregation member contact details and pastoral care metadata
+- Congregation member contact details and pastoral care metadata (for members in your care program)
 - Visit logs, tasks, and notification preferences
 
+What we do not process in this version:
+- Public visitor or contact form submissions
+- Prayer request queues
+- Event registrations or public web forms
+- Bulk CSV exports to third parties
+
 Why we process it:
-- To support lawful pastoral care and congregation administration workflows authorized by the responsible party.
+- To support lawful pastoral care and congregation administration by authorized staff.
 
 Lawful basis:
-- Processing is based on the responsible party's legitimate interests and consent/contractual arrangements with authorized users. Religious affiliation context may constitute special personal information under POPIA and requires legal review.
+- Processing must be confirmed by your legal counsel (POPIA). Religious affiliation context may constitute special personal information.
 
 Operators:
 - Supabase (database/auth)
@@ -25,18 +33,18 @@ Operators:
 - Expo push notification services
 
 Retention:
-- See docs/compliance/retention-schedule.md
+- See congregation retention schedule (docs/compliance/retention-schedule.md)
 
 Your rights:
-- Access, correction, deletion, and objection requests can be submitted to your congregation Information Officer.
+- Access, correction, deletion, and objection requests via your congregation Information Officer.
 
 Security incidents:
-- The responsible party will assess and notify affected data subjects and the Information Regulator where required under POPIA section 22.
+- Assessed under POPIA section 22; Regulator notification where required.
 
 Cross-border transfers:
-- Vendor infrastructure may process data outside South Africa. The responsible party must confirm appropriate safeguards before launch.
+- Vendor infrastructure may process data outside South Africa. Confirm safeguards before launch.
 
-Legal review required before production use.`;
+Counsel must complete legal review before production use. See docs/compliance/legal-review-signoff.md.`;
 
 export default function PrivacyScreen() {
   return (

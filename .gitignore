@@ -6,7 +6,9 @@ node_modules/
 # Expo
 .expo/
 dist/
+worker/dist/
 web-build/
+worker/package-lock.json
 expo-env.d.ts
 
 # Native

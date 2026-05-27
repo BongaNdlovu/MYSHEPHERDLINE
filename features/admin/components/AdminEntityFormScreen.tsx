@@ -9,6 +9,7 @@ import { colors } from '@/constants/theme';
 import { adminFormStyles as styles } from '@/features/admin/components/adminFormStyles';
 import { ShepherdPicker } from '@/features/admin/components/ShepherdPicker';
 import type { AppError } from '@/lib/core/errors';
+import { confirmDestructiveAction } from '@/lib/core/confirm-destructive';
 import type { Profile } from '@/types/database';
 
 type AdminEntityFormScreenProps = {
@@ -29,6 +30,8 @@ type AdminEntityFormScreenProps = {
   saveTestId: string;
   saveLabel: string;
   deleteLabel: string;
+  deleteConfirmTitle: string;
+  deleteConfirmMessage: string;
   saving: boolean;
   submitError: string | null;
   onSave: () => void;
@@ -54,6 +57,8 @@ export function AdminEntityFormScreen({
   saveTestId,
   saveLabel,
   deleteLabel,
+  deleteConfirmTitle,
+  deleteConfirmMessage,
   saving,
   submitError,
   onSave,
@@ -92,7 +97,11 @@ export function AdminEntityFormScreen({
       </Pressable>
 
       {isEdit && onDelete ? (
-        <Pressable style={styles.danger} disabled={saving} onPress={onDelete}>
+        <Pressable
+          style={styles.danger}
+          disabled={saving}
+          onPress={() => confirmDestructiveAction(deleteConfirmTitle, deleteConfirmMessage, onDelete)}
+        >
           <Text style={styles.dangerText}>{deleteLabel}</Text>
         </Pressable>
       ) : null}

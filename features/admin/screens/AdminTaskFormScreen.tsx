@@ -129,6 +129,8 @@ export default function AdminTaskFormScreen() {
       saveTestId={testIds.admin.tasks.save}
       saveLabel="Save task"
       deleteLabel="Delete task"
+      deleteConfirmTitle="Delete task?"
+      deleteConfirmMessage="This permanently removes the follow-up task. This cannot be undone."
       saving={saving}
       submitError={submitError}
       onSave={save}

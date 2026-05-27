@@ -138,6 +138,8 @@ export default function AdminMemberFormScreen() {
       saveTestId={testIds.admin.members.save}
       saveLabel="Save member"
       deleteLabel="Delete member"
+      deleteConfirmTitle="Delete member?"
+      deleteConfirmMessage="This permanently removes the member and their visit history. This cannot be undone."
       saving={saving}
       submitError={submitError}
       onSave={save}

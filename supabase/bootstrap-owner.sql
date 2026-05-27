@@ -1,6 +1,6 @@
 -- One-time owner bootstrap (operator runbook).
 -- Run AFTER the owner account exists in Supabase Auth and has signed in once
--- (so public.profiles has a row from handle_new_user).
+-- (handle_new_user creates an inactive shepherd profile until an owner activates it).
 --
 -- 1. Replace the email literal below with the production owner email.
 -- 2. Run in Supabase SQL Editor.

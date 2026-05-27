@@ -22,7 +22,8 @@ Android-first end-to-end tests using [Maestro](https://maestro.mobile.dev/).
 | `E2E_APP_ID` | `com.myshepherdline.app` | Android application id |
 | `E2E_EMAIL` | — | Test shepherd email |
 | `E2E_PASSWORD` | — | Test shepherd password |
-| `E2E_NEW_EMAIL` | — | Unique email for sign-up flow |
+| `E2E_ADMIN_EMAIL` | — | Test admin email (admin Maestro flows) |
+| `E2E_ADMIN_PASSWORD` | — | Test admin password |
 | `E2E_MEMBER_NAME` | `Sipho` | Member name visible in directory (must be assigned to test shepherd) |
 
 PowerShell example:
@@ -31,7 +32,8 @@ PowerShell example:
 $env:E2E_APP_ID = "com.myshepherdline.app"
 $env:E2E_EMAIL = "shepherd@yourchurch.test"
 $env:E2E_PASSWORD = "YourTestPassword123!"
-$env:E2E_NEW_EMAIL = "shepherd-new-$(Get-Random)@yourchurch.test"
+$env:E2E_ADMIN_EMAIL = "admin@yourchurch.test"
+$env:E2E_ADMIN_PASSWORD = "YourTestPassword123!"
 $env:E2E_MEMBER_NAME = "Sipho"
 ```
 
@@ -69,6 +71,18 @@ Single flow:
 maestro test .maestro/flows/02-auth-sign-in-success.yaml
 ```
 
+Smoke (CI-friendly subset):
+
+```powershell
+npm.cmd run test:e2e:smoke
+```
+
+Admin flows (requires admin test account):
+
+```powershell
+npm.cmd run test:e2e:admin
+```
+
 ## Flow coverage
 
 | Flow | Scenario |
@@ -76,7 +90,7 @@ maestro test .maestro/flows/02-auth-sign-in-success.yaml
 | 01 | Landing → sign-in screen |
 | 02 | Sign-in success → home |
 | 03 | Sign-in failure toast |
-| 04 | Sign-up |
+| 04 | Sign-up restricted screen (no public registration) |
 | 05 | Member search + filter |
 | 06 | Member profile |
 | 07 | Log visit end-to-end |
@@ -85,6 +99,10 @@ maestro test .maestro/flows/02-auth-sign-in-success.yaml
 | 10 | Sign out |
 | 11 | Privacy policy |
 | 12 | Reports fallback state |
+| 13 | Admin center loads (admin login) |
+| 14 | Admin members list |
+| 15 | Admin reports screen |
+| 16 | Shepherd cannot see Admin entry |
 
 ## Push permission flows
 

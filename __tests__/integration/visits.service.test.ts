@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const maybeSingle = vi.fn();
-const insert = vi.fn();
-const update = vi.fn();
-const eq = vi.fn();
-const select = vi.fn();
-const from = vi.fn();
+const rpc = vi.fn();
 const requireSupabase = vi.fn();
 
 vi.mock('@/lib/core/supabase', () => ({
@@ -14,52 +9,72 @@ vi.mock('@/lib/core/supabase', () => ({
 
 describe('visits service', () => {
   beforeEach(() => {
-    maybeSingle.mockReset();
-    insert.mockReset();
-    update.mockReset();
-    eq.mockReset();
-    select.mockReset();
-    from.mockReset();
+    rpc.mockReset();
     requireSupabase.mockReset();
+    requireSupabase.mockReturnValue({ rpc });
+  });
 
-    const membersQuery = {
-      select,
-    };
-    const visitsQuery = {
-      insert,
-    };
-    const memberUpdateQuery = {
-      update,
-    };
+  it('logs visits atomically via the log_visit RPC', async () => {
+    rpc.mockResolvedValue({ error: null });
 
-    select.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        maybeSingle,
-      }),
-    });
-    insert.mockResolvedValue({ error: null });
-    update.mockReturnValue({
-      eq,
-    });
-    eq.mockResolvedValue({ error: null });
-    from.mockImplementation((table: string) => {
-      if (table === 'members') return membersQuery;
-      if (table === 'visits') return visitsQuery;
-      throw new Error(`Unexpected table: ${table}`);
+    const { createVisit } = await import('@/features/visits/services/visits.service');
+
+    await createVisit({
+      memberId: 'member-1',
+      userId: 'user-1',
+      visitType: 'visit',
+      notes: 'Checked in',
+      followUpRequired: true,
     });
 
-    requireSupabase.mockReturnValue({
-      from: (table: string) => {
-        if (table === 'members' && select.mock.calls.length === 0) return membersQuery;
-        if (table === 'members') return memberUpdateQuery;
-        return from(table);
-      },
+    expect(rpc).toHaveBeenCalledWith('log_visit', {
+      p_member_id: 'member-1',
+      p_visit_type: 'visit',
+      p_notes: 'Checked in',
+      p_follow_up_required: true,
     });
   });
 
-  it('surfaces member lookup failures instead of reporting a missing member', async () => {
-    maybeSingle.mockResolvedValue({
-      data: null,
+  it('maps deactivated accounts to an auth error', async () => {
+    rpc.mockResolvedValue({ error: { message: 'Account deactivated' } });
+
+    const { createVisit } = await import('@/features/visits/services/visits.service');
+
+    await expect(
+      createVisit({
+        memberId: 'member-1',
+        userId: 'user-1',
+        visitType: 'call',
+        notes: '',
+        followUpRequired: false,
+      }),
+    ).rejects.toMatchObject({
+      category: 'auth',
+      message: 'Your account is deactivated. Contact your administrator.',
+    });
+  });
+
+  it('maps missing members to a not_found error', async () => {
+    rpc.mockResolvedValue({ error: { message: 'Member not found' } });
+
+    const { createVisit } = await import('@/features/visits/services/visits.service');
+
+    await expect(
+      createVisit({
+        memberId: 'missing',
+        userId: 'user-1',
+        visitType: 'visit',
+        notes: '',
+        followUpRequired: false,
+      }),
+    ).rejects.toMatchObject({
+      category: 'not_found',
+      message: 'Member not found.',
+    });
+  });
+
+  it('surfaces RPC failures with a friendly message', async () => {
+    rpc.mockResolvedValue({
       error: { message: 'JWT expired', status: 401, code: '401' },
     });
 

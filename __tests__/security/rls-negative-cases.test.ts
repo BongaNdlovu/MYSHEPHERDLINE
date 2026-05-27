@@ -30,6 +30,15 @@ describe('RLS negative-path static policy coverage', () => {
     );
   });
 
+  it('requires confirmation props for destructive admin forms', () => {
+    const adminForm = readFileSync(
+      path.join(process.cwd(), 'features/admin/components/AdminEntityFormScreen.tsx'),
+      'utf8',
+    );
+    expect(adminForm).toContain('deleteConfirmTitle');
+    expect(adminForm).toContain('confirmDestructiveAction');
+  });
+
   it('keeps worker digest send forbidden for non-owner callers', () => {
     expect(routesTest).toContain('rejects digest send for non-owner users');
     expect(routesTest).toMatch(/send-digest[\s\S]*403/);
