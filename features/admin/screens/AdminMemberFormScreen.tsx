@@ -1,16 +1,18 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors } from '@/constants/theme';
+import { adminFormStyles as styles } from '@/features/admin/components/adminFormStyles';
+import { ChoiceChipGroup } from '@/features/admin/components/ChoiceChipGroup';
+import { ShepherdPicker } from '@/features/admin/components/ShepherdPicker';
 import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
-import { listAssignableShepherds } from '@/features/admin/selectors/assignees';
 import {
   createMember,
   deleteMember,
@@ -19,6 +21,7 @@ import {
   type MemberInput,
 } from '@/features/members';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
+import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { useToast } from '@/lib/core/toast';
 import { validateOptionalEmail, validateOptionalPhone } from '@/lib/core/validation';
 import type { MemberStatus, RiskLevel } from '@/types/database';
@@ -37,7 +40,6 @@ export default function AdminMemberFormScreen() {
   const { data: member, loading, error, refresh } = useMember(id);
   const { data: profiles, loading: profilesLoading } = useAdminProfiles();
   const { showToast } = useToast();
-  const shepherds = listAssignableShepherds(profiles);
 
   const [fullName, setFullName] = useState('');
   const [assignedTo, setAssignedTo] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function AdminMemberFormScreen() {
       }
       goBackOrMembersList();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Unable to save member.');
+      setSubmitError(getUserMessage(toAppError(err, 'Unable to save member.')));
     } finally {
       setSaving(false);
     }
@@ -137,7 +139,7 @@ export default function AdminMemberFormScreen() {
       showToast('Member removed.');
       router.replace('/admin/members');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Unable to delete member.');
+      setSubmitError(getUserMessage(toAppError(err, 'Unable to delete member.')));
     } finally {
       setSaving(false);
     }
@@ -173,51 +175,16 @@ export default function AdminMemberFormScreen() {
       <FormField label="Address" value={address} onChangeText={setAddress} />
       <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
 
-      <Text style={styles.section}>Assigned shepherd</Text>
-      {profilesLoading ? (
-        <Text style={styles.hint}>Loading shepherds…</Text>
-      ) : shepherds.length === 0 ? (
-        <Text style={styles.hint}>No active shepherds available. Create shepherd accounts first.</Text>
-      ) : (
-        <View style={styles.chips}>
-          {shepherds.map((shepherd) => (
-            <Pressable
-              key={shepherd.id}
-              style={[styles.chip, assignedTo === shepherd.id && styles.chipActive]}
-              testID={testIds.admin.members.assignShepherd(shepherd.id)}
-              onPress={() => setAssignedTo(shepherd.id)}
-            >
-              <Text style={styles.chipText}>{shepherd.display_name}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <ShepherdPicker
+        profiles={profiles}
+        loading={profilesLoading}
+        selectedId={assignedTo}
+        onSelect={setAssignedTo}
+        getTestId={testIds.admin.members.assignShepherd}
+      />
 
-      <Text style={styles.section}>Risk level</Text>
-      <View style={styles.chips}>
-        {riskLevels.map((level) => (
-          <Pressable
-            key={level}
-            style={[styles.chip, riskLevel === level && styles.chipActive]}
-            onPress={() => setRiskLevel(level)}
-          >
-            <Text style={styles.chipText}>{level}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.section}>Status</Text>
-      <View style={styles.chips}>
-        {statuses.map((value) => (
-          <Pressable
-            key={value}
-            style={[styles.chip, status === value && styles.chipActive]}
-            onPress={() => setStatus(value)}
-          >
-            <Text style={styles.chipText}>{value}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <ChoiceChipGroup label="Risk level" options={riskLevels} value={riskLevel} onChange={setRiskLevel} />
+      <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />
 
       {submitError ? <InlineError message={submitError} /> : null}
 
@@ -238,34 +205,3 @@ export default function AdminMemberFormScreen() {
     </FormScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  formContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  centered: { flex: 1, justifyContent: 'center', padding: spacing.xl },
-  back: { marginBottom: spacing.md },
-  title: { fontSize: 22, fontWeight: '800', color: colors.primary, marginBottom: spacing.lg },
-  section: { fontWeight: '600', color: colors.textSecondary, marginBottom: spacing.sm },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: '#ecfdf5' },
-  chipText: { fontWeight: '600', color: colors.primary, textTransform: 'capitalize' },
-  hint: { color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 18 },
-  primary: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  primaryText: { color: colors.white, fontWeight: '700' },
-  danger: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.md },
-  dangerText: { color: colors.accent, fontWeight: '700' },
-});

@@ -1,4 +1,5 @@
-import { requireAssigneeId } from '@/features/admin/selectors/assignees';
+import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/features/members/selectors/members';
+import { requireAssigneeId } from '@/lib/core/assignment';
 import { fromSupabaseError } from '@/lib/core/errors';
 import {
   DEFAULT_PAGE_SIZE,
@@ -21,6 +22,7 @@ export type MemberListQuery = PageParams & {
   search?: string;
   status?: Member['status'];
   riskLevel?: Member['risk_level'];
+  attentionOnly?: boolean;
 };
 
 export async function fetchMembersPage(
@@ -44,6 +46,7 @@ export async function fetchMembersPage(
   }
   if (query.status) request = request.eq('status', query.status);
   if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
+  if (query.attentionOnly) request = request.or(MEMBERS_NEEDING_ATTENTION_OR_FILTER);
 
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load members.');
@@ -55,6 +58,30 @@ export async function fetchMembersPage(
     pageSize,
     hasMore: hasMorePages(items.length, pageSize),
   };
+}
+
+/** Loads all members matching attention criteria (not paginated). */
+export async function fetchMembersNeedingAttention(
+  query: Pick<MemberListQuery, 'search'> = {},
+): Promise<MemberListRow[]> {
+  const supabase = requireSupabase();
+
+  let request = supabase
+    .from('members')
+    .select(MEMBER_LIST_COLUMNS)
+    .or(MEMBERS_NEEDING_ATTENTION_OR_FILTER)
+    .order('full_name');
+
+  const search = query.search?.trim();
+  if (search) {
+    const pattern = `%${escapeLikePattern(search)}%`;
+    request = request.or(`full_name.ilike.${pattern},phone.ilike.${pattern}`);
+  }
+
+  const { data, error } = await request;
+  if (error) throw fromSupabaseError(error, 'Unable to load members needing attention.');
+
+  return (data ?? []) as MemberListRow[];
 }
 
 export async function fetchMemberById(id: string): Promise<Member | null> {

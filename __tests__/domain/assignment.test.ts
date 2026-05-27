@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { listAssignableShepherds, requireAssigneeId } from '@/features/admin/selectors/assignees';
+import { listAssignableShepherds, requireAssigneeId } from '@/lib/core/assignment';
 import { AppException, isAppError } from '@/lib/core/errors';
 import type { Profile } from '@/types/database';
 

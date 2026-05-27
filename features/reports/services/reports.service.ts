@@ -1,8 +1,9 @@
+import { buildRecentReportSummary } from '@/features/reports/selectors/reports';
+import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/features/members/selectors/members';
 import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
 import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
-import { buildRecentReportSummary } from '@/features/reports/selectors/reports';
 
 export async function fetchWorkerSummary(accessToken: string) {
   return fetchWorkerReportSummary(accessToken);
@@ -25,7 +26,7 @@ export async function fetchLocalReportSummary(recentDays = 7) {
     supabase
       .from('members')
       .select('risk_level, status, created_at')
-      .or('risk_level.eq.high,status.eq.inactive,status.eq.new'),
+      .or(MEMBERS_NEEDING_ATTENTION_OR_FILTER),
     supabase.from('visits').select('visit_type, visited_at').gte('visited_at', since.toISOString()),
     supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'open'),
   ]);

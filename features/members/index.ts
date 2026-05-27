@@ -10,4 +10,10 @@ export {
   deleteMember,
   type MemberInput,
 } from './services/members.service';
-export { filterMembers, membersNeedingAttention, type MemberFilter } from './selectors/members';
+export {
+  filterMembers,
+  memberNeedsAttention,
+  membersNeedingAttention,
+  MEMBERS_NEEDING_ATTENTION_OR_FILTER,
+  type MemberFilter,
+} from './selectors/members';

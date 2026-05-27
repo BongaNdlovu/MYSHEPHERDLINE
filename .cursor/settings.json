@@ -2,6 +2,9 @@
   "plugins": {
     "supabase": {
       "enabled": true
+    },
+    "cursor-team-kit": {
+      "enabled": true
     }
   }
 }

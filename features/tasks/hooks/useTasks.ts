@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  fetchTaskById,
   fetchTasksPage,
   updateTaskStatus,
   type TaskListQuery,
 } from '@/features/tasks/services/tasks.service';
 import type { AppError } from '@/lib/core/errors';
-import { toAppError } from '@/lib/core/errors';
-import { appendUniquePage } from '@/lib/core/paginated-state';
-import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
-import type { TaskListRow } from '@/types/database';
+import { notFoundError, toAppError } from '@/lib/core/errors';
+import { computeIsStale, type PaginatedQueryState, type QueryState } from '@/lib/core/query-types';
+import { usePaginatedQuery } from '@/lib/core/usePaginatedQuery';
+import type { Task, TaskListRow } from '@/types/database';
 
 export type UseTasksOptions = Omit<TaskListQuery, 'page'>;
 
@@ -19,71 +20,41 @@ type TasksState = PaginatedQueryState<TaskListRow> & {
 };
 
 export function useTasks(options: UseTasksOptions = {}): TasksState {
-  const [data, setData] = useState<TaskListRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<AppError | null>(null);
-  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const loadingMoreRef = useRef(false);
-  const requestIdRef = useRef(0);
+  const fetchPage = useCallback(
+    (page: number) =>
+      fetchTasksPage({
+        page,
+        pageSize: options.pageSize,
+        status: options.status,
+        assigneeId: options.assigneeId,
+      }),
+    [options.assigneeId, options.pageSize, options.status],
+  );
+
+  const {
+    data,
+    setData,
+    loading,
+    loadingMore,
+    error,
+    refresh,
+    loadMore,
+    page,
+    hasMore,
+    lastLoadedAt,
+    isStale,
+  } = usePaginatedQuery({
+    fetchPage,
+    deps: [options.assigneeId, options.pageSize, options.status],
+    errorMessage: 'Unable to load tasks.',
+  });
+
   const togglingRef = useRef(new Set<string>());
   const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const syncTogglingIds = useCallback(() => {
     setTogglingIds(new Set(togglingRef.current));
   }, []);
-
-  const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
-    const requestId = ++requestIdRef.current;
-
-    if (append) setLoadingMore(true);
-    else {
-      setLoading(true);
-      setError(null);
-    }
-
-    try {
-      const result = await fetchTasksPage({
-        page: pageToLoad,
-        pageSize: options.pageSize,
-        status: options.status,
-        assigneeId: options.assigneeId,
-      });
-      if (requestId !== requestIdRef.current) return;
-
-      setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
-      setPage(result.page);
-      setHasMore(result.hasMore);
-      setLastLoadedAt(Date.now());
-    } catch (err) {
-      if (requestId !== requestIdRef.current) return;
-
-      setError(toAppError(err, 'Unable to load tasks.'));
-      if (!append) setData([]);
-      setHasMore(false);
-    } finally {
-      if (requestId !== requestIdRef.current) return;
-
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [options.assigneeId, options.pageSize, options.status]);
-
-  const refresh = useCallback(async () => {
-    await loadPage(0, false);
-  }, [loadPage]);
-
-  const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore || loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    try {
-      await loadPage(page + 1, true);
-    } finally {
-      loadingMoreRef.current = false;
-    }
-  }, [hasMore, loadPage, loading, loadingMore, page]);
 
   const isTaskToggling = useCallback((taskId: string) => togglingIds.has(taskId), [togglingIds]);
 
@@ -113,19 +84,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
         syncTogglingIds();
       }
     },
-    [syncTogglingIds],
-  );
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void loadPage(0, false);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadPage, options.status, options.assigneeId, options.pageSize]);
-
-  const isStale = useMemo(
-    () => computeIsStale({ loading, loadingMore, error, lastLoadedAt, dataLength: data.length }),
-    [data.length, error, lastLoadedAt, loading, loadingMore],
+    [setData, syncTogglingIds],
   );
 
   return {
@@ -142,4 +101,51 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     toggleTask,
     isTaskToggling,
   };
+}
+
+export function useTask(id: string | undefined): QueryState<Task | null> {
+  const [data, setData] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(Boolean(id));
+  const [error, setError] = useState<AppError | null>(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!id) {
+      setData(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const task = await fetchTaskById(id);
+      if (!task) {
+        setData(null);
+        setError(notFoundError('Task'));
+        return;
+      }
+      setData(task);
+      setLastLoadedAt(Date.now());
+    } catch (err) {
+      setError(toAppError(err, 'Unable to load task.'));
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [refresh]);
+
+  const isStale = useMemo(
+    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: data ? 1 : 0 }),
+    [data, error, lastLoadedAt, loading],
+  );
+
+  return { data, loading, error, refresh, lastLoadedAt, isStale };
 }

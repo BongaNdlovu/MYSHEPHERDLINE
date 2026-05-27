@@ -8,7 +8,7 @@ export {
   shouldRedirectFromAdminLayout,
   shouldRedirectFromOwnerRoute,
 } from './selectors/route-guards';
-export { listAssignableShepherds, requireAssigneeId } from './selectors/assignees';
+export { listAssignableShepherds, requireAssigneeId } from '@/lib/core/assignment';
 export { adminMenuItems, visibleAdminMenuItems } from './selectors/admin-menu';
 export { default as AdminCenterScreen } from './screens/AdminCenterScreen';
 export { default as AdminUnauthorizedScreen } from './screens/AdminUnauthorizedScreen';

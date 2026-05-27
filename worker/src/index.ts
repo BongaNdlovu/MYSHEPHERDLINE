@@ -1,4 +1,4 @@
-import { createServiceClient, isInternalDigestRequest, isOwner, resolveAuth } from './auth';
+import { createServiceClient, isInternalDigestRequest, isOwner, resolveAuth, type AuthContext } from './auth';
 import { validateWorkerEnv, type WorkerEnv } from './env';
 import { corsHeaders, json, readJsonBody, REGISTER_MAX_BODY_BYTES } from './http';
 import { createRequestContext, logAudit, logRouteError, logRouteTiming, type RequestContext } from './logger';
@@ -8,11 +8,24 @@ import { clientRateLimitKey, isRateLimited } from './rate-limit';
 
 export type { WorkerEnv } from './env';
 
+type AuthResolution = Awaited<ReturnType<typeof resolveAuth>>;
+type SupabaseClient = ReturnType<typeof createServiceClient>;
+
+type RouteContext = {
+  request: Request;
+  env: WorkerEnv;
+  requestContext: RequestContext;
+  startedAt: number;
+  supabase: SupabaseClient;
+};
+
+type RouteHandler = (context: RouteContext) => Promise<Response>;
+
 function authErrorResponse(
   request: Request,
   env: WorkerEnv,
   requestContext: RequestContext,
-  auth: Awaited<ReturnType<typeof resolveAuth>>,
+  auth: AuthResolution,
 ) {
   if ('status' in auth && auth.status === 'inactive') {
     logAudit(requestContext, 'inactive_user_rejected', { userId: auth.userId });
@@ -50,6 +63,111 @@ function internalErrorResponse(
     'X-Request-Id': requestContext.requestId,
   });
 }
+
+async function requireAuthenticatedUser(context: RouteContext): Promise<AuthContext | Response> {
+  const auth = await resolveAuth(context.request, context.env, context.supabase);
+  if ('status' in auth) {
+    return authErrorResponse(context.request, context.env, context.requestContext, auth);
+  }
+  return auth;
+}
+
+async function handleReportsSummary(context: RouteContext): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(context);
+  if (authResult instanceof Response) return authResult;
+
+  const summary = await buildSummary(context.supabase, context.env, authResult);
+  logRouteTiming(context.requestContext, {
+    status: 200,
+    durationMs: Date.now() - context.startedAt,
+    organizationId: authResult.organizationId,
+    userId: authResult.userId,
+    usedFallback: false,
+  });
+  return json(context.request, context.env, summary, 200, {
+    'X-Request-Id': context.requestContext.requestId,
+  });
+}
+
+async function handleRegisterNotification(context: RouteContext): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(context);
+  if (authResult instanceof Response) return authResult;
+
+  const parsedBody = await readJsonBody(context.request, REGISTER_MAX_BODY_BYTES);
+  if (!parsedBody.ok) {
+    return json(context.request, context.env, { error: parsedBody.error }, parsedBody.status, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  const parsed = parseRegisterPayload(parsedBody.body);
+  if ('error' in parsed) {
+    return json(context.request, context.env, { error: parsed.error }, 400, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  const result = await registerToken(
+    context.supabase,
+    authResult.userId,
+    authResult.organizationId,
+    parsed,
+  );
+  if ('error' in result) {
+    return json(context.request, context.env, { error: result.error }, result.status, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  logAudit(context.requestContext, 'push_token_registered', { userId: authResult.userId });
+  return json(context.request, context.env, { ok: true }, 200, {
+    'X-Request-Id': context.requestContext.requestId,
+  });
+}
+
+async function handleSendDigest(context: RouteContext): Promise<Response> {
+  const internal = isInternalDigestRequest(context.request, context.env);
+  const auth = internal ? null : await resolveAuth(context.request, context.env, context.supabase);
+
+  if (!internal) {
+    if (auth && 'status' in auth) {
+      return authErrorResponse(context.request, context.env, context.requestContext, auth);
+    }
+    if (!auth || !isOwner(auth)) {
+      logAudit(context.requestContext, 'digest_send_forbidden', {
+        userId: auth && !('status' in auth) ? auth.userId : null,
+        internal,
+        role: auth && !('status' in auth) ? auth.role : null,
+      });
+      return json(context.request, context.env, { error: 'Forbidden' }, 403, {
+        'X-Request-Id': context.requestContext.requestId,
+      });
+    }
+  }
+
+  const result = await sendDigest(context.supabase, context.env);
+  if ('error' in result) {
+    return json(context.request, context.env, { error: result.error }, 500, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  logAudit(context.requestContext, 'digest_sent', {
+    sent: result.sent,
+    organizations: result.organizations,
+    internal,
+    userId: auth && !('status' in auth) ? auth.userId : null,
+  });
+  return json(context.request, context.env, result, 200, {
+    'X-Request-Id': context.requestContext.requestId,
+  });
+}
+
+const routes: { method: string; path: string; handler: RouteHandler }[] = [
+  { method: 'GET', path: '/reports/summary', handler: handleReportsSummary },
+  { method: 'POST', path: '/notifications/register', handler: handleRegisterNotification },
+  { method: 'POST', path: '/notifications/send-digest', handler: handleSendDigest },
+];
 
 async function handleRequest(
   request: Request,
@@ -94,82 +212,10 @@ async function handleRequest(
   }
 
   const supabase = createServiceClient(env);
-
-  if (url.pathname === '/reports/summary' && request.method === 'GET') {
-    const auth = await resolveAuth(request, env, supabase);
-    if ('status' in auth) return authErrorResponse(request, env, requestContext, auth);
-    const summary = await buildSummary(supabase, env, auth);
-    logRouteTiming(requestContext, {
-      status: 200,
-      durationMs: Date.now() - startedAt,
-      organizationId: auth.organizationId,
-      userId: auth.userId,
-      usedFallback: false,
-    });
-    return json(request, env, summary, 200, { 'X-Request-Id': requestContext.requestId });
-  }
-
-  if (url.pathname === '/notifications/register' && request.method === 'POST') {
-    const auth = await resolveAuth(request, env, supabase);
-    if ('status' in auth) return authErrorResponse(request, env, requestContext, auth);
-
-    const parsedBody = await readJsonBody(request, REGISTER_MAX_BODY_BYTES);
-    if (!parsedBody.ok) {
-      return json(request, env, { error: parsedBody.error }, parsedBody.status, {
-        'X-Request-Id': requestContext.requestId,
-      });
-    }
-
-    const parsed = parseRegisterPayload(parsedBody.body);
-    if ('error' in parsed) {
-      return json(request, env, { error: parsed.error }, 400, {
-        'X-Request-Id': requestContext.requestId,
-      });
-    }
-
-    const result = await registerToken(supabase, auth.userId, auth.organizationId, parsed);
-    if ('error' in result) {
-      return json(request, env, { error: result.error }, result.status, {
-        'X-Request-Id': requestContext.requestId,
-      });
-    }
-
-    logAudit(requestContext, 'push_token_registered', { userId: auth.userId });
-    return json(request, env, { ok: true }, 200, { 'X-Request-Id': requestContext.requestId });
-  }
-
-  if (url.pathname === '/notifications/send-digest' && request.method === 'POST') {
-    const internal = isInternalDigestRequest(request, env);
-    const auth = internal ? null : await resolveAuth(request, env, supabase);
-
-    if (!internal) {
-      if (auth && 'status' in auth) return authErrorResponse(request, env, requestContext, auth);
-      if (!auth || !isOwner(auth)) {
-        logAudit(requestContext, 'digest_send_forbidden', {
-          userId: auth && !('status' in auth) ? auth.userId : null,
-          internal,
-          role: auth && !('status' in auth) ? auth.role : null,
-        });
-        return json(request, env, { error: 'Forbidden' }, 403, {
-          'X-Request-Id': requestContext.requestId,
-        });
-      }
-    }
-
-    const result = await sendDigest(supabase, env);
-    if ('error' in result) {
-      return json(request, env, { error: result.error }, 500, {
-        'X-Request-Id': requestContext.requestId,
-      });
-    }
-
-    logAudit(requestContext, 'digest_sent', {
-      sent: result.sent,
-      organizations: result.organizations,
-      internal,
-      userId: auth && !('status' in auth) ? auth.userId : null,
-    });
-    return json(request, env, result, 200, { 'X-Request-Id': requestContext.requestId });
+  const routeContext: RouteContext = { request, env, requestContext, startedAt, supabase };
+  const route = routes.find((entry) => entry.path === url.pathname && entry.method === request.method);
+  if (route) {
+    return route.handler(routeContext);
   }
 
   return json(request, env, { error: 'Not found' }, 404, {

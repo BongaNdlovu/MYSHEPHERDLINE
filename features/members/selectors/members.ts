@@ -23,9 +23,16 @@ export function filterMembers(members: MemberLike[], query: string, filter: Memb
 
 type AttentionMember = { risk_level: Member['risk_level']; status: Member['status'] };
 
-export function membersNeedingAttention<T extends AttentionMember>(members: T[]): T[] {
-  return members.filter(
-    (member) =>
-      member.risk_level === 'high' || member.status === 'inactive' || member.status === 'new',
+/** PostgREST `.or()` filter matching `membersNeedingAttention`. */
+export const MEMBERS_NEEDING_ATTENTION_OR_FILTER =
+  'risk_level.eq.high,status.eq.inactive,status.eq.new';
+
+export function memberNeedsAttention(member: AttentionMember): boolean {
+  return (
+    member.risk_level === 'high' || member.status === 'inactive' || member.status === 'new'
   );
+}
+
+export function membersNeedingAttention<T extends AttentionMember>(members: T[]): T[] {
+  return members.filter(memberNeedsAttention);
 }

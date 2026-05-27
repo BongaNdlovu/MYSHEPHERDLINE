@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { buildAttentionPreview } from '@/features/home/selectors/dashboard';
+import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
 import { MemberListItem, useMembers } from '@/features/members';
 import { groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
@@ -18,7 +18,8 @@ import { colors, radii, spacing } from '@/constants/theme';
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { showToast } = useToast();
-  const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } = useMembers();
+  const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } =
+    useMembers({ attentionOnly: true });
   const {
     data: tasks,
     loading: tasksLoading,
@@ -30,6 +31,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
 
   const attentionMembers = useMemo(() => buildAttentionPreview(members, query), [members, query]);
+  const attentionCount = useMemo(() => countAttentionMatches(members, query), [members, query]);
   const membersInitialLoad = membersLoading && members.length === 0;
   const membersRefreshing = membersLoading && members.length > 0;
   const tasksInitialLoad = tasksLoading && tasks.length === 0;
@@ -53,14 +55,14 @@ export default function HomeScreen() {
         </View>
         <View style={styles.alertContent}>
           <Text style={styles.alertTitle}>
-            {membersLoading ? 'Loading follow-ups…' : `${attentionMembers.length} need follow-up`}
+            {membersLoading ? 'Loading follow-ups…' : `${attentionCount} need follow-up`}
           </Text>
           <Text style={styles.alertText}>Tap to review the full member list</Text>
         </View>
         <Feather name="chevron-right" size={18} color={colors.accent} />
       </Pressable>
 
-      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionMembers.length}`} >
+      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionCount}`} >
         <View testID={testIds.home.attentionList}>
         <QueryStateView
           loading={membersInitialLoad}

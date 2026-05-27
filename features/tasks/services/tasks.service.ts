@@ -1,4 +1,4 @@
-import { requireAssigneeId } from '@/features/admin/selectors/assignees';
+import { requireAssigneeId } from '@/lib/core/assignment';
 import { fromSupabaseError } from '@/lib/core/errors';
 import {
   DEFAULT_PAGE_SIZE,
