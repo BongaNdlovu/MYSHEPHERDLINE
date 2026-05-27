@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeIsStale } from '@/lib/core/query-types';
+import { computeIsStale, hasStaleRefreshError, isInitialLoad, isRefreshing, queryDisplayError } from '@/lib/core/query-types';
+
+describe('query display helpers', () => {
+  const error = { category: 'network' as const, message: 'offline', retryable: true };
+
+  it('detects initial load vs refresh', () => {
+    expect(isInitialLoad(true, 0)).toBe(true);
+    expect(isInitialLoad(true, 2)).toBe(false);
+    expect(isRefreshing(true, 2)).toBe(true);
+    expect(isRefreshing(false, 2)).toBe(false);
+  });
+
+  it('shows inline errors only without cached data', () => {
+    expect(queryDisplayError(error, 0)).toEqual(error);
+    expect(queryDisplayError(error, 2)).toBeNull();
+    expect(hasStaleRefreshError(error, 2)).toBe(true);
+    expect(hasStaleRefreshError(null, 2)).toBe(false);
+  });
+});
 
 describe('computeIsStale', () => {
   it('is false before any successful load', () => {

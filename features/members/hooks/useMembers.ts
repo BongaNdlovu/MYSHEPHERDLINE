@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 
 import {
   fetchMemberById,
@@ -6,52 +6,31 @@ import {
   fetchMembersPage,
   type MemberListQuery,
 } from '@/features/members/services/members.service';
-import type { AppError } from '@/lib/core/errors';
-import { notFoundError, toAppError } from '@/lib/core/errors';
-import { computeIsStale, type PaginatedQueryState, type QueryState } from '@/lib/core/query-types';
+import { notFoundError } from '@/lib/core/errors';
+import type { PaginatedQueryState, QueryState } from '@/lib/core/query-types';
 import { usePaginatedQuery } from '@/lib/core/usePaginatedQuery';
+import { useQuery } from '@/lib/core/useQuery';
 import type { Member, MemberListRow } from '@/types/database';
 
 export type UseMembersOptions = Omit<MemberListQuery, 'page'>;
 
-function useAttentionMembersQuery(enabled: boolean): QueryState<MemberListRow[]> {
-  const [data, setData] = useState<MemberListRow[]>([]);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<AppError | null>(null);
-  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!enabled) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const members = await fetchMembersNeedingAttention();
-      setData(members);
-      setLastLoadedAt(Date.now());
-    } catch (err) {
-      setError(toAppError(err, 'Unable to load members needing attention.'));
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const timer = setTimeout(() => {
-      void refresh();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [enabled, refresh]);
-
-  const isStale = useMemo(
-    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: data.length }),
-    [data.length, error, lastLoadedAt, loading],
+function useAttentionMembersQuery(
+  search: string | undefined,
+  enabled: boolean,
+): QueryState<MemberListRow[]> {
+  const fetch = useCallback(
+    () => fetchMembersNeedingAttention({ search }),
+    [search],
   );
 
-  return { data, loading, error, refresh, lastLoadedAt, isStale };
+  return useQuery({
+    deps: [search],
+    enabled,
+    errorMessage: 'Unable to load members needing attention.',
+    initialData: [],
+    fetch,
+    dataLength: (members) => members.length,
+  });
 }
 
 export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState<MemberListRow> {
@@ -65,19 +44,18 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
         search: options.search,
         status: options.status,
         riskLevel: options.riskLevel,
-        attentionOnly: options.attentionOnly,
       }),
-    [options.attentionOnly, options.pageSize, options.riskLevel, options.search, options.status],
+    [options.pageSize, options.riskLevel, options.search, options.status],
   );
 
   const paginatedQuery = usePaginatedQuery({
     fetchPage,
-    deps: [options.pageSize, options.riskLevel, options.search, options.status, options.attentionOnly],
+    deps: [options.pageSize, options.riskLevel, options.search, options.status],
     errorMessage: 'Unable to load members.',
     enabled: !attentionOnly,
   });
 
-  const attentionQuery = useAttentionMembersQuery(attentionOnly);
+  const attentionQuery = useAttentionMembersQuery(options.search, attentionOnly);
 
   if (attentionOnly) {
     return {
@@ -98,48 +76,18 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
 }
 
 export function useMember(id: string | undefined): QueryState<Member | null> {
-  const [data, setData] = useState<Member | null>(null);
-  const [loading, setLoading] = useState(Boolean(id));
-  const [error, setError] = useState<AppError | null>(null);
-  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!id) {
-      setData(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const member = await fetchMemberById(id);
-      if (!member) {
-        setData(null);
-        setError(notFoundError('Member'));
-        return;
-      }
-      setData(member);
-      setLastLoadedAt(Date.now());
-    } catch (err) {
-      setError(toAppError(err, 'Unable to load member.'));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
+  const fetch = useCallback(async () => {
+    const member = await fetchMemberById(id!);
+    if (!member) throw notFoundError('Member');
+    return member;
   }, [id]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void refresh();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [refresh]);
-
-  const isStale = useMemo(
-    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: data ? 1 : 0 }),
-    [data, error, lastLoadedAt, loading],
-  );
-
-  return { data, loading, error, refresh, lastLoadedAt, isStale };
+  return useQuery({
+    deps: [id],
+    enabled: Boolean(id),
+    errorMessage: 'Unable to load member.',
+    initialData: null,
+    fetch,
+    dataLength: (member) => (member ? 1 : 0),
+  });
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   fetchTaskById,
@@ -8,8 +8,9 @@ import {
 } from '@/features/tasks/services/tasks.service';
 import type { AppError } from '@/lib/core/errors';
 import { notFoundError, toAppError } from '@/lib/core/errors';
-import { computeIsStale, type PaginatedQueryState, type QueryState } from '@/lib/core/query-types';
+import type { PaginatedQueryState, QueryState } from '@/lib/core/query-types';
 import { usePaginatedQuery } from '@/lib/core/usePaginatedQuery';
+import { useQuery } from '@/lib/core/useQuery';
 import type { Task, TaskListRow } from '@/types/database';
 
 export type UseTasksOptions = Omit<TaskListQuery, 'page'>;
@@ -104,48 +105,18 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
 }
 
 export function useTask(id: string | undefined): QueryState<Task | null> {
-  const [data, setData] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(Boolean(id));
-  const [error, setError] = useState<AppError | null>(null);
-  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!id) {
-      setData(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const task = await fetchTaskById(id);
-      if (!task) {
-        setData(null);
-        setError(notFoundError('Task'));
-        return;
-      }
-      setData(task);
-      setLastLoadedAt(Date.now());
-    } catch (err) {
-      setError(toAppError(err, 'Unable to load task.'));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
+  const fetch = useCallback(async () => {
+    const task = await fetchTaskById(id!);
+    if (!task) throw notFoundError('Task');
+    return task;
   }, [id]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void refresh();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [refresh]);
-
-  const isStale = useMemo(
-    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: data ? 1 : 0 }),
-    [data, error, lastLoadedAt, loading],
-  );
-
-  return { data, loading, error, refresh, lastLoadedAt, isStale };
+  return useQuery({
+    deps: [id],
+    enabled: Boolean(id),
+    errorMessage: 'Unable to load task.',
+    initialData: null,
+    fetch,
+    dataLength: (task) => (task ? 1 : 0),
+  });
 }

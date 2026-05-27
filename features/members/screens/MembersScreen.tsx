@@ -5,8 +5,10 @@ import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
-import { FilterChips, MemberListItem, filterMembers, useMembers, type MemberFilter } from '@/features/members';
+import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { FilterChips, MemberListItem, filterMembers, useMembers, type MemberFilter } from '@/features/members';
+import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { testIds } from '@/constants/testIds';
 import { colors } from '@/constants/theme';
 
@@ -45,6 +47,7 @@ export default function MembersScreen() {
     () => (filter === 'risk' ? filterMembers(members, '', 'risk') : members),
     [filter, members],
   );
+  const initialLoad = isInitialLoad(loading, filtered.length);
 
   return (
     <View style={styles.screen} testID={testIds.members.screen}>
@@ -72,11 +75,18 @@ export default function MembersScreen() {
             />
             <Card title="Congregation Directory">
               <QueryStateView
-                loading={loading}
-                error={error}
-                isEmpty={!filtered.length}
+                loading={initialLoad}
+                error={queryDisplayError(error, filtered.length)}
+                isEmpty={!initialLoad && !error && !filtered.length}
                 emptyMessage="No members match your search or filter."
                 onRetry={() => void refresh()}
+              />
+              <QueryRefreshFeedback
+                loading={loading}
+                error={error}
+                dataLength={filtered.length}
+                refreshingLabel="Refreshing members…"
+                staleErrorLabel="Could not refresh members. Showing last loaded data."
               />
             </Card>
           </>

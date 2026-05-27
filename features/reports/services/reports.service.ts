@@ -1,13 +1,8 @@
 import { buildRecentReportSummary } from '@/features/reports/selectors/reports';
 import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/features/members/selectors/members';
-import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
 import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
-
-export async function fetchWorkerSummary(accessToken: string) {
-  return fetchWorkerReportSummary(accessToken);
-}
 
 /** Dev / break-glass only - not for production steady state. */
 export async function fetchLocalReportSummary(recentDays = 7) {

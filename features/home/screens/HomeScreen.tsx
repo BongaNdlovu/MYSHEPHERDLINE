@@ -1,25 +1,37 @@
 import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
+import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
 import { MemberListItem, useMembers } from '@/features/members';
 import { groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
 import { getUserMessage } from '@/lib/core/errors';
+import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { showToast } = useToast();
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } =
-    useMembers({ attentionOnly: true });
+    useMembers({ attentionOnly: true, search: debouncedQuery || undefined });
   const {
     data: tasks,
     loading: tasksLoading,
@@ -28,14 +40,11 @@ export default function HomeScreen() {
     toggleTask,
     isTaskToggling,
   } = useTasks();
-  const [query, setQuery] = useState('');
 
-  const attentionMembers = useMemo(() => buildAttentionPreview(members, query), [members, query]);
-  const attentionCount = useMemo(() => countAttentionMatches(members, query), [members, query]);
-  const membersInitialLoad = membersLoading && members.length === 0;
-  const membersRefreshing = membersLoading && members.length > 0;
-  const tasksInitialLoad = tasksLoading && tasks.length === 0;
-  const tasksRefreshing = tasksLoading && tasks.length > 0;
+  const attentionMembers = useMemo(() => buildAttentionPreview(members), [members]);
+  const attentionCount = useMemo(() => countAttentionMatches(members), [members]);
+  const membersInitialLoad = isInitialLoad(membersLoading, members.length);
+  const tasksInitialLoad = isInitialLoad(tasksLoading, tasks.length);
 
   const { today: todayTasks } = groupTasksByDueDate(tasks);
 
@@ -55,58 +64,70 @@ export default function HomeScreen() {
         </View>
         <View style={styles.alertContent}>
           <Text style={styles.alertTitle}>
-            {membersLoading ? 'Loading follow-ups…' : `${attentionCount} need follow-up`}
+            {membersInitialLoad ? 'Loading follow-ups…' : `${attentionCount} need follow-up`}
           </Text>
           <Text style={styles.alertText}>Tap to review the full member list</Text>
         </View>
         <Feather name="chevron-right" size={18} color={colors.accent} />
       </Pressable>
 
-      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionCount}`} >
+      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionCount}`}>
         <View testID={testIds.home.attentionList}>
-        <QueryStateView
-          loading={membersInitialLoad}
-          error={membersError}
-          isEmpty={!membersInitialLoad && !membersError && !attentionMembers.length}
-          emptyMessage="No members currently flagged for follow-up."
-          onRetry={() => void refreshMembers()}
-        />
-        {membersRefreshing ? <Text style={styles.refreshing}>Refreshing members…</Text> : null}
-        {!membersInitialLoad && !membersError
-          ? attentionMembers.map((member) => (
-          <MemberListItem
-            key={member.id}
-            member={member}
-            testID={testIds.members.member(member.id)}
-            onPress={() => router.push(`/member/${member.id}`)}
+          <QueryStateView
+            loading={membersInitialLoad}
+            error={queryDisplayError(membersError, members.length)}
+            isEmpty={!membersInitialLoad && !membersError && !attentionMembers.length}
+            emptyMessage="No members currently flagged for follow-up."
+            onRetry={() => void refreshMembers()}
           />
-        ))
-          : null}
+          <QueryRefreshFeedback
+            loading={membersLoading}
+            error={membersError}
+            dataLength={members.length}
+            refreshingLabel="Refreshing members…"
+            staleErrorLabel="Could not refresh members. Showing last loaded data."
+          />
+          {!membersInitialLoad && !membersError
+            ? attentionMembers.map((member) => (
+                <MemberListItem
+                  key={member.id}
+                  member={member}
+                  testID={testIds.members.member(member.id)}
+                  onPress={() => router.push(`/member/${member.id}`)}
+                />
+              ))
+            : null}
         </View>
       </Card>
 
       <Card title="Today's Tasks" badge={tasksInitialLoad ? undefined : `${todayTasks.length}`}>
         <QueryStateView
           loading={tasksInitialLoad}
-          error={tasksError}
+          error={queryDisplayError(tasksError, tasks.length)}
           isEmpty={!tasksInitialLoad && !tasksError && !todayTasks.length}
           emptyMessage="No open tasks due today."
           onRetry={() => void refreshTasks()}
         />
-        {tasksRefreshing ? <Text style={styles.refreshing}>Refreshing tasks…</Text> : null}
+        <QueryRefreshFeedback
+          loading={tasksLoading}
+          error={tasksError}
+          dataLength={tasks.length}
+          refreshingLabel="Refreshing tasks…"
+          staleErrorLabel="Could not refresh tasks. Showing last loaded data."
+        />
         {!tasksInitialLoad && !tasksError
           ? todayTasks.map((task) => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            toggleTestID={testIds.tasks.toggle(task.id)}
-            toggleDisabled={isTaskToggling(task.id)}
-            onToggle={async () => {
-              const err = await toggleTask(task);
-              if (err) showToast(getUserMessage(err));
-            }}
-          />
-        ))
+              <TaskItem
+                key={task.id}
+                task={task}
+                toggleTestID={testIds.tasks.toggle(task.id)}
+                toggleDisabled={isTaskToggling(task.id)}
+                onToggle={async () => {
+                  const err = await toggleTask(task);
+                  if (err) showToast(getUserMessage(err));
+                }}
+              />
+            ))
           : null}
       </Card>
     </ScrollView>
@@ -139,11 +160,4 @@ const styles = StyleSheet.create({
   alertContent: { flex: 1 },
   alertTitle: { color: '#dc2626', fontWeight: '700', fontSize: 14 },
   alertText: { color: '#991b1b', fontSize: 13, marginTop: 3, opacity: 0.8 },
-  refreshing: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
 });

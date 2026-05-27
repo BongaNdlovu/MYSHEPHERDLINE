@@ -16,6 +16,26 @@ export type PaginatedQueryState<T> = QueryState<T[]> & {
   loadMore: () => Promise<void>;
 };
 
+/** True on first load before any rows/items are available. */
+export function isInitialLoad(loading: boolean, dataLength: number): boolean {
+  return loading && dataLength === 0;
+}
+
+/** True when refreshing with cached rows/items still visible. */
+export function isRefreshing(loading: boolean, dataLength: number): boolean {
+  return loading && dataLength > 0;
+}
+
+/** Inline query errors only when there is no cached data to show. */
+export function queryDisplayError(error: AppError | null, dataLength: number): AppError | null {
+  return error && dataLength === 0 ? error : null;
+}
+
+/** True when refresh failed but cached data remains visible. */
+export function hasStaleRefreshError(error: AppError | null, dataLength: number): boolean {
+  return Boolean(error && dataLength > 0);
+}
+
 /** True when cached list data is visible during refresh or after a failed refresh. */
 export function computeIsStale(input: {
   loading: boolean;

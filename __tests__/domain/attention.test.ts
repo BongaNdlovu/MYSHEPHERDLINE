@@ -53,23 +53,13 @@ describe('home attention preview', () => {
       }),
     );
 
-    expect(buildAttentionPreview(attentionMembers, '', 4)).toHaveLength(4);
-    expect(countAttentionMatches(attentionMembers, '')).toBe(DEFAULT_PAGE_SIZE + 3);
-  });
-
-  it('filters attention preview by search query', () => {
-    const members = [
-      memberRow({ id: '1', full_name: 'Sarah Mkhize', risk_level: 'high' }),
-      memberRow({ id: '2', full_name: 'Sipho Dlamini', status: 'inactive' }),
-    ];
-
-    expect(countAttentionMatches(members, 'sipho')).toBe(1);
-    expect(buildAttentionPreview(members, 'sipho', 4)).toHaveLength(1);
+    expect(buildAttentionPreview(attentionMembers, 4)).toHaveLength(4);
+    expect(countAttentionMatches(attentionMembers)).toBe(DEFAULT_PAGE_SIZE + 3);
   });
 
   it('works with fixture members needing attention', () => {
     const attention = membersNeedingAttention(fixtureMembers);
     expect(attention.length).toBeGreaterThan(0);
-    expect(countAttentionMatches(fixtureMembers, '')).toBe(attention.length);
+    expect(countAttentionMatches(fixtureMembers)).toBe(attention.length);
   });
 });

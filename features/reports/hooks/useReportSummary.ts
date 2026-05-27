@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { resolveReportFailure } from '@/features/reports/selectors/reports';
-import { fetchLocalReportSummary, fetchWorkerSummary } from '@/features/reports/services/reports.service';
+import { fetchLocalReportSummary } from '@/features/reports/services/reports.service';
+import { fetchReportSummary } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
 import { useAuth } from '@/lib/core/auth';
 import type { AppError } from '@/lib/core/errors';
@@ -43,7 +44,7 @@ export function useReportSummary(): ReportState {
     setError(null);
     setWorkerUnavailable(false);
 
-    const remote = await fetchWorkerSummary(accessToken);
+    const remote = await fetchReportSummary(accessToken);
     if (remote.ok) {
       setSummary(remote.data);
       setSource('worker');

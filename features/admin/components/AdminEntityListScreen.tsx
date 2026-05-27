@@ -4,10 +4,11 @@ import { Pressable, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
+import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { colors } from '@/constants/theme';
 import { adminListStyles as styles } from '@/features/admin/components/adminFormStyles';
-import type { PaginatedQueryState } from '@/lib/core/query-types';
+import { isInitialLoad, queryDisplayError, type PaginatedQueryState } from '@/lib/core/query-types';
 
 type AdminEntityListScreenProps<T extends { id: string }> = {
   screenTestId: string;
@@ -37,6 +38,7 @@ export function AdminEntityListScreen<T extends { id: string }>({
   getItemTestId,
 }: AdminEntityListScreenProps<T>) {
   const { data, loading, error, refresh, loadMore, hasMore, loadingMore } = query;
+  const initialLoad = isInitialLoad(loading, data.length);
 
   return (
     <View style={styles.screen} testID={screenTestId}>
@@ -62,7 +64,18 @@ export function AdminEntityListScreen<T extends { id: string }>({
               <Feather name="plus" size={18} color={colors.white} />
               <Text style={styles.addText}>{addLabel}</Text>
             </Pressable>
-            <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
+            <QueryStateView
+              loading={initialLoad}
+              error={queryDisplayError(error, data.length)}
+              onRetry={() => void refresh()}
+            />
+            <QueryRefreshFeedback
+              loading={loading}
+              error={error}
+              dataLength={data.length}
+              refreshingLabel="Refreshing…"
+              staleErrorLabel="Could not refresh. Showing last loaded data."
+            />
           </>
         }
         renderItem={({ item }) => (

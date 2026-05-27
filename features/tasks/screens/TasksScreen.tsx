@@ -4,9 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
+import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { buildWeekDayStrip, groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
 import { getUserMessage } from '@/lib/core/errors';
+import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
@@ -27,8 +29,7 @@ export default function TasksScreen() {
   const { showToast } = useToast();
   const { today, overdue, upcoming } = groupTasksByDueDate(tasks);
   const weekDays = buildWeekDayStrip();
-  const initialLoad = loading && tasks.length === 0;
-  const refreshing = loading && tasks.length > 0;
+  const initialLoad = isInitialLoad(loading, tasks.length);
 
   const sections = useMemo(
     () => [
@@ -61,13 +62,16 @@ export default function TasksScreen() {
       </View>
       <QueryStateView
         loading={initialLoad}
-        error={error && tasks.length === 0 ? error : null}
+        error={queryDisplayError(error, tasks.length)}
         onRetry={() => void refresh()}
       />
-      {refreshing ? <Text style={styles.refreshing}>Refreshing tasks…</Text> : null}
-      {error && tasks.length > 0 ? (
-        <Text style={styles.refreshError}>Could not refresh tasks. Showing last loaded data.</Text>
-      ) : null}
+      <QueryRefreshFeedback
+        loading={loading}
+        error={error}
+        dataLength={tasks.length}
+        refreshingLabel="Refreshing tasks…"
+        staleErrorLabel="Could not refresh tasks. Showing last loaded data."
+      />
     </>
   );
 
@@ -151,20 +155,4 @@ const styles = StyleSheet.create({
   dayLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
   dayNumber: { fontSize: 16, color: colors.primary, fontWeight: '700', marginTop: 4 },
   dayLabelActive: { color: colors.white },
-  refreshing: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  refreshError: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
 });

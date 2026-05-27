@@ -22,6 +22,7 @@ export type MemberListQuery = PageParams & {
   search?: string;
   status?: Member['status'];
   riskLevel?: Member['risk_level'];
+  /** When true, useMembers loads via fetchMembersNeedingAttention instead of pagination. */
   attentionOnly?: boolean;
 };
 
@@ -46,7 +47,6 @@ export async function fetchMembersPage(
   }
   if (query.status) request = request.eq('status', query.status);
   if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
-  if (query.attentionOnly) request = request.or(MEMBERS_NEEDING_ATTENTION_OR_FILTER);
 
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load members.');
