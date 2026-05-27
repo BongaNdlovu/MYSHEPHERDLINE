@@ -38,6 +38,19 @@ create policy "Districts readable with congregation"
     )
   );
 
+create or replace function public.is_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'owner' and p.is_active = true
+  );
+$$;
+
 drop policy if exists "Organizations readable by members" on public.organizations;
 drop policy if exists "Organizations readable in tenant" on public.organizations;
 create policy "Organizations readable in tenant"
@@ -46,9 +59,12 @@ create policy "Organizations readable in tenant"
     public.is_active_user()
     and (
       id = public.current_organization_id()
-      or district_id is not distinct from (
-        select o.district_id from public.organizations o
-        where o.id = public.current_organization_id()
+      or (
+        public.is_owner()
+        and district_id is not distinct from (
+          select o.district_id from public.organizations o
+          where o.id = public.current_organization_id()
+        )
       )
     )
   );
