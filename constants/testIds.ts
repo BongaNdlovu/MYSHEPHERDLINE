@@ -11,6 +11,17 @@ export const testIds = {
     displayName: 'auth-display-name',
     signInButton: 'auth-sign-in-button',
     signUpRestricted: 'auth-sign-up-restricted',
+    signUpEmail: 'auth-sign-up-email',
+    signUpDistrict: 'auth-sign-up-district',
+    signUpCongregation: 'auth-sign-up-congregation',
+    signUpMessage: 'auth-sign-up-message',
+    signUpSubmit: 'auth-sign-up-submit',
+  },
+  profileSettings: {
+    screen: 'profile-settings-screen',
+    district: 'profile-settings-district',
+    congregation: 'profile-settings-congregation',
+    save: 'profile-settings-save',
   },
   tabs: {
     home: 'tab-home',
@@ -66,6 +77,7 @@ export const testIds = {
     screen: 'more-screen',
     signOut: 'more-sign-out',
     privacy: 'more-privacy',
+    profileSettings: 'more-profile-settings',
   },
   admin: {
     entry: 'admin-entry',

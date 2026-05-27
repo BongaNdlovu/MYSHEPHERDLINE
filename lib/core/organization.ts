@@ -63,6 +63,29 @@ export async function fetchDistrictCongregations(): Promise<Organization[]> {
   return (data ?? []) as Organization[];
 }
 
+export async function fetchAllDistricts(): Promise<District[]> {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('districts')
+    .select('id, name, slug, created_at, updated_at')
+    .order('name');
+
+  if (error) throw fromSupabaseError(error, 'Unable to load districts.');
+  return (data ?? []) as District[];
+}
+
+export async function fetchCongregationsByDistrict(districtId: string): Promise<Organization[]> {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id, name, slug, district_id, created_at, updated_at')
+    .eq('district_id', districtId)
+    .order('name');
+
+  if (error) throw fromSupabaseError(error, 'Unable to load congregations.');
+  return (data ?? []) as Organization[];
+}
+
 export async function createCongregation(input: {
   name: string;
   slug: string;

@@ -17,6 +17,8 @@ function profile(overrides: Partial<Profile> = {}): Profile {
     display_name: 'Owner',
     role: 'owner',
     is_active: true,
+    preferred_district_id: null,
+    preferred_organization_id: null,
     created_at: '',
     updated_at: '',
     ...overrides,

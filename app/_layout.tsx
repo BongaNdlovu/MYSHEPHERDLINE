@@ -52,6 +52,7 @@ export default function RootLayout() {
               <Stack.Screen name="landing" />
               <Stack.Screen name="sign-in" />
               <Stack.Screen name="sign-up" />
+              <Stack.Screen name="settings/profile" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="member/[id]" />
               <Stack.Screen name="member/[id]/care-progress" />

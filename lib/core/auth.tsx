@@ -41,7 +41,7 @@ async function fetchProfile(userId: string): Promise<FetchProfileResult> {
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, organization_id, email, display_name, role, is_active, created_at, updated_at')
+    .select('id, organization_id, email, display_name, role, is_active, preferred_district_id, preferred_organization_id, created_at, updated_at')
     .eq('id', userId)
     .maybeSingle();
 

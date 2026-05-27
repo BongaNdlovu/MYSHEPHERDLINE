@@ -36,8 +36,21 @@ export interface Profile {
   display_name: string;
   role: UserRole;
   is_active: boolean;
+  preferred_district_id: string | null;
+  preferred_organization_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AccessRequest {
+  id: string;
+  email: string;
+  display_name: string;
+  preferred_district_id: string | null;
+  preferred_organization_id: string | null;
+  message: string | null;
+  status: 'pending' | 'reviewed';
+  created_at: string;
 }
 
 export interface Member {

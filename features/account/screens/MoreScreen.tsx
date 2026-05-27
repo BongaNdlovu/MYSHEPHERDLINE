@@ -49,6 +49,21 @@ export default function MoreScreen() {
 
       <NotificationSettingsCard />
 
+      <Card title="Profile">
+        <Pressable
+          style={styles.shortcut}
+          testID={testIds.more.profileSettings}
+          onPress={() => router.push('/settings/profile')}
+        >
+          <Feather name="user" size={18} color={colors.primary} />
+          <View style={styles.shortcutBody}>
+            <Text style={styles.shortcutText}>District & Conference</Text>
+            <Text style={styles.shortcutSub}>Set where you serve</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.textMuted} />
+        </Pressable>
+      </Card>
+
       <View style={styles.grid}>
         {accountQuickActions.map((action) => (
           <Pressable
