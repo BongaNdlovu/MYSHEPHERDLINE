@@ -36,7 +36,8 @@
     "eslint": "^9.29.0",
     "eslint-config-expo": "~56.0.4",
     "typescript": "~6.0.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.94.0"
   },
   "scripts": {
     "start": "expo start",
@@ -58,7 +59,9 @@
     "test:load:reports": "k6 run load-tests/k6/worker-reports.js",
     "check:env": "node scripts/check-env.mjs",
     "setup:worker": "powershell -ExecutionPolicy Bypass -File scripts/setup-worker.ps1",
-    "setup:supabase": "node scripts/open-supabase-sql.mjs"
+    "setup:supabase": "node scripts/open-supabase-sql.mjs",
+    "deploy": "npx expo export -p web && wrangler deploy",
+    "preview": "npx expo export -p web && wrangler dev"
   },
   "private": true,
   "workspaces": [
