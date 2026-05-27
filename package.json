@@ -68,6 +68,11 @@
     "deploy": "wrangler deploy",
     "preview": "wrangler dev"
   },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
+  },
   "private": true,
   "workspaces": [
     "worker"

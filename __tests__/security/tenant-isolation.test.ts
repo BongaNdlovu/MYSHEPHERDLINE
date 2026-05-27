@@ -22,6 +22,16 @@ describe('tenant isolation schema', () => {
     expect(schema).toContain('public.same_organization(organization_id)');
   });
 
+  it('limits cross-congregation district visibility to active owners', () => {
+    expect(schema).toContain('Organizations readable in tenant');
+    expect(schema).toMatch(
+      /create or replace function public\.is_owner\(\)[\s\S]*p\.role = 'owner' and p\.is_active = true/,
+    );
+    expect(schema).toMatch(
+      /create policy "Organizations readable in tenant"[\s\S]*id = public\.current_organization_id\(\)[\s\S]*public\.is_owner\(\)[\s\S]*district_id is not distinct from/,
+    );
+  });
+
   it('provides worker-side SQL aggregation instead of broad client scans', () => {
     expect(schema).toContain('create or replace function public.worker_report_summary');
     expect(migration).toContain('grant execute on function public.worker_report_summary');

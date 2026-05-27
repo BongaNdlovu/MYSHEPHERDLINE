@@ -11,6 +11,7 @@ describe('admin flow test IDs', () => {
 
   it('exposes admin module menus', () => {
     expect(testIds.admin.menu('users')).toBe('admin-menu-users');
+    expect(testIds.admin.menu('congregations')).toBe('admin-menu-congregations');
     expect(testIds.admin.members.screen).toBe('admin-members-screen');
     expect(testIds.admin.tasks.screen).toBe('admin-tasks-screen');
   });

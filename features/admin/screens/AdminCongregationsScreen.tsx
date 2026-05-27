@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FormField } from '@/components/ui/FormField';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { FormField } from '@/components/ui/FormField';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { colors, radii, spacing } from '@/constants/theme';
 import { testIds } from '@/constants/testIds';
+import { colors, radii, spacing } from '@/constants/theme';
+import { OwnerRoute } from '@/features/admin';
 import { useCongregation } from '@/features/members/hooks/useCongregation';
-import { createCongregation, fetchDistrictCongregations } from '@/lib/core/organization';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
+import { createCongregation, fetchDistrictCongregations } from '@/lib/core/organization';
 import { useQuery } from '@/lib/core/useQuery';
 import type { Organization } from '@/types/database';
 
@@ -57,59 +58,62 @@ export default function AdminCongregationsScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.admin.congregations.screen}>
-      <AppHeader
-        title="Congregations"
-        subtitle={congregationLabel ?? 'Your district congregations'}
-      />
+    <OwnerRoute>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        testID={testIds.admin.congregations.screen}
+      >
+        <AppHeader title="Congregations" subtitle={congregationLabel ?? 'Your district congregations'} />
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Your congregation</Text>
-        <QueryStateView loading={contextLoading} error={contextError} onRetry={() => void refreshContext()} />
-        {context ? (
-          <Text style={styles.body}>
-            {context.organization.name}
-            {context.district ? ` · ${context.district.name}` : ''}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Your congregation</Text>
+          <QueryStateView loading={contextLoading} error={contextError} onRetry={() => void refreshContext()} />
+          {context ? (
+            <Text style={styles.body}>
+              {context.organization.name}
+              {context.district ? ` · ${context.district.name}` : ''}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Congregations in your district</Text>
+          <QueryStateView
+            loading={loading}
+            error={error}
+            isEmpty={!loading && !error && congregations.length === 0}
+            emptyMessage="No congregations found in this district yet."
+            onRetry={() => void refreshCongregations()}
+          />
+          {congregations.map((congregation) => (
+            <View key={congregation.id} style={styles.row}>
+              <Text style={styles.rowTitle}>{congregation.name}</Text>
+              <Text style={styles.rowMeta}>{congregation.slug}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Add congregation (owner)</Text>
+          <Text style={styles.help}>
+            Creates a new congregation tenant in your district. Assign shepherds to it via Supabase Auth and Admin
+            {' -> '}Users & Roles.
           </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Congregations in your district</Text>
-        <QueryStateView
-          loading={loading}
-          error={error}
-          isEmpty={!loading && !error && congregations.length === 0}
-          emptyMessage="No congregations found in this district yet."
-          onRetry={() => void refreshCongregations()}
-        />
-        {congregations.map((congregation) => (
-          <View key={congregation.id} style={styles.row}>
-            <Text style={styles.rowTitle}>{congregation.name}</Text>
-            <Text style={styles.rowMeta}>{congregation.slug}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Add congregation (owner)</Text>
-        <Text style={styles.help}>
-          Creates a new congregation tenant in your district. Assign shepherds to it via Supabase Auth and Admin →
-          Users & Roles.
-        </Text>
-        <FormField label="Congregation name" value={name} onChangeText={setName} />
-        <FormField
-          label="Slug (unique id, e.g. river-park)"
-          value={slug}
-          onChangeText={setSlug}
-          autoCapitalize="none"
-        />
-        {submitError ? <InlineError message={submitError} /> : null}
-        <Pressable style={styles.primary} disabled={saving} onPress={save}>
-          <Text style={styles.primaryText}>{saving ? 'Creating…' : 'Create congregation'}</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          <FormField label="Congregation name" value={name} onChangeText={setName} />
+          <FormField
+            label="Slug (unique id, e.g. river-park)"
+            value={slug}
+            onChangeText={setSlug}
+            autoCapitalize="none"
+          />
+          {submitError ? <InlineError message={submitError} /> : null}
+          <Pressable style={styles.primary} disabled={saving} onPress={save}>
+            <Text style={styles.primaryText}>{saving ? 'Creating...' : 'Create congregation'}</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </OwnerRoute>
   );
 }
 
