@@ -4,7 +4,7 @@ import {
   MEMBERS_NEEDING_ATTENTION_OR_FILTER,
   memberNeedsAttention,
   membersNeedingAttention,
-} from '@/features/members/selectors/members';
+} from '@/lib/core/member-attention';
 import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
 import { DEFAULT_PAGE_SIZE } from '@/lib/core/pagination';
 import { fixtureMembers } from '@/__tests__/fixtures/demo-data';

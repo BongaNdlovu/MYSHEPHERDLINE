@@ -1,4 +1,4 @@
-import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/features/members/selectors/members';
+import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/lib/core/member-attention';
 import { requireAssigneeId } from '@/lib/core/assignment';
 import { fromSupabaseError } from '@/lib/core/errors';
 import {

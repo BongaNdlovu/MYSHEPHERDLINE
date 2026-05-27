@@ -1,20 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { parseReportSummary, type ReportSummary } from '../../shared/report-summary';
+
 import type { AuthContext } from './auth';
 import { getRecentActivityDays, type WorkerEnv } from './env';
 
-export type ReportSummary = {
-  membersNeedingAttention: number;
-  visitsCompleted: number;
-  tasksOpen: number;
-  recentActivityDays: number;
-  visitBreakdown: {
-    visits: number;
-    calls: number;
-    bibleStudies: number;
-    newConverts: number;
-  };
-};
+export type { ReportSummary } from '../../shared/report-summary';
 
 type ReportCacheEntry = { summary: ReportSummary; expiresAt: number };
 
@@ -78,7 +69,11 @@ export async function buildSummary(
     throw new Error(error?.message ?? 'Report aggregation failed');
   }
 
-  const summary = data as ReportSummary;
+  const summary = parseReportSummary(data);
+  if (!summary) {
+    throw new Error('Report aggregation returned invalid data');
+  }
+
   writeCache(key, summary);
   return summary;
 }

@@ -1,5 +1,5 @@
 import { buildRecentReportSummary } from '@/features/reports/selectors/reports';
-import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/features/members/selectors/members';
+import { MEMBERS_NEEDING_ATTENTION_OR_FILTER } from '@/lib/core/member-attention';
 import { getAppEnv } from '@/lib/core/env';
 import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';

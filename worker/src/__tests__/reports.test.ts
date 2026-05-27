@@ -81,4 +81,20 @@ describe('worker report aggregation', () => {
       }),
     ).rejects.toThrow('db down');
   });
+
+  it('throws when RPC returns invalid summary shape', async () => {
+    const supabase = {
+      rpc: vi.fn().mockResolvedValue({ data: { tasksOpen: 'bad' }, error: null }),
+    };
+
+    await expect(
+      buildSummary(supabase as never, { RECENT_ACTIVITY_DAYS: '7' } as never, {
+        userId: 'user-1',
+        organizationId: 'org-1',
+        role: 'admin',
+        email: 'a@test.local',
+        isActive: true,
+      }),
+    ).rejects.toThrow('Report aggregation returned invalid data');
+  });
 });

@@ -1,6 +1,6 @@
 import type { WorkerReportResult } from '@/lib/core/api';
 import { createAppError, type AppError } from '@/lib/core/errors';
-import { membersNeedingAttention } from '@/features/members/selectors/members';
+import { membersNeedingAttention } from '@/lib/core/member-attention';
 import type { Member, ReportSummary, Task, Visit } from '@/types/database';
 
 export const DEFAULT_RECENT_ACTIVITY_DAYS = 7;

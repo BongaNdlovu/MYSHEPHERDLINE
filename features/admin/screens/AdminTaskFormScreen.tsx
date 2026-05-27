@@ -1,17 +1,12 @@
-import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
 
 import { FormField } from '@/components/ui/FormField';
-import { FormScreen } from '@/components/ui/FormScreen';
-import { InlineError } from '@/components/ui/InlineError';
-import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors } from '@/constants/theme';
-import { adminFormStyles as styles } from '@/features/admin/components/adminFormStyles';
+import { AdminEntityFormScreen } from '@/features/admin/components/AdminEntityFormScreen';
 import { ChoiceChipGroup } from '@/features/admin/components/ChoiceChipGroup';
-import { ShepherdPicker } from '@/features/admin/components/ShepherdPicker';
+import { useAdminEditForm } from '@/features/admin/hooks/useAdminEditForm';
+import { useAdminFormActions } from '@/features/admin/hooks/useAdminFormActions';
 import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
 import {
   createTask,
@@ -21,10 +16,9 @@ import {
   type TaskInput,
 } from '@/features/tasks';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
-import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { useToast } from '@/lib/core/toast';
 import { validateDueDate } from '@/lib/core/validation';
-import type { TaskPriority, TaskStatus } from '@/types/database';
+import type { Task, TaskPriority, TaskStatus } from '@/types/database';
 
 function goBackOrTasksList() {
   if (router.canGoBack()) router.back();
@@ -48,37 +42,31 @@ export default function AdminTaskFormScreen() {
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [status, setStatus] = useState<TaskStatus>('open');
   const [dueDateError, setDueDateError] = useState<string | undefined>();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formReady, setFormReady] = useState(!isEdit);
-  const formInitializedRef = useRef(false);
+
+  const hydrate = useCallback((next: Task) => {
+    setTitle(next.title);
+    setDescription(next.description ?? '');
+    setDueDate(next.due_date ?? '');
+    setPriority(next.priority);
+    setStatus(next.status);
+    setAssigneeId(next.assignee_id);
+  }, []);
+
+  const { formReady, retryLoad } = useAdminEditForm({
+    isEdit,
+    entity: task,
+    loading,
+    error,
+    refresh,
+    hydrate,
+  });
+
+  const { saving, submitError, setSubmitError, runSave, runRemove } = useAdminFormActions({
+    saveFallbackMessage: 'Unable to save task.',
+    removeFallbackMessage: 'Unable to delete task.',
+  });
+
   useAndroidBackNavigation(goBackOrTasksList);
-
-  useEffect(() => {
-    if (!isEdit || !task || formInitializedRef.current) return;
-    setTitle(task.title);
-    setDescription(task.description ?? '');
-    setDueDate(task.due_date ?? '');
-    setPriority(task.priority);
-    setStatus(task.status);
-    setAssigneeId(task.assignee_id);
-    formInitializedRef.current = true;
-    setFormReady(true);
-  }, [isEdit, task]);
-
-  const retryLoad = useCallback(() => {
-    formInitializedRef.current = false;
-    setFormReady(false);
-    void refresh();
-  }, [refresh]);
-
-  if (isEdit && !formReady) {
-    return (
-      <View style={styles.centered}>
-        <QueryStateView loading={loading} error={error} onRetry={retryLoad} />
-      </View>
-    );
-  }
 
   const input = (): TaskInput => ({
     title,
@@ -89,7 +77,7 @@ export default function AdminTaskFormScreen() {
     assignee_id: assigneeId,
   });
 
-  const save = async () => {
+  const save = () => {
     if (!title.trim()) {
       setSubmitError('Title is required.');
       return;
@@ -100,13 +88,8 @@ export default function AdminTaskFormScreen() {
       setSubmitError(dueDateValidation);
       return;
     }
-    if (!assigneeId) {
-      setSubmitError('Assign a shepherd before saving this task.');
-      return;
-    }
-    setSaving(true);
-    setSubmitError(null);
-    try {
+
+    void runSave(async () => {
       if (isEdit && id) {
         await updateTask(id, input());
         showToast('Task updated.');
@@ -115,34 +98,42 @@ export default function AdminTaskFormScreen() {
         showToast('Task created.');
       }
       goBackOrTasksList();
-    } catch (err) {
-      setSubmitError(getUserMessage(toAppError(err, 'Unable to save task.')));
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
-  const remove = async () => {
+  const remove = () => {
     if (!id) return;
-    setSaving(true);
-    try {
-      await deleteTask(id);
-      showToast('Task removed.');
-      router.replace('/admin/tasks');
-    } catch (err) {
-      setSubmitError(getUserMessage(toAppError(err, 'Unable to delete task.')));
-    } finally {
-      setSaving(false);
-    }
+    void runRemove(
+      () => deleteTask(id),
+      'Task removed.',
+      () => router.replace('/admin/tasks'),
+    );
   };
 
   return (
-    <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={testIds.admin.tasks.form}>
-      <Pressable onPress={goBackOrTasksList} style={styles.back}>
-        <Feather name="chevron-left" size={24} color={colors.primary} />
-      </Pressable>
-      <Text style={styles.title}>{isEdit ? 'Edit task' : 'New task'}</Text>
-
+    <AdminEntityFormScreen
+      formTestId={testIds.admin.tasks.form}
+      editTitle="Edit task"
+      createTitle="New task"
+      isEdit={isEdit}
+      formReady={formReady}
+      loading={loading}
+      error={error}
+      onRetryLoad={retryLoad}
+      onBack={goBackOrTasksList}
+      profiles={profiles}
+      profilesLoading={profilesLoading}
+      assigneeId={assigneeId}
+      onAssigneeSelect={setAssigneeId}
+      assignShepherdTestId={testIds.admin.tasks.assignShepherd}
+      saveTestId={testIds.admin.tasks.save}
+      saveLabel="Save task"
+      deleteLabel="Delete task"
+      saving={saving}
+      submitError={submitError}
+      onSave={save}
+      onDelete={isEdit ? remove : undefined}
+    >
       <FormField label="Title" value={title} onChangeText={setTitle} />
       <FormField label="Description" value={description} onChangeText={setDescription} multiline />
       <FormField
@@ -155,34 +146,8 @@ export default function AdminTaskFormScreen() {
         error={dueDateError}
         placeholder="2026-05-30"
       />
-
-      <ShepherdPicker
-        profiles={profiles}
-        loading={profilesLoading}
-        selectedId={assigneeId}
-        onSelect={setAssigneeId}
-        getTestId={testIds.admin.tasks.assignShepherd}
-      />
-
       <ChoiceChipGroup label="Priority" options={priorities} value={priority} onChange={setPriority} />
       <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />
-
-      {submitError ? <InlineError message={submitError} /> : null}
-
-      <Pressable
-        style={styles.primary}
-        disabled={saving}
-        testID={testIds.admin.tasks.save}
-        onPress={() => void save()}
-      >
-        <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save task'}</Text>
-      </Pressable>
-
-      {isEdit ? (
-        <Pressable style={styles.danger} disabled={saving} onPress={() => void remove()}>
-          <Text style={styles.dangerText}>Delete task</Text>
-        </Pressable>
-      ) : null}
-    </FormScreen>
+    </AdminEntityFormScreen>
   );
 }

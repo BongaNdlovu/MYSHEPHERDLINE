@@ -1,17 +1,12 @@
-import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
 
 import { FormField } from '@/components/ui/FormField';
-import { FormScreen } from '@/components/ui/FormScreen';
-import { InlineError } from '@/components/ui/InlineError';
-import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors } from '@/constants/theme';
-import { adminFormStyles as styles } from '@/features/admin/components/adminFormStyles';
+import { AdminEntityFormScreen } from '@/features/admin/components/AdminEntityFormScreen';
 import { ChoiceChipGroup } from '@/features/admin/components/ChoiceChipGroup';
-import { ShepherdPicker } from '@/features/admin/components/ShepherdPicker';
+import { useAdminEditForm } from '@/features/admin/hooks/useAdminEditForm';
+import { useAdminFormActions } from '@/features/admin/hooks/useAdminFormActions';
 import { useAdminProfiles } from '@/features/admin/hooks/useAdminProfiles';
 import {
   createMember,
@@ -21,10 +16,9 @@ import {
   type MemberInput,
 } from '@/features/members';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
-import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { useToast } from '@/lib/core/toast';
 import { validateOptionalEmail, validateOptionalPhone } from '@/lib/core/validation';
-import type { MemberStatus, RiskLevel } from '@/types/database';
+import type { MemberStatus, Member, RiskLevel } from '@/types/database';
 
 function goBackOrMembersList() {
   if (router.canGoBack()) router.back();
@@ -51,39 +45,33 @@ export default function AdminMemberFormScreen() {
   const [status, setStatus] = useState<MemberStatus>('new');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [phoneError, setPhoneError] = useState<string | undefined>();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formReady, setFormReady] = useState(!isEdit);
-  const formInitializedRef = useRef(false);
+
+  const hydrate = useCallback((next: Member) => {
+    setFullName(next.full_name);
+    setPhone(next.phone ?? '');
+    setEmail(next.email ?? '');
+    setAddress(next.address ?? '');
+    setNotes(next.notes ?? '');
+    setRiskLevel(next.risk_level);
+    setStatus(next.status);
+    setAssignedTo(next.assigned_to);
+  }, []);
+
+  const { formReady, retryLoad } = useAdminEditForm({
+    isEdit,
+    entity: member,
+    loading,
+    error,
+    refresh,
+    hydrate,
+  });
+
+  const { saving, submitError, setSubmitError, runSave, runRemove } = useAdminFormActions({
+    saveFallbackMessage: 'Unable to save member.',
+    removeFallbackMessage: 'Unable to delete member.',
+  });
+
   useAndroidBackNavigation(goBackOrMembersList);
-
-  useEffect(() => {
-    if (!isEdit || !member || formInitializedRef.current) return;
-    setFullName(member.full_name);
-    setPhone(member.phone ?? '');
-    setEmail(member.email ?? '');
-    setAddress(member.address ?? '');
-    setNotes(member.notes ?? '');
-    setRiskLevel(member.risk_level);
-    setStatus(member.status);
-    setAssignedTo(member.assigned_to);
-    formInitializedRef.current = true;
-    setFormReady(true);
-  }, [isEdit, member]);
-
-  const retryLoad = useCallback(() => {
-    formInitializedRef.current = false;
-    setFormReady(false);
-    void refresh();
-  }, [refresh]);
-
-  if (isEdit && !formReady) {
-    return (
-      <View style={styles.centered}>
-        <QueryStateView loading={loading} error={error} onRetry={retryLoad} />
-      </View>
-    );
-  }
 
   const input = (): MemberInput => ({
     full_name: fullName,
@@ -96,7 +84,7 @@ export default function AdminMemberFormScreen() {
     assigned_to: assignedTo,
   });
 
-  const save = async () => {
+  const save = () => {
     if (!fullName.trim()) {
       setSubmitError('Full name is required.');
       return;
@@ -109,13 +97,8 @@ export default function AdminMemberFormScreen() {
       setSubmitError(nextEmailError ?? nextPhoneError ?? 'Check the highlighted fields.');
       return;
     }
-    if (!assignedTo) {
-      setSubmitError('Assign a shepherd before saving this member.');
-      return;
-    }
-    setSaving(true);
-    setSubmitError(null);
-    try {
+
+    void runSave(async () => {
       if (isEdit && id) {
         await updateMember(id, input());
         showToast('Member updated.');
@@ -124,34 +107,42 @@ export default function AdminMemberFormScreen() {
         showToast('Member created.');
       }
       goBackOrMembersList();
-    } catch (err) {
-      setSubmitError(getUserMessage(toAppError(err, 'Unable to save member.')));
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
-  const remove = async () => {
+  const remove = () => {
     if (!id) return;
-    setSaving(true);
-    try {
-      await deleteMember(id);
-      showToast('Member removed.');
-      router.replace('/admin/members');
-    } catch (err) {
-      setSubmitError(getUserMessage(toAppError(err, 'Unable to delete member.')));
-    } finally {
-      setSaving(false);
-    }
+    void runRemove(
+      () => deleteMember(id),
+      'Member removed.',
+      () => router.replace('/admin/members'),
+    );
   };
 
   return (
-    <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={testIds.admin.members.form}>
-      <Pressable onPress={goBackOrMembersList} style={styles.back}>
-        <Feather name="chevron-left" size={24} color={colors.primary} />
-      </Pressable>
-      <Text style={styles.title}>{isEdit ? 'Edit member' : 'New member'}</Text>
-
+    <AdminEntityFormScreen
+      formTestId={testIds.admin.members.form}
+      editTitle="Edit member"
+      createTitle="New member"
+      isEdit={isEdit}
+      formReady={formReady}
+      loading={loading}
+      error={error}
+      onRetryLoad={retryLoad}
+      onBack={goBackOrMembersList}
+      profiles={profiles}
+      profilesLoading={profilesLoading}
+      assigneeId={assignedTo}
+      onAssigneeSelect={setAssignedTo}
+      assignShepherdTestId={testIds.admin.members.assignShepherd}
+      saveTestId={testIds.admin.members.save}
+      saveLabel="Save member"
+      deleteLabel="Delete member"
+      saving={saving}
+      submitError={submitError}
+      onSave={save}
+      onDelete={isEdit ? remove : undefined}
+    >
       <FormField label="Full name" value={fullName} onChangeText={setFullName} />
       <FormField
         label="Phone"
@@ -174,34 +165,8 @@ export default function AdminMemberFormScreen() {
       />
       <FormField label="Address" value={address} onChangeText={setAddress} />
       <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
-
-      <ShepherdPicker
-        profiles={profiles}
-        loading={profilesLoading}
-        selectedId={assignedTo}
-        onSelect={setAssignedTo}
-        getTestId={testIds.admin.members.assignShepherd}
-      />
-
       <ChoiceChipGroup label="Risk level" options={riskLevels} value={riskLevel} onChange={setRiskLevel} />
       <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />
-
-      {submitError ? <InlineError message={submitError} /> : null}
-
-      <Pressable
-        style={styles.primary}
-        disabled={saving}
-        testID={testIds.admin.members.save}
-        onPress={() => void save()}
-      >
-        <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save member'}</Text>
-      </Pressable>
-
-      {isEdit ? (
-        <Pressable style={styles.danger} disabled={saving} onPress={() => void remove()}>
-          <Text style={styles.dangerText}>Delete member</Text>
-        </Pressable>
-      ) : null}
-    </FormScreen>
+    </AdminEntityFormScreen>
   );
 }

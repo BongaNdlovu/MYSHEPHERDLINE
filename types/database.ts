@@ -110,15 +110,4 @@ export interface PushToken {
   updated_at: string;
 }
 
-export interface ReportSummary {
-  membersNeedingAttention: number;
-  visitsCompleted: number;
-  tasksOpen: number;
-  recentActivityDays: number;
-  visitBreakdown: {
-    visits: number;
-    calls: number;
-    bibleStudies: number;
-    newConverts: number;
-  };
-}
+export type { ReportSummary } from '../shared/report-summary';
