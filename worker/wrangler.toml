@@ -4,7 +4,7 @@ compatibility_date = "2025-05-25"
 
 [vars]
 RECENT_ACTIVITY_DAYS = "7"
-ALLOWED_ORIGINS = ""
+ALLOWED_ORIGINS = "https://myshepherdline.app,https://myshepherdline.fanelesibonge50.workers.dev"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"

@@ -1,7 +1,7 @@
 # Step-by-step production setup
 
 Use this guide if you are setting up MyShepherdLine for the first time or finishing security hardening. Your project
-already has Supabase credentials in `.env`; the Worker URL still needs to be configured.
+already has Supabase credentials and a Worker URL in `.env`.
 
 ## Where you are now
 
