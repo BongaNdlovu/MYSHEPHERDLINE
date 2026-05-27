@@ -1,6 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
+import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -61,7 +63,7 @@ export default function MemberProfileScreen() {
         </View>
         <Text style={styles.name}>{member.full_name}</Text>
         <Text style={styles.meta}>
-          {member.status.toUpperCase()} | {member.risk_level.toUpperCase()} RISK
+          {member.care_stage.replace(/_/g, ' ').toUpperCase()} | {member.risk_level.toUpperCase()} RISK
         </Text>
       </LinearGradient>
 
@@ -80,20 +82,47 @@ export default function MemberProfileScreen() {
         <InfoRow label="Notes" value={member.notes ?? 'No notes yet'} />
       </Card>
 
+      <View style={styles.quickActions}>
+        <QuickActionButton
+          icon="phone"
+          label="Call"
+          disabled={!member.phone}
+          testID={testIds.memberProfile.call}
+          onPress={() => {
+            if (!member.phone) return;
+            void Linking.openURL(`tel:${member.phone}`);
+          }}
+        />
+        <QuickActionButton
+          icon="message-circle"
+          label="WhatsApp"
+          disabled={!member.phone}
+          testID={testIds.memberProfile.whatsapp}
+          onPress={() => {
+            if (!member.phone) return;
+            const normalized = member.phone.replace(/[^\d]/g, '');
+            void Linking.openURL(`https://wa.me/${normalized}`);
+          }}
+        />
+        <QuickActionButton
+          icon="mail"
+          label="SMS"
+          disabled={!member.phone}
+          testID={testIds.memberProfile.sms}
+          onPress={() => {
+            if (!member.phone) return;
+            void Linking.openURL(`sms:${member.phone}`);
+          }}
+        />
+      </View>
+
       <View style={styles.actions}>
         <Pressable
           style={styles.primaryButton}
           testID={testIds.memberProfile.logVisit}
-          onPress={() => router.push(`/log-visit/${member.id}`)}
+          onPress={() => router.push(`/log-action/${member.id}`)}
         >
-          <Text style={styles.primaryButtonText}>Log Visit</Text>
-        </Pressable>
-        <Pressable
-          style={styles.secondaryButton}
-          testID={testIds.memberProfile.careProgress}
-          onPress={() => router.push(`/member/${member.id}/care-progress`)}
-        >
-          <Text style={styles.secondaryButtonText}>Update Care Progress</Text>
+          <Text style={styles.primaryButtonText}>Log Care Action</Text>
         </Pressable>
         <Pressable
           style={styles.secondaryButton}
@@ -104,12 +133,12 @@ export default function MemberProfileScreen() {
         </Pressable>
       </View>
 
-      <Card title="Visit History" badge={visitsInitialLoad ? undefined : `${visits.length}`}>
+      <Card title="Care History" badge={visitsInitialLoad ? undefined : `${visits.length}`}>
         <QueryStateView
           loading={visitsInitialLoad}
           error={queryDisplayError(visitsError, visits.length)}
           isEmpty={!visitsInitialLoad && !visitsError && !visits.length}
-          emptyMessage="No visits logged yet."
+          emptyMessage="No care actions logged yet."
           onRetry={() => void refreshVisits()}
         />
         <QueryRefreshFeedback
@@ -124,7 +153,7 @@ export default function MemberProfileScreen() {
           : null}
         {hasMore && !visitsLoading ? (
           <Pressable style={styles.loadMore} onPress={() => void loadMore()} disabled={loadingMore}>
-            <Text style={styles.loadMoreText}>{loadingMore ? 'Loading…' : 'Load more visits'}</Text>
+            <Text style={styles.loadMoreText}>{loadingMore ? 'Loading…' : 'Load more care history'}</Text>
           </Pressable>
         ) : null}
       </Card>
@@ -138,6 +167,32 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
     </View>
+  );
+}
+
+function QuickActionButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+  testID,
+}: {
+  icon: ComponentProps<typeof Feather>['name'];
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      style={[styles.quickActionButton, disabled && styles.quickActionDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      testID={testID}
+    >
+      <Feather name={icon} size={16} color={disabled ? colors.textMuted : colors.primary} />
+      <Text style={[styles.quickActionText, disabled && styles.quickActionTextDisabled]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -186,6 +241,25 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
     gap: spacing.sm,
   },
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  quickActionDisabled: { opacity: 0.5 },
+  quickActionText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  quickActionTextDisabled: { color: colors.textMuted },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,

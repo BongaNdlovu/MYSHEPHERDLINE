@@ -2,7 +2,7 @@ appId: ${E2E_APP_ID}
 ---
 - runFlow: ../subflows/admin-login.yaml
 - tapOn:
-    id: tab-more
+    id: tab-me
 - assertVisible:
     id: admin-entry
 - tapOn:

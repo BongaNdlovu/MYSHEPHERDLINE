@@ -2,6 +2,6 @@ appId: ${E2E_APP_ID}
 ---
 - runFlow: ../subflows/login.yaml
 - assertVisible:
-    id: home-screen
+    id: today-screen
 - assertVisible:
-    id: tab-members
+    id: tab-people

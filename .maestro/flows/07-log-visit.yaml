@@ -2,21 +2,21 @@ appId: ${E2E_APP_ID}
 ---
 - runFlow: ../subflows/login.yaml
 - tapOn:
-    id: tab-members
+    id: tab-people
 - tapOn:
     text: ${E2E_MEMBER_NAME}
 - tapOn:
-    id: member-log-visit
+    id: member-log-care-action
 - assertVisible:
-    id: log-visit-screen
+    id: log-care-action-screen
 - tapOn:
-    id: log-visit-type-call
+    id: log-care-action-type-call
 - tapOn:
-    id: log-visit-notes
+    id: log-care-action-notes
 - inputText: E2E visit note from Maestro
 - hideKeyboard
 - tapOn:
-    id: log-visit-save
+    id: log-care-action-save
 - extendedWaitUntil:
     visible:
       id: app-toast

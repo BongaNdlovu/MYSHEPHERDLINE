@@ -92,7 +92,7 @@ export async function registerToken(
 }
 
 function digestBody(summary: ReportSummary) {
-  return `${summary.membersNeedingAttention} members need attention. ${summary.tasksOpen} open tasks.`;
+  return `${summary.membersNeedingAttention} people need care today. ${summary.tasksOpen} follow-ups are still open.`;
 }
 
 function chunkTokens(tokens: string[], chunkSize = EXPO_PUSH_CHUNK_SIZE) {
@@ -188,7 +188,7 @@ export async function sendExpoPushBatch(
     const messages = chunk.map((token) => ({
       to: token,
       sound: 'default',
-      title: 'MyShepherdLine digest',
+      title: 'Today Care List',
       body: digestBody(summary),
     }));
 
@@ -375,7 +375,7 @@ const DEFAULT_REMINDER_WINDOW_MINUTES = 60;
 
 function reminderBody(title: string, dueAt: string) {
   const dueLabel = new Date(dueAt).toLocaleString();
-  return `Task due soon: ${title} (${dueLabel})`;
+  return `Care follow-up due soon: ${title} (${dueLabel})`;
 }
 
 export async function listTasksDueForReminder(
@@ -444,7 +444,7 @@ async function sendTaskReminderBatch(
   const messages = tokens.map((token) => ({
     to: token,
     sound: 'default',
-    title: 'Task reminder',
+    title: 'Care follow-up reminder',
     body: reminderBody(task.title, task.due_at),
     data: { taskId: task.id, type: 'task_reminder' },
   }));

@@ -20,7 +20,7 @@ export async function fetchLocalReportSummary(recentDays = 7) {
   const [membersResult, visitsResult, tasksCountResult] = await Promise.all([
     supabase
       .from('members')
-      .select('risk_level, status, created_at')
+      .select('risk_level, status, care_stage, last_contact_at, created_at')
       .or(MEMBERS_NEEDING_ATTENTION_OR_FILTER),
     supabase.from('visits').select('visit_type, visited_at').gte('visited_at', since.toISOString()),
     supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'open'),

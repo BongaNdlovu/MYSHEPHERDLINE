@@ -19,5 +19,5 @@ appId: ${E2E_APP_ID}
     id: auth-sign-in-button
 - extendedWaitUntil:
     visible:
-      id: home-screen
+      id: today-screen
     timeout: 30000

@@ -45,8 +45,8 @@ export function validateSignUp(values: { displayName: string; email: string; pas
 }
 
 export function validateVisitLog(values: { memberPresent: boolean; userPresent: boolean }) {
-  if (!values.userPresent) return 'Sign in to log a visit.';
-  if (!values.memberPresent) return 'Select a valid member to log a visit.';
+  if (!values.userPresent) return 'Sign in to log a care action.';
+  if (!values.memberPresent) return 'Select a valid person to log a care action.';
   return undefined;
 }
 

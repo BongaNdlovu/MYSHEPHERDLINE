@@ -18,8 +18,10 @@ function memberRow(overrides: Partial<MemberListRow> = {}): MemberListRow {
     phone: null,
     risk_level: overrides.risk_level ?? 'low',
     status: overrides.status ?? 'active',
+    care_stage: overrides.care_stage ?? 'contacted',
     last_contact_at: null,
     assigned_to: 'shepherd-id',
+    created_at: '2026-05-26T10:00:00.000Z',
     ...overrides,
   };
 }
@@ -27,7 +29,7 @@ function memberRow(overrides: Partial<MemberListRow> = {}): MemberListRow {
 describe('members attention selectors', () => {
   it('matches the canonical PostgREST filter string', () => {
     expect(MEMBERS_NEEDING_ATTENTION_OR_FILTER).toBe(
-      'risk_level.eq.high,status.eq.inactive,status.eq.new',
+      'risk_level.eq.high,status.eq.inactive,status.eq.new,care_stage.eq.needs_urgent_care',
     );
   });
 

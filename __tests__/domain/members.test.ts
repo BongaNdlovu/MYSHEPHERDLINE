@@ -5,7 +5,7 @@ import { fixtureMembers } from '@/__tests__/fixtures/demo-data';
 
 describe('members domain', () => {
   it('filters by risk', () => {
-    const result = filterMembers(fixtureMembers, '', 'risk');
+    const result = filterMembers(fixtureMembers, '', 'urgent');
     expect(result).toHaveLength(1);
     expect(result[0]?.full_name).toBe('Sarah Mkhize');
   });

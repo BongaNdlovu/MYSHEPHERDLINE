@@ -33,17 +33,25 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarButtonTestID: testIds.tabs.home,
+          title: 'Today',
+          tabBarButtonTestID: testIds.tabs.today,
           tabBarIcon: ({ color }) => <FontAwesome name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="members"
         options={{
-          title: 'Members',
-          tabBarButtonTestID: testIds.tabs.members,
+          title: 'People in Care',
+          tabBarButtonTestID: testIds.tabs.people,
           tabBarIcon: ({ color }) => <FontAwesome name="users" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="log-action"
+        options={{
+          title: 'Log Action',
+          tabBarButtonTestID: testIds.tabs.logAction,
+          tabBarIcon: ({ color }) => <FontAwesome name="plus-circle" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -55,19 +63,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="more"
         options={{
-          title: 'Reports',
-          tabBarButtonTestID: testIds.tabs.reports,
-          tabBarIcon: ({ color }) => <FontAwesome name="bar-chart" size={22} color={color} />,
+          title: 'Me',
+          tabBarButtonTestID: testIds.tabs.me,
+          tabBarIcon: ({ color }) => <FontAwesome name="ellipsis-h" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="reports"
         options={{
-          title: 'More',
-          tabBarButtonTestID: testIds.tabs.more,
-          tabBarIcon: ({ color }) => <FontAwesome name="ellipsis-h" size={22} color={color} />,
+          href: null,
         }}
       />
     </Tabs>

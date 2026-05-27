@@ -15,9 +15,13 @@ import { colors, radii, spacing } from '@/constants/theme';
 
 const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'All', value: 'all' },
-  { label: 'At Risk', value: 'risk' },
+  { label: 'Urgent', value: 'urgent' },
+  { label: 'Not Contacted', value: 'not_contacted' },
   { label: 'Inactive', value: 'inactive' },
   { label: 'New', value: 'new' },
+  { label: 'Bible Study', value: 'bible_study' },
+  { label: 'Baptism Interest', value: 'baptism_interest' },
+  { label: 'My Assigned People', value: 'my_people' },
 ];
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -35,7 +39,9 @@ export default function MembersScreen() {
   const serverFilter = useMemo(() => {
     if (filter === 'inactive') return { status: 'inactive' as const };
     if (filter === 'new') return { status: 'new' as const };
-    if (filter === 'risk') return { riskLevel: 'high' as const };
+    if (filter === 'urgent') return { riskLevel: 'high' as const };
+    if (filter === 'bible_study') return { careStage: 'bible_study' as const };
+    if (filter === 'baptism_interest') return { careStage: 'baptism_interest' as const };
     return {};
   }, [filter]);
 
@@ -46,16 +52,16 @@ export default function MembersScreen() {
   const { congregationLabel } = useCongregation();
 
   const filtered = useMemo(
-    () => (filter === 'risk' ? filterMembers(members, '', 'risk') : members),
+    () => (filter === 'all' ? members : filterMembers(members, '', filter)),
     [filter, members],
   );
   const initialLoad = isInitialLoad(loading, filtered.length);
   const headerSubtitle = congregationLabel
-    ? `${filtered.length} in directory · ${congregationLabel}`
-    : `${filtered.length} in directory`;
+    ? `${filtered.length} in care · ${congregationLabel}`
+    : `${filtered.length} in care`;
 
   return (
-    <View style={styles.screen} testID={testIds.members.screen}>
+      <View style={styles.screen} testID={testIds.people.screen}>
       <PaginatedFlatList
         data={filtered}
         keyExtractor={(member) => member.id}
@@ -65,41 +71,41 @@ export default function MembersScreen() {
         ListHeaderComponent={
           <>
             <AppHeader
-              title="Members"
+              title="People in Care"
               subtitle={headerSubtitle}
               searchValue={query}
               onSearchChange={setQuery}
-              searchPlaceholder="Search directory..."
-              searchTestID={testIds.members.search}
+              searchPlaceholder="Search people in care..."
+              searchTestID={testIds.people.search}
             />
             <Pressable
               style={styles.addButton}
-              testID={testIds.members.add}
+              testID={testIds.people.add}
               onPress={() => router.push('/members/new')}
             >
               <Feather name="plus" size={18} color={colors.white} />
-              <Text style={styles.addText}>Add member</Text>
+              <Text style={styles.addText}>Add person</Text>
             </Pressable>
             <FilterChips
               options={filterOptions}
               value={filter}
               onChange={setFilter}
-              testIdForValue={(value) => testIds.members.filter(value)}
+              testIdForValue={(value) => testIds.people.filter(value)}
             />
-            <Card title="Congregation Directory">
+            <Card title="People Directory">
               <QueryStateView
                 loading={initialLoad}
                 error={queryDisplayError(error, filtered.length)}
                 isEmpty={!initialLoad && !error && !filtered.length}
-                emptyMessage="No members match your search or filter."
+                emptyMessage="No people match your search or filter."
                 onRetry={() => void refresh()}
               />
               <QueryRefreshFeedback
                 loading={loading}
                 error={error}
                 dataLength={filtered.length}
-                refreshingLabel="Refreshing members…"
-                staleErrorLabel="Could not refresh members. Showing last loaded data."
+                refreshingLabel="Refreshing people…"
+                staleErrorLabel="Could not refresh people. Showing last loaded data."
               />
             </Card>
           </>
@@ -107,7 +113,7 @@ export default function MembersScreen() {
         renderItem={({ item: member }) => (
           <MemberListItem
             member={member}
-            testID={testIds.members.member(member.id)}
+            testID={testIds.people.member(member.id)}
             onPress={() => router.push(`/member/${member.id}`)}
           />
         )}

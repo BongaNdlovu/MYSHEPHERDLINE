@@ -32,7 +32,7 @@ describe('validation', () => {
 
   it('blocks visit logging without auth context', () => {
     expect(validateVisitLog({ memberPresent: true, userPresent: false })).toContain('Sign in');
-    expect(validateVisitLog({ memberPresent: false, userPresent: true })).toContain('valid member');
+    expect(validateVisitLog({ memberPresent: false, userPresent: true })).toContain('valid person');
     expect(validateVisitLog({ memberPresent: true, userPresent: true })).toBeUndefined();
   });
 

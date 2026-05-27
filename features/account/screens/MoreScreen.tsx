@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin';
+import { useReportSummary } from '@/features/reports';
 import { useAuth } from '@/lib/core/auth';
 import { useToast } from '@/lib/core/toast';
 
@@ -17,6 +18,7 @@ export default function MoreScreen() {
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const { isAdmin } = useAdminAccess();
+  const { summary } = useReportSummary();
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -27,8 +29,8 @@ export default function MoreScreen() {
   }, []);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.more.screen}>
-      <AppHeader title="More" subtitle="Quick actions, privacy, and account" />
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.me.screen}>
+      <AppHeader title="Me" subtitle="Your profile, notifications, and weekly care view" />
 
       {isAdmin ? (
         <Card title="Administration">
@@ -49,15 +51,36 @@ export default function MoreScreen() {
 
       <NotificationSettingsCard />
 
+      {summary ? (
+        <Card title="My Week">
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Care actions completed</Text>
+            <Text style={styles.summaryValue}>{summary.visitsCompleted}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Open follow-ups</Text>
+            <Text style={styles.summaryValue}>{summary.tasksOpen}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Bible studies logged</Text>
+            <Text style={styles.summaryValue}>{summary.visitBreakdown.bibleStudies}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>People still needing care</Text>
+            <Text style={styles.summaryValue}>{summary.membersNeedingAttention}</Text>
+          </View>
+        </Card>
+      ) : null}
+
       <Card title="Profile">
         <Pressable
           style={styles.shortcut}
-          testID={testIds.more.profileSettings}
+          testID={testIds.me.profileSettings}
           onPress={() => router.push('/settings/profile')}
         >
           <Feather name="user" size={18} color={colors.primary} />
           <View style={styles.shortcutBody}>
-            <Text style={styles.shortcutText}>District & Conference</Text>
+            <Text style={styles.shortcutText}>My Profile</Text>
             <Text style={styles.shortcutSub}>Set where you serve</Text>
           </View>
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
@@ -81,7 +104,7 @@ export default function MoreScreen() {
       <Card title="Account">
         <Pressable
           style={styles.shortcut}
-          testID={testIds.more.signOut}
+          testID={testIds.me.signOut}
           onPress={() => {
             void signOut()
               .then(() => {
@@ -141,4 +164,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  summaryLabel: { color: colors.textSecondary, fontWeight: '600' },
+  summaryValue: { color: colors.primary, fontWeight: '800', fontSize: 16 },
 });

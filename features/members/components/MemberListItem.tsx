@@ -34,6 +34,8 @@ export function MemberListItem({ member, onPress, testID }: MemberListItemProps)
       <View style={styles.info}>
         <Text style={styles.name}>{member.full_name}</Text>
         <Text style={styles.meta}>
+          {member.care_stage.replace(/_/g, ' ')}
+          {' · '}
           {member.last_contact_at
             ? `Last contact ${new Date(member.last_contact_at).toLocaleDateString()}`
             : 'No recent contact'}

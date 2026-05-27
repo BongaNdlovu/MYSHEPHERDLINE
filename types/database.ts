@@ -4,13 +4,32 @@ export type RiskLevel = 'high' | 'medium' | 'low';
 
 export type MemberStatus = 'active' | 'inactive' | 'new';
 
+export type CareStage =
+  | 'new'
+  | 'contacted'
+  | 'visited'
+  | 'bible_study'
+  | 'baptism_interest'
+  | 'integrated'
+  | 'inactive'
+  | 'needs_urgent_care';
+
 export type TaskStatus = 'open' | 'completed' | 'cancelled';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type AssignmentRequestStatus = 'pending' | 'approved' | 'rejected';
 
-export type VisitType = 'visit' | 'call' | 'bible_study' | 'other';
+export type VisitType =
+  | 'visit'
+  | 'call'
+  | 'whatsapp'
+  | 'bible_study'
+  | 'prayer'
+  | 'pastoral_visit'
+  | 'home_visit'
+  | 'baptism_prep'
+  | 'other';
 
 export interface District {
   id: string;
@@ -62,6 +81,7 @@ export interface Member {
   address: string | null;
   risk_level: RiskLevel;
   status: MemberStatus;
+  care_stage: CareStage;
   last_contact_at: string | null;
   notes: string | null;
   assigned_to: string | null;
@@ -78,8 +98,10 @@ export type MemberListRow = Pick<
   | 'phone'
   | 'risk_level'
   | 'status'
+  | 'care_stage'
   | 'last_contact_at'
   | 'assigned_to'
+  | 'created_at'
 >;
 
 export interface Visit {
@@ -139,7 +161,9 @@ export type TaskListRow = Pick<
   | 'assignee_id'
   | 'member_id'
   | 'task_type'
->;
+> & {
+  member?: Pick<Member, 'id' | 'full_name' | 'phone'> | null;
+};
 
 export interface PushToken {
   id: string;

@@ -47,6 +47,7 @@ describe('members service', () => {
       address: null,
       risk_level: 'low',
       status: 'new',
+      care_stage: 'new',
       notes: 'Met at service',
       assigned_to: 'shepherd-1',
     });

@@ -7,15 +7,15 @@ describe('test id coverage', () => {
     const { testIds } = await import('@/constants/testIds');
     expect(testIds.landing.signIn).toBe('landing-sign-in');
     expect(testIds.auth.signInButton).toBe('auth-sign-in-button');
-    expect(testIds.tabs.home).toBe('tab-home');
-    expect(testIds.more.signOut).toBe('more-sign-out');
+    expect(testIds.tabs.today).toBe('tab-today');
+    expect(testIds.me.signOut).toBe('me-sign-out');
   });
 
   it('maps screens referenced by Maestro flows', async () => {
     const flowDir = path.join(process.cwd(), '.maestro/flows');
     const flows = readFileSync(path.join(flowDir, '02-auth-sign-in-success.yaml'), 'utf8');
     const { testIds } = await import('@/constants/testIds');
-    expect(flows).toContain(testIds.home.screen);
-    expect(flows).toContain(testIds.tabs.members);
+    expect(flows).toContain(testIds.today.screen);
+    expect(flows).toContain(testIds.tabs.people);
   });
 });

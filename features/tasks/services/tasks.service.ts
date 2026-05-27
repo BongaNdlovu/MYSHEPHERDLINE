@@ -12,7 +12,7 @@ import { getCurrentOrganizationId } from '@/lib/core/tenant';
 import type { Task, TaskListRow } from '@/types/database';
 
 export const TASK_LIST_COLUMNS =
-  'id, organization_id, title, due_date, due_at, status, priority, assignee_id, member_id, task_type';
+  'id, organization_id, title, due_date, due_at, status, priority, assignee_id, member_id, task_type, member:members(id, full_name, phone)';
 
 export const TASK_DETAIL_COLUMNS = '*';
 
@@ -39,7 +39,12 @@ export async function fetchTasksPage(query: TaskListQuery = {}): Promise<Paginat
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load tasks.');
 
-  const items = (data ?? []) as TaskListRow[];
+  const items = ((data ?? []) as Array<TaskListRow & { member?: TaskListRow['member'] | TaskListRow['member'][] }>).map(
+    (item) => ({
+      ...item,
+      member: Array.isArray(item.member) ? (item.member[0] ?? null) : (item.member ?? null),
+    }),
+  );
   return {
     items,
     page,

@@ -1,5 +1,7 @@
-import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,20 +10,88 @@ import { Card } from '@/components/ui/Card';
 import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
-import { MemberListItem, useMembers } from '@/features/members';
-import { groupTasksByDueDate, TaskItem, useTasks } from '@/features/tasks';
+import { useMembers } from '@/features/members';
+import { useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
-import { getUserMessage } from '@/lib/core/errors';
+import { buildMemberAttentionList, type AttentionSection, type MemberAttentionEntry } from '@/lib/core/member-attention';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
-import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
 const SEARCH_DEBOUNCE_MS = 300;
+const SECTION_ORDER: AttentionSection[] = ['overdue', 'urgent_care', 'new_people', 'follow_ups_due', 'recently_updated'];
+const SECTION_TITLES: Record<AttentionSection, string> = {
+  overdue: 'Overdue',
+  urgent_care: 'Urgent Care',
+  new_people: 'New People',
+  follow_ups_due: 'Follow-ups Due',
+  recently_updated: 'Recently Updated',
+};
+
+function AttentionCard({ entry }: { entry: MemberAttentionEntry }) {
+  const phone = entry.member.phone?.trim() ?? '';
+
+  return (
+    <View style={styles.personCard}>
+      <View style={styles.personTopRow}>
+        <View style={styles.personBody}>
+          <Text style={styles.personName}>{entry.member.full_name}</Text>
+          <Text style={styles.personReason}>{entry.reasonLabel}</Text>
+          <Text style={styles.personMeta}>
+            {entry.member.care_stage.replace(/_/g, ' ')} · {entry.member.risk_level} risk
+            {entry.member.last_contact_at
+              ? ` · Last contact ${new Date(entry.member.last_contact_at).toLocaleDateString()}`
+              : ' · No contact logged'}
+          </Text>
+        </View>
+        <Pressable style={styles.profileLink} onPress={() => router.push(`/member/${entry.member.id}`)}>
+          <Feather name="chevron-right" size={18} color={colors.textMuted} />
+        </Pressable>
+      </View>
+      <View style={styles.personActions}>
+        <QuickButton
+          label="Call"
+          icon="phone"
+          disabled={!phone}
+          onPress={() => void Linking.openURL(`tel:${phone}`)}
+        />
+        <QuickButton
+          label="WhatsApp"
+          icon="message-circle"
+          disabled={!phone}
+          onPress={() => void Linking.openURL(`https://wa.me/${phone.replace(/[^\d]/g, '')}`)}
+        />
+        <QuickButton
+          label="Log Action"
+          icon="edit-3"
+          onPress={() => router.push(`/log-action/${entry.member.id}`)}
+        />
+      </View>
+    </View>
+  );
+}
+
+function QuickButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  icon: ComponentProps<typeof Feather>['name'];
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable style={[styles.quickButton, disabled && styles.quickButtonDisabled]} onPress={onPress} disabled={disabled}>
+      <Feather name={icon} size={14} color={disabled ? colors.textMuted : colors.primary} />
+      <Text style={[styles.quickButtonText, disabled && styles.quickButtonTextDisabled]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
   const { profile } = useAuth();
-  const { showToast } = useToast();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
@@ -31,105 +101,84 @@ export default function HomeScreen() {
   }, [query]);
 
   const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } =
-    useMembers({ attentionOnly: true, search: debouncedQuery || undefined });
-  const {
-    data: tasks,
-    loading: tasksLoading,
-    error: tasksError,
-    refresh: refreshTasks,
-    toggleTask,
-    isTaskToggling,
-  } = useTasks();
+    useMembers({ pageSize: 200, search: debouncedQuery || undefined });
+  const { data: tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks } = useTasks({
+    pageSize: 200,
+    status: 'open',
+  });
 
-  const attentionMembers = useMemo(() => buildAttentionPreview(members), [members]);
-  const attentionCount = useMemo(() => countAttentionMatches(members), [members]);
+  const attentionEntries = useMemo(() => buildMemberAttentionList(members, tasks), [members, tasks]);
+  const attentionPreview = useMemo(() => buildAttentionPreview(members, tasks, 4), [members, tasks]);
+  const attentionCount = useMemo(() => countAttentionMatches(members, tasks), [members, tasks]);
+  const groupedSections = useMemo(
+    () =>
+      SECTION_ORDER.map((section) => ({
+        key: section,
+        title: SECTION_TITLES[section],
+        items: attentionEntries.filter((entry) => entry.section === section),
+      })).filter((section) => section.items.length > 0),
+    [attentionEntries],
+  );
   const membersInitialLoad = isInitialLoad(membersLoading, members.length);
   const tasksInitialLoad = isInitialLoad(tasksLoading, tasks.length);
 
-  const { today: todayTasks } = groupTasksByDueDate(tasks);
-
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.home.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.today.screen}>
       <AppHeader
         title={`Hello, ${profile?.display_name?.split(' ')[0] ?? 'Shepherd'}`}
-        subtitle="Members needing attention today"
+        subtitle="Here is who you must care for today."
         searchValue={query}
         onSearchChange={setQuery}
-        searchPlaceholder="Search members..."
+        searchPlaceholder="Search people in care..."
       />
 
       <Pressable style={styles.alertBanner} onPress={() => router.push('/(tabs)/members')}>
         <View style={styles.alertIcon}>
-          <Feather name="alert-circle" size={20} color={colors.white} />
+          <Feather name="heart" size={20} color={colors.white} />
         </View>
         <View style={styles.alertContent}>
           <Text style={styles.alertTitle}>
-            {membersInitialLoad ? 'Loading follow-ups…' : `${attentionCount} need follow-up`}
+            {membersInitialLoad || tasksInitialLoad ? 'Building today’s care list…' : `${attentionCount} people need care`}
           </Text>
-          <Text style={styles.alertText}>Tap to review the full member list</Text>
+          <Text style={styles.alertText}>Open People in Care to manage the full list</Text>
         </View>
         <Feather name="chevron-right" size={18} color={colors.accent} />
       </Pressable>
 
-      <Card title="Needs Attention" badge={membersInitialLoad ? undefined : `${attentionCount}`}>
-        <View testID={testIds.home.attentionList}>
+      <Card title="Today" badge={membersInitialLoad || tasksInitialLoad ? undefined : `${attentionCount}`}>
+        <View testID={testIds.today.attentionList}>
           <QueryStateView
-            loading={membersInitialLoad}
-            error={queryDisplayError(membersError, members.length)}
-            isEmpty={!membersInitialLoad && !membersError && !attentionMembers.length}
-            emptyMessage="No members currently flagged for follow-up."
-            onRetry={() => void refreshMembers()}
+            loading={membersInitialLoad || tasksInitialLoad}
+            error={queryDisplayError(membersError ?? tasksError, attentionEntries.length)}
+            isEmpty={!membersInitialLoad && !tasksInitialLoad && !membersError && !tasksError && !attentionEntries.length}
+            emptyMessage="No people need care right now."
+            onRetry={() => {
+              void refreshMembers();
+              void refreshTasks();
+            }}
           />
           <QueryRefreshFeedback
-            loading={membersLoading}
-            error={membersError}
-            dataLength={members.length}
-            refreshingLabel="Refreshing members…"
-            staleErrorLabel="Could not refresh members. Showing last loaded data."
+            loading={membersLoading || tasksLoading}
+            error={membersError ?? tasksError}
+            dataLength={attentionEntries.length}
+            refreshingLabel="Refreshing today’s care list…"
+            staleErrorLabel="Could not refresh everything. Showing last loaded data."
           />
-          {!membersInitialLoad && !membersError
-            ? attentionMembers.map((member) => (
-                <MemberListItem
-                  key={member.id}
-                  member={member}
-                  testID={testIds.members.member(member.id)}
-                  onPress={() => router.push(`/member/${member.id}`)}
-                />
-              ))
+          {!membersInitialLoad && !tasksInitialLoad && !membersError && !tasksError
+            ? attentionPreview.map((entry) => <AttentionCard key={entry.member.id} entry={entry} />)
             : null}
         </View>
       </Card>
 
-      <Card title="Today's Tasks" badge={tasksInitialLoad ? undefined : `${todayTasks.length}`}>
-        <QueryStateView
-          loading={tasksInitialLoad}
-          error={queryDisplayError(tasksError, tasks.length)}
-          isEmpty={!tasksInitialLoad && !tasksError && !todayTasks.length}
-          emptyMessage="No open tasks due today."
-          onRetry={() => void refreshTasks()}
-        />
-        <QueryRefreshFeedback
-          loading={tasksLoading}
-          error={tasksError}
-          dataLength={tasks.length}
-          refreshingLabel="Refreshing tasks…"
-          staleErrorLabel="Could not refresh tasks. Showing last loaded data."
-        />
-        {!tasksInitialLoad && !tasksError
-          ? todayTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                toggleTestID={testIds.tasks.toggle(task.id)}
-                toggleDisabled={isTaskToggling(task.id)}
-                onToggle={async () => {
-                  const err = await toggleTask(task);
-                  if (err) showToast(getUserMessage(err));
-                }}
-              />
-            ))
-          : null}
-      </Card>
+      {!membersInitialLoad && !tasksInitialLoad && !membersError && !tasksError
+        ? groupedSections.map((section) => (
+            <Card key={section.key} title={section.title} badge={`${section.items.length}`}>
+              {section.items.map((entry) => (
+                <AttentionCard key={`${section.key}-${entry.member.id}`} entry={entry} />
+              ))}
+            </Card>
+          ))
+        : null}
     </ScrollView>
   );
 }
@@ -160,4 +209,38 @@ const styles = StyleSheet.create({
   alertContent: { flex: 1 },
   alertTitle: { color: '#dc2626', fontWeight: '700', fontSize: 14 },
   alertText: { color: '#991b1b', fontSize: 13, marginTop: 3, opacity: 0.8 },
+  personCard: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  personTopRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  personBody: { flex: 1 },
+  personName: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  personReason: { fontSize: 13, color: colors.accent, fontWeight: '700', marginTop: 4 },
+  personMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 4, textTransform: 'capitalize' },
+  profileLink: { paddingTop: 4 },
+  personActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  quickButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  quickButtonDisabled: { opacity: 0.5 },
+  quickButtonText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  quickButtonTextDisabled: { color: colors.textMuted },
 });

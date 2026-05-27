@@ -14,7 +14,7 @@ import { escapeLikePattern } from '@/lib/core/validation';
 import type { Member, MemberListRow } from '@/types/database';
 
 export const MEMBER_LIST_COLUMNS =
-  'id, organization_id, full_name, phone, risk_level, status, last_contact_at, assigned_to';
+  'id, organization_id, full_name, phone, risk_level, status, care_stage, last_contact_at, assigned_to, created_at';
 
 export const MEMBER_DETAIL_COLUMNS = '*';
 
@@ -22,6 +22,7 @@ export type MemberListQuery = PageParams & {
   search?: string;
   status?: Member['status'];
   riskLevel?: Member['risk_level'];
+  careStage?: Member['care_stage'];
   /** When true, useMembers loads via fetchMembersNeedingAttention instead of pagination. */
   attentionOnly?: boolean;
 };
@@ -47,6 +48,7 @@ export async function fetchMembersPage(
   }
   if (query.status) request = request.eq('status', query.status);
   if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
+  if (query.careStage) request = request.eq('care_stage', query.careStage);
 
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load members.');
@@ -102,6 +104,7 @@ export type MemberInput = {
   address?: string | null;
   risk_level?: Member['risk_level'];
   status?: Member['status'];
+  care_stage?: Member['care_stage'];
   notes?: string | null;
   assigned_to?: string | null;
 };
@@ -119,6 +122,7 @@ export async function createMember(input: MemberInput): Promise<Member> {
       address: input.address?.trim() || null,
       risk_level: input.risk_level ?? 'low',
       status: input.status ?? 'new',
+      care_stage: input.care_stage ?? 'new',
       notes: input.notes?.trim() || null,
       assigned_to: assignedTo,
     })
@@ -142,17 +146,19 @@ export async function createMemberAsShepherd(
     notes: input.notes,
     assigned_to: shepherdId,
     status: 'new',
+    care_stage: 'new',
     risk_level: 'low',
   });
 }
 
-export type CareProgressInput = Pick<MemberInput, 'risk_level' | 'status' | 'notes'>;
+export type CareProgressInput = Pick<MemberInput, 'risk_level' | 'status' | 'care_stage' | 'notes'>;
 
 /** Shepherd-facing care update: risk, status, and notes only. */
 export async function updateCareProgress(id: string, input: CareProgressInput): Promise<Member> {
   return updateMember(id, {
     risk_level: input.risk_level,
     status: input.status,
+    care_stage: input.care_stage,
     notes: input.notes,
   });
 }
@@ -168,6 +174,7 @@ export async function updateMember(id: string, input: Partial<MemberInput>): Pro
   if (input.address !== undefined) patch.address = input.address?.trim() || null;
   if (input.risk_level !== undefined) patch.risk_level = input.risk_level;
   if (input.status !== undefined) patch.status = input.status;
+  if (input.care_stage !== undefined) patch.care_stage = input.care_stage;
   if (input.notes !== undefined) patch.notes = input.notes?.trim() || null;
   if (input.assigned_to !== undefined) {
     patch.assigned_to = requireAssigneeId(input.assigned_to, 'member');

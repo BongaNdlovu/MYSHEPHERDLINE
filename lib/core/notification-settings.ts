@@ -35,9 +35,9 @@ export function notificationStatusLabel(status: NotificationStatus): string {
     case 'denied':
       return 'Permission denied. Enable notifications in device settings.';
     case 'granted':
-      return 'Notifications enabled. You will receive task reminders when due soon.';
+      return 'Notifications enabled. You will receive care reminders and daily care-list updates.';
     default:
-      return 'Tap below to enable task reminder notifications.';
+      return 'Tap below to enable care reminder notifications.';
   }
 }
 

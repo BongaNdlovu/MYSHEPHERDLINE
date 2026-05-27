@@ -72,7 +72,7 @@ export default function ShepherdMemberFormScreen() {
     <FormScreen
       style={styles.screen}
       contentContainerStyle={styles.content}
-      testID={testIds.members.addForm}
+      testID={testIds.people.addForm}
     >
       <Text style={styles.title}>Add member</Text>
       <Text style={styles.lead}>
@@ -106,7 +106,7 @@ export default function ShepherdMemberFormScreen() {
       <Pressable
         style={styles.primary}
         disabled={saving}
-        testID={testIds.members.addSave}
+        testID={testIds.people.addSave}
         onPress={save}
       >
         <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save member'}</Text>

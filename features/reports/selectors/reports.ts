@@ -5,7 +5,7 @@ import type { Member, ReportSummary, Task, Visit } from '@/types/database';
 
 export const DEFAULT_RECENT_ACTIVITY_DAYS = 7;
 
-type ReportMember = Pick<Member, 'risk_level' | 'status' | 'created_at'>;
+type ReportMember = Pick<Member, 'risk_level' | 'status' | 'care_stage' | 'last_contact_at' | 'created_at'>;
 type ReportVisit = Pick<Visit, 'visit_type' | 'visited_at'>;
 type ReportTask = Pick<Task, 'status'>;
 type ReportFailureResult = Extract<WorkerReportResult, { ok: false }>;

@@ -2,14 +2,14 @@ appId: ${E2E_APP_ID}
 ---
 - runFlow: ../subflows/login.yaml
 - tapOn:
-    id: tab-members
+    id: tab-people
 - assertVisible:
-    id: members-screen
+    id: people-screen
 - tapOn:
-    id: members-search
+    id: people-search
 - inputText: ${E2E_MEMBER_NAME}
 - hideKeyboard
 - tapOn:
-    id: members-filter-risk
+    id: people-filter-urgent
 - assertVisible:
     text: ${E2E_MEMBER_NAME}

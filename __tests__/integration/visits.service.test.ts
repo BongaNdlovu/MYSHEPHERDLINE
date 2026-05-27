@@ -93,4 +93,46 @@ describe('visits service', () => {
       message: 'Your session expired. Sign in again.',
     });
   });
+
+  it('logs care actions atomically via the log_care_action RPC', async () => {
+    rpc.mockResolvedValue({ error: null });
+
+    const { createCareAction } = await import('@/features/visits/services/visits.service');
+
+    await createCareAction({
+      memberId: 'member-1',
+      visitType: 'whatsapp',
+      notes: 'Shared encouragement',
+      followUpRequired: true,
+      careStage: 'contacted',
+      status: 'active',
+      riskLevel: 'medium',
+      memberNotes: 'Responded well',
+      followUpTitle: 'Call Sipho',
+      followUpDescription: 'Check in tomorrow',
+      followUpDueDate: '2026-05-30',
+      followUpDueAt: '2026-05-30T09:00:00.000Z',
+      followUpPriority: 'high',
+      followUpTaskType: 'call',
+      followUpReminderMinutesBefore: 30,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('log_care_action', {
+      p_member_id: 'member-1',
+      p_visit_type: 'whatsapp',
+      p_notes: 'Shared encouragement',
+      p_follow_up_required: true,
+      p_status: 'active',
+      p_risk_level: 'medium',
+      p_care_stage: 'contacted',
+      p_member_notes: 'Responded well',
+      p_follow_up_title: 'Call Sipho',
+      p_follow_up_description: 'Check in tomorrow',
+      p_follow_up_due_date: '2026-05-30',
+      p_follow_up_due_at: '2026-05-30T09:00:00.000Z',
+      p_follow_up_priority: 'high',
+      p_follow_up_task_type: 'call',
+      p_follow_up_reminder_minutes_before: 30,
+    });
+  });
 });

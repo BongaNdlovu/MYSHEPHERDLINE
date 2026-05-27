@@ -27,7 +27,7 @@ export default function TasksScreen() {
     loadingMore,
   } = useTasks();
   const { showToast } = useToast();
-  const { today, overdue, upcoming } = groupTasksByDueDate(tasks);
+  const { today, overdue, upcoming, unscheduled } = groupTasksByDueDate(tasks);
   const weekDays = buildWeekDayStrip();
   const initialLoad = isInitialLoad(loading, tasks.length);
 
@@ -35,9 +35,10 @@ export default function TasksScreen() {
     () => [
       { key: 'overdue', title: 'Overdue', badge: overdue.length, items: overdue },
       { key: 'today', title: 'Today', badge: today.length, items: today },
-      { key: 'upcoming', title: 'Upcoming', badge: upcoming.length, items: upcoming },
+      { key: 'upcoming', title: 'This Week', badge: upcoming.length, items: upcoming },
+      { key: 'unscheduled', title: 'No Due Date', badge: unscheduled.length, items: unscheduled },
     ],
-    [overdue, today, upcoming],
+    [overdue, today, upcoming, unscheduled],
   );
 
   const flatData = useMemo(
@@ -103,7 +104,9 @@ export default function TasksScreen() {
                       ? 'No overdue tasks.'
                       : item.section.key === 'today'
                         ? 'No open tasks due today.'
-                        : 'No upcoming tasks.'
+                        : item.section.key === 'upcoming'
+                          ? 'No tasks due this week.'
+                          : 'No unscheduled follow-ups.'
                   }
                   loading={false}
                   error={null}

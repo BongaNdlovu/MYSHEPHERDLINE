@@ -1,9 +1,11 @@
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Linking from 'expo-linking';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatTaskDueDate } from '@/features/tasks/selectors/tasks';
-import { colors, spacing } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 import type { TaskListRow } from '@/types/database';
 
 type TaskItemProps = {
@@ -13,11 +15,14 @@ type TaskItemProps = {
   toggleDisabled?: boolean;
 };
 
-const iconMap: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = {
+const iconMap: Record<string, ComponentProps<typeof FontAwesome>['name']> = {
   call: 'phone',
   visit: 'home',
+  whatsapp: 'comment',
   bible_study: 'book',
-  meeting: 'users',
+  prayer: 'heart',
+  invite: 'user-plus',
+  check_in: 'commenting',
   other: 'check',
 };
 
@@ -25,6 +30,7 @@ export function TaskItem({ task, onToggle, toggleTestID, toggleDisabled }: TaskI
   const completed = task.status === 'completed';
   const iconName = iconMap[task.task_type ?? 'other'] ?? 'check';
   const formattedDueDate = formatTaskDueDate(task.due_date);
+  const phone = task.member?.phone?.trim() ?? '';
 
   return (
     <View style={styles.item} testID={`task-item-${task.id}`}>
@@ -33,9 +39,27 @@ export function TaskItem({ task, onToggle, toggleTestID, toggleDisabled }: TaskI
       </View>
       <View style={styles.info}>
         <Text style={[styles.name, completed && styles.completedName]}>{task.title}</Text>
+        {task.member?.full_name ? <Text style={styles.memberName}>{task.member.full_name}</Text> : null}
         <Text style={styles.status}>
-          {completed ? 'Completed' : formattedDueDate ? `Due ${formattedDueDate}` : 'Open'}
+          {completed
+            ? 'Completed'
+            : formattedDueDate
+              ? `Due ${formattedDueDate} · ${task.priority} priority`
+              : `${task.priority} priority`}
         </Text>
+        {!completed && phone ? (
+          <View style={styles.shortcuts}>
+            <Pressable style={styles.shortcut} onPress={() => void Linking.openURL(`tel:${phone}`)}>
+              <Text style={styles.shortcutText}>Call</Text>
+            </Pressable>
+            <Pressable
+              style={styles.shortcut}
+              onPress={() => void Linking.openURL(`https://wa.me/${phone.replace(/[^\d]/g, '')}`)}
+            >
+              <Text style={styles.shortcutText}>WhatsApp</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
       <Pressable
         testID={toggleTestID}
@@ -71,6 +95,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontWeight: '600', color: colors.primary },
   completedName: { textDecorationLine: 'line-through', color: colors.textMuted },
   status: { fontSize: 13, color: colors.textMuted, marginTop: 3 },
+  memberName: { fontSize: 12, color: colors.textSecondary, marginTop: 3, fontWeight: '600' },
   check: {
     width: 26,
     height: 26,
@@ -85,4 +110,12 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryLight,
   },
   checkDisabled: { opacity: 0.5 },
+  shortcuts: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  shortcut: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primaryPale,
+  },
+  shortcutText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 });
