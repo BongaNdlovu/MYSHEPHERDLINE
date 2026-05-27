@@ -1,0 +1,19 @@
+appId: ${E2E_APP_ID}
+---
+- runFlow: ../subflows/login.yaml
+- tapOn:
+    id: tab-members
+- assertVisible:
+    id: members-screen
+- tapOn:
+    id: members-add
+- assertVisible:
+    id: members-add-form
+- tapOn:
+    text: Full name
+- inputText: E2E Test Member
+- hideKeyboard
+- tapOn:
+    id: members-add-save
+- assertVisible:
+    id: members-screen

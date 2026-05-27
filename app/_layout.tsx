@@ -54,6 +54,7 @@ export default function RootLayout() {
               <Stack.Screen name="sign-up" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="member/[id]" />
+              <Stack.Screen name="members/new" />
               <Stack.Screen name="log-visit/[memberId]" />
               <Stack.Screen name="legal/privacy" />
               <Stack.Screen name="legal/terms" />

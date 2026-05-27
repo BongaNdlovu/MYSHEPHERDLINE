@@ -5,6 +5,7 @@ export type AdminMenuItem = {
   icon: 'users' | 'user-plus' | 'check-square' | 'bar-chart-2' | 'settings';
   route:
     | '/admin/users'
+    | '/admin/congregations'
     | '/admin/members'
     | '/admin/tasks'
     | '/admin/reports'
@@ -19,6 +20,14 @@ export const adminMenuItems: AdminMenuItem[] = [
     subtitle: 'Manage access and shepherd roles',
     icon: 'users',
     route: '/admin/users',
+    ownerOnly: true,
+  },
+  {
+    id: 'congregations',
+    title: 'Congregations',
+    subtitle: 'District congregations and new church tenants',
+    icon: 'users',
+    route: '/admin/congregations',
     ownerOnly: true,
   },
   {

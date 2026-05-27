@@ -2,7 +2,7 @@
 
 create extension if not exists "pgcrypto";
 
-create table if not exists public.organizations (
+create table if not exists public.districts (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text not null unique,
@@ -10,11 +10,29 @@ create table if not exists public.organizations (
   updated_at timestamptz not null default now()
 );
 
-insert into public.organizations (id, name, slug)
+create table if not exists public.organizations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  district_id uuid references public.districts(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.districts (id, name, slug)
+values (
+  'b0000000-0000-4000-8000-000000000001',
+  'Default District',
+  'default-district'
+)
+on conflict (id) do nothing;
+
+insert into public.organizations (id, name, slug, district_id)
 values (
   'a0000000-0000-4000-8000-000000000001',
   'Default Organization',
-  'default'
+  'default',
+  'b0000000-0000-4000-8000-000000000001'
 )
 on conflict (id) do nothing;
 
@@ -85,6 +103,7 @@ create table if not exists public.push_tokens (
 );
 
 alter table public.organizations enable row level security;
+alter table public.districts enable row level security;
 alter table public.profiles enable row level security;
 alter table public.members enable row level security;
 alter table public.visits enable row level security;
@@ -183,9 +202,42 @@ create policy "Profiles readable in tenant by self or admin"
   );
 
 drop policy if exists "Organizations readable by members" on public.organizations;
-create policy "Organizations readable by members"
+drop policy if exists "Organizations readable in tenant" on public.organizations;
+create policy "Organizations readable in tenant"
   on public.organizations for select to authenticated
-  using (public.is_active_user() and id = public.current_organization_id());
+  using (
+    public.is_active_user()
+    and (
+      id = public.current_organization_id()
+      or district_id is not distinct from (
+        select o.district_id from public.organizations o
+        where o.id = public.current_organization_id()
+      )
+    )
+  );
+
+drop policy if exists "Owner can insert congregations" on public.organizations;
+create policy "Owner can insert congregations"
+  on public.organizations for insert to authenticated
+  with check (public.is_owner());
+
+drop policy if exists "Owner can update own congregation" on public.organizations;
+create policy "Owner can update own congregation"
+  on public.organizations for update to authenticated
+  using (id = public.current_organization_id() and public.is_owner())
+  with check (id = public.current_organization_id() and public.is_owner());
+
+drop policy if exists "Districts readable with congregation" on public.districts;
+create policy "Districts readable with congregation"
+  on public.districts for select to authenticated
+  using (
+    public.is_active_user()
+    and exists (
+      select 1 from public.organizations o
+      where o.district_id = districts.id
+        and o.id = public.current_organization_id()
+    )
+  );
 
 drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
@@ -330,6 +382,7 @@ create policy "Push tokens writable in tenant by owner"
     and organization_id = public.current_organization_id()
   );
 
+create index if not exists organizations_district_id_idx on public.organizations (district_id);
 create index if not exists profiles_organization_id_idx on public.profiles (organization_id);
 create index if not exists members_org_assigned_name_idx on public.members (organization_id, assigned_to, full_name);
 create index if not exists members_org_status_risk_idx on public.members (organization_id, status, risk_level);

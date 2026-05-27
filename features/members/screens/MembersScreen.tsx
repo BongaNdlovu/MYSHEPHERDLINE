@@ -1,16 +1,17 @@
+import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { FilterChips, MemberListItem, filterMembers, useMembers, type MemberFilter } from '@/features/members';
+import { FilterChips, MemberListItem, filterMembers, useMembers, useCongregation, type MemberFilter } from '@/features/members';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { testIds } from '@/constants/testIds';
-import { colors } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 
 const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'All', value: 'all' },
@@ -42,12 +43,16 @@ export default function MembersScreen() {
     search: debouncedQuery || undefined,
     ...serverFilter,
   });
+  const { congregationLabel } = useCongregation();
 
   const filtered = useMemo(
     () => (filter === 'risk' ? filterMembers(members, '', 'risk') : members),
     [filter, members],
   );
   const initialLoad = isInitialLoad(loading, filtered.length);
+  const headerSubtitle = congregationLabel
+    ? `${filtered.length} in directory · ${congregationLabel}`
+    : `${filtered.length} in directory`;
 
   return (
     <View style={styles.screen} testID={testIds.members.screen}>
@@ -61,12 +66,20 @@ export default function MembersScreen() {
           <>
             <AppHeader
               title="Members"
-              subtitle={`${filtered.length} in directory`}
+              subtitle={headerSubtitle}
               searchValue={query}
               onSearchChange={setQuery}
               searchPlaceholder="Search directory..."
               searchTestID={testIds.members.search}
             />
+            <Pressable
+              style={styles.addButton}
+              testID={testIds.members.add}
+              onPress={() => router.push('/members/new')}
+            >
+              <Feather name="plus" size={18} color={colors.white} />
+              <Text style={styles.addText}>Add member</Text>
+            </Pressable>
             <FilterChips
               options={filterOptions}
               value={filter}
@@ -107,4 +120,16 @@ export default function MembersScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 24 },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: 14,
+    justifyContent: 'center',
+  },
+  addText: { color: colors.white, fontWeight: '700' },
 });

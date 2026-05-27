@@ -10,10 +10,19 @@ export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type VisitType = 'visit' | 'call' | 'bible_study' | 'other';
 
+export interface District {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Organization {
   id: string;
   name: string;
   slug: string;
+  district_id: string | null;
   created_at: string;
   updated_at: string;
 }

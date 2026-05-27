@@ -1,8 +1,8 @@
 # Architecture
 
-MyShepherdLine is an **internal shepherd tool** for one congregation: provisioned staff log visits, manage assigned
-members, and run follow-up tasks. It is not a public visitor or prayer-request platform. See
-[docs/product-scope.md](docs/product-scope.md).
+MyShepherdLine is an **internal shepherd tool** for pastoral care teams across **multiple congregations** grouped by
+**districts**. Provisioned staff log visits, manage assigned members, and run follow-up tasks within their congregation
+tenant. It is not a public visitor or prayer-request platform. See [docs/product-scope.md](docs/product-scope.md).
 
 MyShepherdLine uses a **hybrid feature-first** layout: business features live together under `features/`, while shared
 infrastructure stays centralized under `lib/core/` and reusable UI primitives under `components/ui/`.
@@ -170,10 +170,14 @@ Operational management lives in `features/admin/` with thin routes under `app/ad
 Modules:
 
 - **Users & Roles** — list profiles, promote/demote role, activate/deactivate (`profiles.is_active`)
+- **Congregations** — list district congregations; owners create new congregation tenants
 - **Members** — create, edit, delete via `members.service` mutations
 - **Tasks** — create, edit, delete via `tasks.service` mutations
 - **Reports & Ops** — org summary + Worker health (no secrets in app)
 - **App Controls** — legal links and operator references
+
+Shepherd-facing **Members** tab includes **Add member** (`/members/new`), which creates a member assigned to the
+signed-in shepherd (RLS: `assigned_to = auth.uid()`).
 
 Access model:
 
@@ -181,8 +185,10 @@ Access model:
 - New auth users get an **inactive** `profiles` row from `handle_new_user`; owners activate access in Admin → Users & Roles.
 - Apply `supabase/security-hardening-migration.sql` on existing projects for inactive-user RLS, atomic visit
   logging, and audit expansion.
+- Apply `supabase/multi-congregation-migration.sql` for districts and cross-congregation read within a district.
 - Promote the owner with `supabase/bootstrap-owner.sql` (not in reusable schema).
-- **Single organization (v1):** all users belong to the default org; multi-church onboarding is intentionally out of scope.
+- **Multi-congregation:** each user has one `profiles.organization_id`; RLS isolates data per congregation; districts
+  group orgs for owner visibility. No in-app org switcher — operators re-provision users to move congregations.
 
 ## Compliance
 

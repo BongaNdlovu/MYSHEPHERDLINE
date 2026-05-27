@@ -128,6 +128,24 @@ export async function createMember(input: MemberInput): Promise<Member> {
   return data as Member;
 }
 
+export type ShepherdMemberInput = Pick<MemberInput, 'full_name' | 'phone' | 'email' | 'notes'>;
+
+/** Shepherd-facing create: assigns to the signed-in user (RLS: assigned_to = auth.uid()). */
+export async function createMemberAsShepherd(
+  shepherdId: string,
+  input: ShepherdMemberInput,
+): Promise<Member> {
+  return createMember({
+    full_name: input.full_name,
+    phone: input.phone,
+    email: input.email,
+    notes: input.notes,
+    assigned_to: shepherdId,
+    status: 'new',
+    risk_level: 'low',
+  });
+}
+
 export async function updateMember(id: string, input: Partial<MemberInput>): Promise<Member> {
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),

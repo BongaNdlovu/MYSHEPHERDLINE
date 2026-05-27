@@ -38,6 +38,7 @@ export default function AdminLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="unauthorized" />
       <Stack.Screen name="users" />
+      <Stack.Screen name="congregations" />
       <Stack.Screen name="members/index" />
       <Stack.Screen name="members/new" />
       <Stack.Screen name="members/[id]" />

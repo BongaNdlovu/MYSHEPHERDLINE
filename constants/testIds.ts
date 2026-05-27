@@ -26,6 +26,9 @@ export const testIds = {
   members: {
     screen: 'members-screen',
     search: 'members-search',
+    add: 'members-add',
+    addForm: 'members-add-form',
+    addSave: 'members-add-save',
     filter: (value: string) => `members-filter-${value}`,
     member: (id: string) => `member-item-${id}`,
   },
@@ -58,6 +61,7 @@ export const testIds = {
     unauthorized: 'admin-unauthorized',
     menu: (id: string) => `admin-menu-${id}`,
     users: { screen: 'admin-users-screen' },
+    congregations: { screen: 'admin-congregations-screen' },
     members: {
       screen: 'admin-members-screen',
       add: 'admin-members-add',
