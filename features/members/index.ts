@@ -1,5 +1,6 @@
 export { default as MembersScreen } from './screens/MembersScreen';
 export { default as MemberProfileScreen } from './screens/MemberProfileScreen';
+export { default as CareProgressScreen } from './screens/CareProgressScreen';
 export { default as ShepherdMemberFormScreen } from './screens/ShepherdMemberFormScreen';
 export { MemberListItem } from './components/MemberListItem';
 export { FilterChips } from './components/FilterChips';
@@ -10,6 +11,8 @@ export {
   createMember,
   createMemberAsShepherd,
   updateMember,
+  updateCareProgress,
+  type CareProgressInput,
   deleteMember,
   type MemberInput,
   type ShepherdMemberInput,

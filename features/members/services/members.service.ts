@@ -146,6 +146,17 @@ export async function createMemberAsShepherd(
   });
 }
 
+export type CareProgressInput = Pick<MemberInput, 'risk_level' | 'status' | 'notes'>;
+
+/** Shepherd-facing care update: risk, status, and notes only. */
+export async function updateCareProgress(id: string, input: CareProgressInput): Promise<Member> {
+  return updateMember(id, {
+    risk_level: input.risk_level,
+    status: input.status,
+    notes: input.notes,
+  });
+}
+
 export async function updateMember(id: string, input: Partial<MemberInput>): Promise<Member> {
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),

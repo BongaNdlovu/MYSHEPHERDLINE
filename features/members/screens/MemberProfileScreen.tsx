@@ -5,17 +5,29 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
 import { colors, gradients, radii, spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin';
 import { useMember } from '@/features/members';
+import { VisitTimelineItem, useMemberVisits } from '@/features/visits';
 import { getInitials } from '@/lib/core/names';
+import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 
 export default function MemberProfileScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: member, loading, error, refresh } = useMember(id);
+  const {
+    data: visits,
+    loading: visitsLoading,
+    error: visitsError,
+    refresh: refreshVisits,
+    loadMore,
+    hasMore,
+    loadingMore,
+  } = useMemberVisits(id);
   const { isAdmin } = useAdminAccess();
 
   if (loading || error || !member) {
@@ -27,6 +39,7 @@ export default function MemberProfileScreen() {
   }
 
   const initials = getInitials(member.full_name);
+  const visitsInitialLoad = isInitialLoad(visitsLoading, visits.length);
 
   return (
     <ScrollView style={styles.screen} testID={testIds.memberProfile.screen}>
@@ -67,13 +80,54 @@ export default function MemberProfileScreen() {
         <InfoRow label="Notes" value={member.notes ?? 'No notes yet'} />
       </Card>
 
-      <Pressable
-        style={styles.primaryButton}
-        testID={testIds.memberProfile.logVisit}
-        onPress={() => router.push(`/log-visit/${member.id}`)}
-      >
-        <Text style={styles.primaryButtonText}>Log Visit</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          style={styles.primaryButton}
+          testID={testIds.memberProfile.logVisit}
+          onPress={() => router.push(`/log-visit/${member.id}`)}
+        >
+          <Text style={styles.primaryButtonText}>Log Visit</Text>
+        </Pressable>
+        <Pressable
+          style={styles.secondaryButton}
+          testID={testIds.memberProfile.careProgress}
+          onPress={() => router.push(`/member/${member.id}/care-progress`)}
+        >
+          <Text style={styles.secondaryButtonText}>Update Care Progress</Text>
+        </Pressable>
+        <Pressable
+          style={styles.secondaryButton}
+          testID={testIds.memberProfile.assignmentRequest}
+          onPress={() => router.push(`/member/${member.id}/assignment-request`)}
+        >
+          <Text style={styles.secondaryButtonText}>Request Assignment Change</Text>
+        </Pressable>
+      </View>
+
+      <Card title="Visit History" badge={visitsInitialLoad ? undefined : `${visits.length}`}>
+        <QueryStateView
+          loading={visitsInitialLoad}
+          error={queryDisplayError(visitsError, visits.length)}
+          isEmpty={!visitsInitialLoad && !visitsError && !visits.length}
+          emptyMessage="No visits logged yet."
+          onRetry={() => void refreshVisits()}
+        />
+        <QueryRefreshFeedback
+          loading={visitsLoading}
+          error={visitsError}
+          dataLength={visits.length}
+          refreshingLabel="Refreshing visits…"
+          staleErrorLabel="Could not refresh visits. Showing last loaded data."
+        />
+        {!visitsInitialLoad && !visitsError
+          ? visits.map((visit) => <VisitTimelineItem key={visit.id} visit={visit} />)
+          : null}
+        {hasMore && !visitsLoading ? (
+          <Pressable style={styles.loadMore} onPress={() => void loadMore()} disabled={loadingMore}>
+            <Text style={styles.loadMoreText}>{loadingMore ? 'Loading…' : 'Load more visits'}</Text>
+          </Pressable>
+        ) : null}
+      </Card>
     </ScrollView>
   );
 }
@@ -127,13 +181,27 @@ const styles = StyleSheet.create({
   },
   infoLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   infoValue: { color: colors.primary, fontSize: 15, fontWeight: '600', marginTop: 4 },
-  primaryButton: {
+  actions: {
     marginHorizontal: spacing.lg,
     marginVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
   },
   primaryButtonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  secondaryButton: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  secondaryButtonText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
+  loadMore: { paddingVertical: spacing.md, alignItems: 'center' },
+  loadMoreText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
 });

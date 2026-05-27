@@ -35,6 +35,18 @@ export const testIds = {
   memberProfile: {
     screen: 'member-profile-screen',
     logVisit: 'member-log-visit',
+    careProgress: 'member-care-progress',
+    assignmentRequest: 'member-assignment-request',
+  },
+  careProgress: {
+    screen: 'care-progress-screen',
+    notes: 'care-progress-notes',
+    save: 'care-progress-save',
+  },
+  assignmentRequest: {
+    screen: 'assignment-request-screen',
+    reason: 'assignment-request-reason',
+    submit: 'assignment-request-submit',
   },
   logVisit: {
     screen: 'log-visit-screen',
@@ -80,6 +92,15 @@ export const testIds = {
     },
     reports: { screen: 'admin-reports-screen' },
     controls: { screen: 'admin-controls-screen' },
+    assignmentRequests: {
+      screen: 'admin-assignment-requests-screen',
+      approve: (id: string) => `admin-assignment-approve-${id}`,
+      reject: (id: string) => `admin-assignment-reject-${id}`,
+    },
+  },
+  notifications: {
+    status: 'notifications-status',
+    enable: 'notifications-enable',
   },
   toast: 'app-toast',
 } as const;

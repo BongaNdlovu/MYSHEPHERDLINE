@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { NotificationSettingsCard } from '../components/NotificationSettingsCard';
 import { accountQuickActions } from '../selectors/quick-actions';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
@@ -45,6 +46,8 @@ export default function MoreScreen() {
           </Pressable>
         </Card>
       ) : null}
+
+      <NotificationSettingsCard />
 
       <View style={styles.grid}>
         {accountQuickActions.map((action) => (

@@ -6,6 +6,8 @@ import {
   sendDigest,
   sendDigestForOrganization,
   sendExpoPushBatch,
+  sendTaskReminders,
+  listTasksDueForReminder,
 } from '../notifications';
 
 const mockSummary = vi.hoisted(() => ({
@@ -357,5 +359,112 @@ describe('per-organization digest', () => {
 
     expect(result.tokenCount).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('task reminders', () => {
+  it('lists open tasks due within the reminder window', async () => {
+    const supabase = {
+      from: (table: string) => {
+        if (table !== 'tasks') throw new Error(`unexpected table ${table}`);
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => ({
+                is: () => ({
+                  gte: () => ({
+                    lte: async () => ({
+                      data: [
+                        {
+                          id: 'task-1',
+                          organization_id: 'org-1',
+                          title: 'Visit Sipho',
+                          due_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+                          assignee_id: 'shepherd-1',
+                        },
+                      ],
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        };
+      },
+    };
+
+    const result = await listTasksDueForReminder(supabase as never, 60);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].title).toBe('Visit Sipho');
+  });
+
+  it('marks tasks after successful reminder delivery', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ status: 'ok' }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const updates: string[] = [];
+    const supabase = {
+      from: (table: string) => {
+        if (table === 'tasks') {
+          return {
+            select: () => ({
+              eq: () => ({
+                not: () => ({
+                  is: () => ({
+                    gte: () => ({
+                      lte: async () => ({
+                        data: [
+                          {
+                            id: 'task-1',
+                            organization_id: 'org-1',
+                            title: 'Call member',
+                            due_at: new Date(Date.now() + 20 * 60_000).toISOString(),
+                            assignee_id: 'shepherd-1',
+                          },
+                        ],
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+            update: () => ({
+              in: async (_col: string, ids: string[]) => {
+                updates.push(...ids);
+                return { error: null };
+              },
+            }),
+          };
+        }
+        if (table === 'push_tokens') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: async () => ({
+                    data: [{ expo_push_token: 'ExpoPushToken[abc]' }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected table ${table}`);
+      },
+    };
+
+    const result = await sendTaskReminders(supabase as never, 60);
+    expect('error' in result).toBe(false);
+    if (!('error' in result)) {
+      expect(result.sent).toBe(1);
+      expect(result.marked).toBe(1);
+      expect(updates).toEqual(['task-1']);
+    }
   });
 });

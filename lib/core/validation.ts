@@ -63,6 +63,14 @@ export function validateOptionalPhone(phone: string): string | undefined {
   return undefined;
 }
 
+export function validateDueAt(dueAt: string): string | undefined {
+  const trimmed = dueAt.trim();
+  if (!trimmed) return undefined;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return 'Enter a valid date and time (ISO or YYYY-MM-DDTHH:mm).';
+  return undefined;
+}
+
 export function validateDueDate(dueDate: string): string | undefined {
   const trimmed = dueDate.trim();
   if (!trimmed) return undefined;

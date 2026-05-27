@@ -163,7 +163,24 @@ API-only/mobile Bearer-token usage.
 Schedule a POST to `/notifications/send-digest` with header `X-Cron-Secret: <DIGEST_CRON_SECRET>`. Admins can also
 trigger via Bearer token.
 
-Audit events appear in Worker logs as JSON (`digest_sent`, `digest_send_forbidden`, `push_token_registered`,
+### Task reminder cron
+
+Apply `supabase/care-reminders-migration.sql` so tasks have `due_at` and `reminder_sent_at`.
+
+The Worker runs two crons (see `worker/wrangler.toml`):
+
+- `0 8 * * *` — daily org digest (existing)
+- `*/15 * * * *` — task due-soon reminders for open tasks with `due_at` in the next 60 minutes
+
+Manual trigger (owner Bearer or `X-Cron-Secret`):
+
+```http
+POST /notifications/send-reminders
+```
+
+Shepherds must register a push token (More → Notifications, or automatic on sign-in when the Worker URL is set).
+
+Audit events appear in Worker logs as JSON (`digest_sent`, `task_reminders_sent`, `digest_send_forbidden`, `push_token_registered`,
 `rate_limit_exceeded`). Responses include `X-Request-Id` for correlation.
 
 Deploy:

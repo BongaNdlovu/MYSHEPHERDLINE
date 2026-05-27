@@ -46,6 +46,7 @@ export default function AdminLayout() {
       <Stack.Screen name="tasks/new" />
       <Stack.Screen name="tasks/[id]" />
       <Stack.Screen name="reports" />
+      <Stack.Screen name="assignment-requests" />
       <Stack.Screen name="controls" />
     </Stack>
   );

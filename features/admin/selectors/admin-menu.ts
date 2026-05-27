@@ -8,6 +8,7 @@ export type AdminMenuItem = {
     | '/admin/congregations'
     | '/admin/members'
     | '/admin/tasks'
+    | '/admin/assignment-requests'
     | '/admin/reports'
     | '/admin/controls';
   ownerOnly?: boolean;
@@ -43,6 +44,13 @@ export const adminMenuItems: AdminMenuItem[] = [
     subtitle: 'Create, assign, and close tasks',
     icon: 'check-square',
     route: '/admin/tasks',
+  },
+  {
+    id: 'assignment-requests',
+    title: 'Assignment Requests',
+    subtitle: 'Review shepherd reassignment requests',
+    icon: 'user-plus',
+    route: '/admin/assignment-requests',
   },
   {
     id: 'reports',

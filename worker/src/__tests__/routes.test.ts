@@ -14,6 +14,7 @@ const notificationMocks = vi.hoisted(() => ({
   parseRegisterPayload: vi.fn(),
   registerToken: vi.fn(),
   sendDigest: vi.fn(),
+  sendTaskReminders: vi.fn(),
 }));
 
 vi.mock('../auth', async (importOriginal) => {
@@ -53,6 +54,7 @@ describe('worker routes', () => {
     });
     notificationMocks.registerToken.mockResolvedValue({ ok: true });
     notificationMocks.sendDigest.mockResolvedValue({ sent: 1, organizations: 1, results: [] });
+    notificationMocks.sendTaskReminders.mockResolvedValue({ sent: 2, tasks: 1, marked: 1 });
     authMocks.isInternalDigestRequest.mockReturnValue(false);
   });
 
@@ -219,6 +221,25 @@ describe('worker routes', () => {
       env,
     );
     expect(response.status).toBe(400);
+  });
+
+  it('allows task reminders send for owner users', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org-1',
+      role: 'owner',
+      email: 'o@test.local',
+      isActive: true,
+    });
+    const response = await worker.fetch(
+      new Request('https://worker.test/notifications/send-reminders', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(notificationMocks.sendTaskReminders).toHaveBeenCalled();
   });
 
   it('rejects oversized register payloads', async () => {

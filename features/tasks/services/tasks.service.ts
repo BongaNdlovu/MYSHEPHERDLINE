@@ -12,7 +12,7 @@ import { getCurrentOrganizationId } from '@/lib/core/tenant';
 import type { Task, TaskListRow } from '@/types/database';
 
 export const TASK_LIST_COLUMNS =
-  'id, organization_id, title, due_date, status, priority, assignee_id, member_id, task_type';
+  'id, organization_id, title, due_date, due_at, status, priority, assignee_id, member_id, task_type';
 
 export const TASK_DETAIL_COLUMNS = '*';
 
@@ -71,14 +71,29 @@ export type TaskInput = {
   assignee_id?: string | null;
   member_id?: string | null;
   due_date?: string | null;
+  due_at?: string | null;
   status?: Task['status'];
   priority?: Task['priority'];
   task_type?: string | null;
 };
 
+function dueDateFromDueAt(dueAt: string | null | undefined): string | null {
+  if (!dueAt) return null;
+  return dueAt.slice(0, 10);
+}
+
+function defaultDueAtFromDate(dueDate: string): string {
+  return `${dueDate}T09:00:00.000Z`;
+}
+
 export async function createTask(input: TaskInput): Promise<Task> {
   const assigneeId = requireAssigneeId(input.assignee_id, 'task');
   const supabase = requireSupabase();
+  const dueAt =
+    input.due_at?.trim() ||
+    (input.due_date?.trim() ? defaultDueAtFromDate(input.due_date.trim()) : null);
+  const dueDate = dueDateFromDueAt(dueAt) ?? input.due_date ?? null;
+
   const { data, error } = await supabase
     .from('tasks')
     .insert({
@@ -87,7 +102,8 @@ export async function createTask(input: TaskInput): Promise<Task> {
       description: input.description?.trim() || null,
       assignee_id: assigneeId,
       member_id: input.member_id ?? null,
-      due_date: input.due_date ?? null,
+      due_date: dueDate,
+      due_at: dueAt,
       status: input.status ?? 'open',
       priority: input.priority ?? 'medium',
       task_type: input.task_type?.trim() || null,
@@ -109,7 +125,16 @@ export async function updateTask(id: string, input: Partial<TaskInput>): Promise
     patch.assignee_id = requireAssigneeId(input.assignee_id, 'task');
   }
   if (input.member_id !== undefined) patch.member_id = input.member_id ?? null;
-  if (input.due_date !== undefined) patch.due_date = input.due_date ?? null;
+  if (input.due_at !== undefined) {
+    patch.due_at = input.due_at?.trim() || null;
+    patch.due_date = dueDateFromDueAt(patch.due_at as string | null);
+    if (patch.due_at && !patch.due_date) {
+      patch.due_date = dueDateFromDueAt(patch.due_at as string);
+    }
+  } else if (input.due_date !== undefined) {
+    patch.due_date = input.due_date ?? null;
+    patch.due_at = input.due_date ? defaultDueAtFromDate(input.due_date) : null;
+  }
   if (input.status !== undefined) patch.status = input.status;
   if (input.priority !== undefined) patch.priority = input.priority;
   if (input.task_type !== undefined) patch.task_type = input.task_type?.trim() || null;

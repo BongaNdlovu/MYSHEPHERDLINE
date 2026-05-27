@@ -8,6 +8,8 @@ export type TaskStatus = 'open' | 'completed' | 'cancelled';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
+export type AssignmentRequestStatus = 'pending' | 'approved' | 'rejected';
+
 export type VisitType = 'visit' | 'call' | 'bible_study' | 'other';
 
 export interface District {
@@ -87,9 +89,26 @@ export interface Task {
   assignee_id: string | null;
   member_id: string | null;
   due_date: string | null;
+  due_at: string | null;
+  reminder_sent_at: string | null;
+  reminder_minutes_before: number;
   status: TaskStatus;
   priority: TaskPriority;
   task_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentRequest {
+  id: string;
+  organization_id: string;
+  member_id: string | null;
+  task_id: string | null;
+  requested_by: string;
+  reason: string;
+  status: AssignmentRequestStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +120,7 @@ export type TaskListRow = Pick<
   | 'organization_id'
   | 'title'
   | 'due_date'
+  | 'due_at'
   | 'status'
   | 'priority'
   | 'assignee_id'

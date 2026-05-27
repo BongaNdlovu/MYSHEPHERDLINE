@@ -17,7 +17,7 @@ import {
 } from '@/features/tasks';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useToast } from '@/lib/core/toast';
-import { validateDueDate } from '@/lib/core/validation';
+import { validateDueAt, validateDueDate } from '@/lib/core/validation';
 import type { Task, TaskPriority, TaskStatus } from '@/types/database';
 
 function goBackOrTasksList() {
@@ -39,14 +39,17 @@ export default function AdminTaskFormScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueAt, setDueAt] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [status, setStatus] = useState<TaskStatus>('open');
   const [dueDateError, setDueDateError] = useState<string | undefined>();
+  const [dueAtError, setDueAtError] = useState<string | undefined>();
 
   const hydrate = useCallback((next: Task) => {
     setTitle(next.title);
     setDescription(next.description ?? '');
     setDueDate(next.due_date ?? '');
+    setDueAt(next.due_at ? new Date(next.due_at).toISOString().slice(0, 16) : '');
     setPriority(next.priority);
     setStatus(next.status);
     setAssigneeId(next.assignee_id);
@@ -72,6 +75,7 @@ export default function AdminTaskFormScreen() {
     title,
     description,
     due_date: dueDate || null,
+    due_at: dueAt.trim() ? new Date(dueAt.trim()).toISOString() : null,
     priority,
     status,
     assignee_id: assigneeId,
@@ -83,9 +87,11 @@ export default function AdminTaskFormScreen() {
       return;
     }
     const dueDateValidation = validateDueDate(dueDate);
+    const dueAtValidation = validateDueAt(dueAt);
     setDueDateError(dueDateValidation);
-    if (dueDateValidation) {
-      setSubmitError(dueDateValidation);
+    setDueAtError(dueAtValidation);
+    if (dueDateValidation || dueAtValidation) {
+      setSubmitError(dueDateValidation ?? dueAtValidation ?? 'Invalid due date/time.');
       return;
     }
 
@@ -147,6 +153,16 @@ export default function AdminTaskFormScreen() {
         }}
         error={dueDateError}
         placeholder="2026-05-30"
+      />
+      <FormField
+        label="Due at (for reminders, YYYY-MM-DDTHH:mm)"
+        value={dueAt}
+        onChangeText={(value) => {
+          setDueAt(value);
+          setDueAtError(undefined);
+        }}
+        error={dueAtError}
+        placeholder="2026-05-30T14:00"
       />
       <ChoiceChipGroup label="Priority" options={priorities} value={priority} onChange={setPriority} />
       <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />

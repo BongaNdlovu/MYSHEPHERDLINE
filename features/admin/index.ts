@@ -19,3 +19,4 @@ export { default as AdminTasksScreen } from './screens/AdminTasksScreen';
 export { default as AdminTaskFormScreen } from './screens/AdminTaskFormScreen';
 export { default as AdminReportsScreen } from './screens/AdminReportsScreen';
 export { default as AdminControlsScreen } from './screens/AdminControlsScreen';
+export { AdminAssignmentRequestsScreen } from '@/features/assignment-requests';
