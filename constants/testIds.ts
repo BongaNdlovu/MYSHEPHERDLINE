@@ -109,6 +109,10 @@ export const testIds = {
       approve: (id: string) => `admin-assignment-approve-${id}`,
       reject: (id: string) => `admin-assignment-reject-${id}`,
     },
+    accessRequests: {
+      screen: 'admin-access-requests-screen',
+      review: (id: string) => `admin-access-review-${id}`,
+    },
   },
   notifications: {
     status: 'notifications-status',

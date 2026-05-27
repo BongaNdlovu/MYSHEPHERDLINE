@@ -9,6 +9,7 @@ export type AdminMenuItem = {
     | '/admin/members'
     | '/admin/tasks'
     | '/admin/assignment-requests'
+    | '/admin/access-requests'
     | '/admin/reports'
     | '/admin/controls';
   ownerOnly?: boolean;
@@ -51,6 +52,13 @@ export const adminMenuItems: AdminMenuItem[] = [
     subtitle: 'Review shepherd reassignment requests',
     icon: 'user-plus',
     route: '/admin/assignment-requests',
+  },
+  {
+    id: 'access-requests',
+    title: 'Access Requests',
+    subtitle: 'Review sign-up requests with district and congregation',
+    icon: 'users',
+    route: '/admin/access-requests',
   },
   {
     id: 'reports',
