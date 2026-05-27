@@ -24,6 +24,15 @@ describe('api integration', () => {
     await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'server' });
   });
 
+  it('maps worker auth and forbidden report failures explicitly', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ ok: false, status: 401 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 403 } as Response);
+
+    await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'auth' });
+    await expect(fetchReportSummary('token')).resolves.toEqual({ ok: false, reason: 'forbidden' });
+  });
+
   it('rejects malformed report payloads', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,

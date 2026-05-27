@@ -7,6 +7,7 @@ import {
 } from '@/features/admin/services/profiles.service';
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
+import { appendUniquePage } from '@/lib/core/paginated-state';
 import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
 import type { Profile, UserRole } from '@/types/database';
 
@@ -22,8 +23,11 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const loadingMoreRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
+    const requestId = ++requestIdRef.current;
+
     if (append) setLoadingMore(true);
     else {
       setLoading(true);
@@ -32,15 +36,21 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
 
     try {
       const result = await fetchProfilesPage({ page: pageToLoad });
-      setData((current) => (append ? [...current, ...result.items] : result.items));
+      if (requestId !== requestIdRef.current) return;
+
+      setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
       setPage(result.page);
       setHasMore(result.hasMore);
       setLastLoadedAt(Date.now());
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+
       setError(toAppError(err, 'Unable to load users.'));
       if (!append) setData([]);
       setHasMore(false);
     } finally {
+      if (requestId !== requestIdRef.current) return;
+
       setLoading(false);
       setLoadingMore(false);
     }

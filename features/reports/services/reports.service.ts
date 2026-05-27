@@ -2,13 +2,14 @@ import { fetchReportSummary as fetchWorkerReportSummary } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
 import { createAppError, fromSupabaseError } from '@/lib/core/errors';
 import { requireSupabase } from '@/lib/core/supabase';
+import { buildRecentReportSummary } from '@/features/reports/selectors/reports';
 
 export async function fetchWorkerSummary(accessToken: string) {
   return fetchWorkerReportSummary(accessToken);
 }
 
-/** Dev / break-glass only — not for production steady state. */
-export async function fetchLocalReportInputs(recentDays = 7) {
+/** Dev / break-glass only - not for production steady state. */
+export async function fetchLocalReportSummary(recentDays = 7) {
   if (!getAppEnv().allowReportFallback) {
     throw createAppError(
       'config',
@@ -20,24 +21,30 @@ export async function fetchLocalReportInputs(recentDays = 7) {
   const since = new Date();
   since.setDate(since.getDate() - recentDays);
 
-  const memberCols = 'id, risk_level, status, assigned_to, created_at';
-  const visitCols = 'visit_type, visited_at, logged_by, member_id';
-  const taskCols = 'status, assignee_id';
-
-  const [membersResult, visitsResult, tasksResult] = await Promise.all([
-    supabase.from('members').select(memberCols),
-    supabase.from('visits').select(visitCols).gte('visited_at', since.toISOString()),
-    supabase.from('tasks').select(taskCols),
+  const [membersResult, visitsResult, tasksCountResult] = await Promise.all([
+    supabase
+      .from('members')
+      .select('risk_level, status, created_at')
+      .or('risk_level.eq.high,status.eq.inactive,status.eq.new'),
+    supabase.from('visits').select('visit_type, visited_at').gte('visited_at', since.toISOString()),
+    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'open'),
   ]);
 
   if (membersResult.error) throw fromSupabaseError(membersResult.error, 'Unable to load reports.');
   if (visitsResult.error) throw fromSupabaseError(visitsResult.error, 'Unable to load reports.');
-  if (tasksResult.error) throw fromSupabaseError(tasksResult.error, 'Unable to load reports.');
+  if (tasksCountResult.error) throw fromSupabaseError(tasksCountResult.error, 'Unable to load reports.');
 
-  return {
-    members: membersResult.data ?? [],
-    visits: visitsResult.data ?? [],
-    tasks: tasksResult.data ?? [],
+  const attentionMembers = membersResult.data ?? [];
+  const recentVisits = visitsResult.data ?? [];
+
+  return buildRecentReportSummary({
+    membersNeedingAttention: attentionMembers.length,
+    recentVisits,
+    tasksOpen: tasksCountResult.count ?? 0,
+    newConverts: attentionMembers.filter(
+      (member) =>
+        member.status === 'new' && new Date(member.created_at).getTime() >= since.getTime(),
+    ).length,
     recentActivityDays: recentDays,
-  };
+  });
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReportSummary } from '@/features/reports/selectors/reports';
+import {
+  buildRecentReportSummary,
+  buildReportSummary,
+  resolveReportFailure,
+} from '@/features/reports/selectors/reports';
 import { fixtureMembers, fixtureTasks, fixtureVisits } from '@/__tests__/fixtures/demo-data';
 
 describe('reports domain', () => {
@@ -35,5 +39,40 @@ describe('reports domain', () => {
     });
 
     expect(summary.visitBreakdown.newConverts).toBe(1);
+  });
+
+  it('builds summaries from compact fallback inputs', () => {
+    const summary = buildRecentReportSummary({
+      membersNeedingAttention: 3,
+      recentVisits: fixtureVisits.map((visit) => ({
+        visit_type: visit.visit_type,
+        visited_at: visit.visited_at,
+      })),
+      tasksOpen: 7,
+      newConverts: 2,
+      recentActivityDays: 14,
+    });
+
+    expect(summary.membersNeedingAttention).toBe(3);
+    expect(summary.visitsCompleted).toBe(2);
+    expect(summary.tasksOpen).toBe(7);
+    expect(summary.visitBreakdown.newConverts).toBe(2);
+    expect(summary.recentActivityDays).toBe(14);
+  });
+
+  it('does not allow auth failures to fall back to local report aggregation', () => {
+    const result = resolveReportFailure({ ok: false, reason: 'auth' }, true);
+
+    expect(result.shouldUseFallback).toBe(false);
+    expect(result.workerUnavailable).toBe(false);
+    expect(result.error?.category).toBe('auth');
+  });
+
+  it('allows network failures to fall back and mark the worker as unavailable', () => {
+    const result = resolveReportFailure({ ok: false, reason: 'network' }, true);
+
+    expect(result.shouldUseFallback).toBe(true);
+    expect(result.workerUnavailable).toBe(true);
+    expect(result.error).toBeNull();
   });
 });

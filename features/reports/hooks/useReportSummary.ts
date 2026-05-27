@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { buildReportSummary } from '@/features/reports/selectors/reports';
-import { fetchLocalReportInputs, fetchWorkerSummary } from '@/features/reports/services/reports.service';
+import { resolveReportFailure } from '@/features/reports/selectors/reports';
+import { fetchLocalReportSummary, fetchWorkerSummary } from '@/features/reports/services/reports.service';
 import { getAppEnv } from '@/lib/core/env';
 import { useAuth } from '@/lib/core/auth';
 import type { AppError } from '@/lib/core/errors';
@@ -52,26 +52,20 @@ export function useReportSummary(): ReportState {
       return;
     }
 
-    setWorkerUnavailable(true);
+    const failure = resolveReportFailure(remote, allowFallback);
+    setWorkerUnavailable(failure.workerUnavailable);
 
-    if (!allowFallback) {
+    if (!failure.shouldUseFallback) {
       setSummary(null);
       setSource(null);
-      setError(
-        createAppError(
-          'config',
-          remote.reason === 'unconfigured'
-            ? 'Reports require the Worker API. Set EXPO_PUBLIC_WORKER_API_URL.'
-            : 'Report service is unavailable. Try again later.',
-        ),
-      );
+      setError(failure.error);
       setLoading(false);
       return;
     }
 
     try {
-      const inputs = await fetchLocalReportInputs();
-      setSummary(buildReportSummary(inputs));
+      const fallbackSummary = await fetchLocalReportSummary();
+      setSummary(fallbackSummary);
       setSource('supabase');
       setLastLoadedAt(Date.now());
     } catch (err) {

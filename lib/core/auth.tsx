@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -13,6 +14,7 @@ import { envValidation } from '@/lib/core/env';
 import type { AppError } from '@/lib/core/errors';
 import { createAppError, fromAuthError, fromSupabaseError } from '@/lib/core/errors';
 import { registerForPushNotifications } from '@/lib/core/notifications';
+import { shouldRegisterPushForSession } from '@/lib/core/push-registration';
 import { SUPABASE_AUTH_STORAGE_KEY, supabaseAuthStorage } from '@/lib/core/supabase-storage';
 import { requireSupabase } from '@/lib/core/supabase';
 import { isProfileActive } from '@/lib/core/admin';
@@ -54,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(envValidation.ok);
+  const lastRegisteredPushUserIdRef = useRef<string | null>(null);
+  const pushRegistrationInFlightUserIdRef = useRef<string | null>(null);
 
   const refreshProfile = useCallback(async () => {
     const userId = session?.user?.id;
@@ -120,7 +124,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    const userId = session?.user?.id ?? null;
+    const accessToken = session?.access_token ?? null;
+
+    if (!userId) {
+      lastRegisteredPushUserIdRef.current = null;
+      pushRegistrationInFlightUserIdRef.current = null;
+      return;
+    }
 
     const timer = setTimeout(() => {
       void refreshProfile().catch((err) => {
@@ -128,11 +139,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }, 0);
 
-    void registerForPushNotifications(session.access_token).then((result) => {
-      if (result.error) {
-        console.warn('[notifications] registration failed:', result.error);
-      }
-    });
+    if (
+      shouldRegisterPushForSession({
+        userId,
+        accessToken,
+        lastRegisteredUserId: lastRegisteredPushUserIdRef.current,
+        inFlightUserId: pushRegistrationInFlightUserIdRef.current,
+      })
+    ) {
+      pushRegistrationInFlightUserIdRef.current = userId;
+      void registerForPushNotifications(accessToken!).then((result) => {
+        if (pushRegistrationInFlightUserIdRef.current === userId) {
+          pushRegistrationInFlightUserIdRef.current = null;
+          if (!result.error) {
+            lastRegisteredPushUserIdRef.current = userId;
+          }
+        }
+
+        if (result.error) {
+          console.warn('[notifications] registration failed:', result.error);
+        }
+      });
+    }
 
     return () => clearTimeout(timer);
   }, [session?.user?.id, session?.access_token, refreshProfile]);
