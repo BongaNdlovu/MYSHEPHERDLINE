@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -116,11 +116,11 @@ export default function LogVisitScreen() {
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpTime, setFollowUpTime] = useState('');
   const [followUpPriority, setFollowUpPriority] = useState<TaskPriority>('medium');
-  const [memberNotes, setMemberNotes] = useState('');
+  const [memberNotesOverride, setMemberNotesOverride] = useState<string | null>(null);
   const [stageTouched, setStageTouched] = useState(false);
-  const [status, setStatus] = useState<MemberStatus>('active');
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>('low');
-  const [careStage, setCareStage] = useState<CareStage>('new');
+  const [statusOverride, setStatusOverride] = useState<MemberStatus | null>(null);
+  const [riskLevelOverride, setRiskLevelOverride] = useState<RiskLevel | null>(null);
+  const [careStageOverride, setCareStageOverride] = useState<CareStage | null>(null);
   const mountedRef = useRef(true);
 
   const peopleQuery = useMembers({ search: memberQuery || undefined });
@@ -134,38 +134,29 @@ export default function LogVisitScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    if (routeMember) {
-      setSelectedMemberId(routeMember.id);
-      setStatus(routeMember.status);
-      setRiskLevel(routeMember.risk_level);
-      setCareStage(routeMember.care_stage);
-      setMemberNotes(routeMember.notes ?? '');
-    }
-  }, [routeMember]);
-
-  useEffect(() => {
-    if (stageTouched) return;
-    const suggestion = suggestedCareStage(visitType);
-    if (suggestion) setCareStage(suggestion);
-  }, [stageTouched, visitType]);
-
   const selectedMember =
     routeMember && routeMember.id === selectedMemberId
       ? routeMember
       : peopleQuery.data.find((member) => member.id === selectedMemberId) ?? null;
+  const selectedMemberNotes =
+    routeMember && routeMember.id === selectedMemberId ? (routeMember.notes ?? '') : '';
+  const status = statusOverride ?? selectedMember?.status ?? 'active';
+  const riskLevel = riskLevelOverride ?? selectedMember?.risk_level ?? 'low';
+  const memberNotes = memberNotesOverride ?? selectedMemberNotes;
+  const careStage =
+    careStageOverride ??
+    (stageTouched ? null : suggestedCareStage(visitType)) ??
+    selectedMember?.care_stage ??
+    'new';
   const canSave = Boolean(selectedMember && user) && !saving && !saved;
 
   const onSelectMember = (id: string) => {
     setSelectedMemberId(id);
-    const selected = peopleQuery.data.find((member) => member.id === id);
-    if (selected) {
-      setStatus(selected.status);
-      setRiskLevel(selected.risk_level);
-      setCareStage(selected.care_stage);
-      setMemberNotes('');
-      setStageTouched(false);
-    }
+    setStatusOverride(null);
+    setRiskLevelOverride(null);
+    setCareStageOverride(null);
+    setMemberNotesOverride(null);
+    setStageTouched(false);
   };
 
   const onSave = async () => {
@@ -309,16 +300,16 @@ export default function LogVisitScreen() {
                 options={careStages}
                 onChange={(value) => {
                   setStageTouched(true);
-                  setCareStage(value);
+                  setCareStageOverride(value);
                 }}
               />
-              <ChoiceGroup label="Status" value={status} options={statuses} onChange={setStatus} />
-              <ChoiceGroup label="Risk level" value={riskLevel} options={riskLevels} onChange={setRiskLevel} />
+              <ChoiceGroup label="Status" value={status} options={statuses} onChange={setStatusOverride} />
+              <ChoiceGroup label="Risk level" value={riskLevel} options={riskLevels} onChange={setRiskLevelOverride} />
               <View style={styles.section}>
                 <FormField
                   label="Care notes"
                   value={memberNotes}
-                  onChangeText={setMemberNotes}
+                  onChangeText={setMemberNotesOverride}
                   placeholder="Update the person’s overall care notes if needed."
                   multiline
                   style={styles.notesInput}

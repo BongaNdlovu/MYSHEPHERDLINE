@@ -39,7 +39,7 @@ export async function fetchTasksPage(query: TaskListQuery = {}): Promise<Paginat
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load tasks.');
 
-  const items = ((data ?? []) as Array<TaskListRow & { member?: TaskListRow['member'] | TaskListRow['member'][] }>).map(
+  const items = ((data ?? []) as (TaskListRow & { member?: TaskListRow['member'] | TaskListRow['member'][] })[]).map(
     (item) => ({
       ...item,
       member: Array.isArray(item.member) ? (item.member[0] ?? null) : (item.member ?? null),

@@ -44,7 +44,10 @@ export function DistrictCongregationPicker({
     fetch: fetchCongregations,
   });
 
-  const congregations = districtId ? congregationsQuery.data : [];
+  const congregations = useMemo(
+    () => (districtId ? congregationsQuery.data : []),
+    [districtId, congregationsQuery.data],
+  );
   const congregationsLoading = congregationsQuery.loading;
   const congregationsError = congregationsQuery.error;
 
