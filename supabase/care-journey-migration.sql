@@ -253,3 +253,6 @@ grant execute on function public.log_care_action(
   text,
   integer
 ) to authenticated;
+
+create index if not exists members_org_care_stage_idx
+  on public.members (organization_id, care_stage);
