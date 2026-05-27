@@ -61,7 +61,10 @@ export function useAdminProfiles(): PaginatedQueryState<Profile> & {
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
   useEffect(() => {
-    void loadPage(0, false);
+    const timer = setTimeout(() => {
+      void loadPage(0, false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadPage]);
 
   const setRole = useCallback(async (userId: string, role: UserRole) => {

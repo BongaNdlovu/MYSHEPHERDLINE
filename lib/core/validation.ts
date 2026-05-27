@@ -67,7 +67,19 @@ export function validateDueDate(dueDate: string): string | undefined {
   const trimmed = dueDate.trim();
   if (!trimmed) return undefined;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return 'Use YYYY-MM-DD format.';
-  const parsed = new Date(`${trimmed}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return 'Enter a valid due date.';
+  const [yearRaw, monthRaw, dayRaw] = trimmed.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return 'Enter a valid due date.';
+  }
   return undefined;
 }

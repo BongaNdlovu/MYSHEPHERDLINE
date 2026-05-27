@@ -52,6 +52,7 @@ describe('validation', () => {
   it('validates optional task due dates', () => {
     expect(validateDueDate('05-30-2026')).toContain('YYYY-MM-DD');
     expect(validateDueDate('2026-05-30')).toBeUndefined();
+    expect(validateDueDate('2026-02-30')).toContain('valid due date');
     expect(validateDueDate('')).toBeUndefined();
   });
 });

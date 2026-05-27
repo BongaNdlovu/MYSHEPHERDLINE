@@ -30,8 +30,6 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   const requestIdRef = useRef(0);
   const togglingRef = useRef(new Set<string>());
   const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(() => new Set());
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
 
   const syncTogglingIds = useCallback(() => {
     setTogglingIds(new Set(togglingRef.current));
@@ -47,7 +45,12 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
     }
 
     try {
-      const result = await fetchTasksPage({ ...optionsRef.current, page: pageToLoad });
+      const result = await fetchTasksPage({
+        page: pageToLoad,
+        pageSize: options.pageSize,
+        status: options.status,
+        assigneeId: options.assigneeId,
+      });
       if (requestId !== requestIdRef.current) return;
 
       setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
@@ -66,7 +69,7 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [options.assigneeId, options.pageSize, options.status]);
 
   const refresh = useCallback(async () => {
     await loadPage(0, false);
@@ -114,7 +117,10 @@ export function useTasks(options: UseTasksOptions = {}): TasksState {
   );
 
   useEffect(() => {
-    void loadPage(0, false);
+    const timer = setTimeout(() => {
+      void loadPage(0, false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadPage, options.status, options.assigneeId, options.pageSize]);
 
   const isStale = useMemo(

@@ -20,6 +20,7 @@ type ReportState = {
 
 export function useReportSummary(): ReportState {
   const { session } = useAuth();
+  const accessToken = session?.access_token ?? null;
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
@@ -29,7 +30,7 @@ export function useReportSummary(): ReportState {
   const allowFallback = getAppEnv().allowReportFallback;
 
   const refresh = useCallback(async () => {
-    if (!session?.access_token) {
+    if (!accessToken) {
       setSummary(null);
       setLoading(false);
       setError(createAppError('auth', 'Sign in to view reports.'));
@@ -42,7 +43,7 @@ export function useReportSummary(): ReportState {
     setError(null);
     setWorkerUnavailable(false);
 
-    const remote = await fetchWorkerSummary(session.access_token);
+    const remote = await fetchWorkerSummary(accessToken);
     if (remote.ok) {
       setSummary(remote.data);
       setSource('worker');
@@ -80,10 +81,13 @@ export function useReportSummary(): ReportState {
     } finally {
       setLoading(false);
     }
-  }, [allowFallback, session?.access_token]);
+  }, [accessToken, allowFallback]);
 
   useEffect(() => {
-    void refresh();
+    const timer = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refresh]);
 
   return { summary, loading, error, source, workerUnavailable, refresh, lastLoadedAt };

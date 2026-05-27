@@ -23,8 +23,6 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
   const [hasMore, setHasMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const requestIdRef = useRef(0);
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
 
   const loadPage = useCallback(async (pageToLoad: number, append: boolean) => {
     const requestId = ++requestIdRef.current;
@@ -36,7 +34,13 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
     }
 
     try {
-      const result = await fetchMembersPage({ ...optionsRef.current, page: pageToLoad });
+      const result = await fetchMembersPage({
+        page: pageToLoad,
+        pageSize: options.pageSize,
+        search: options.search,
+        status: options.status,
+        riskLevel: options.riskLevel,
+      });
       if (requestId !== requestIdRef.current) return;
 
       setData((current) => (append ? appendUniquePage(current, result.items) : result.items));
@@ -55,7 +59,7 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [options.pageSize, options.riskLevel, options.search, options.status]);
 
   const refresh = useCallback(async () => {
     await loadPage(0, false);
@@ -72,7 +76,10 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
   }, [hasMore, loadPage, loading, loadingMore, page]);
 
   useEffect(() => {
-    void loadPage(0, false);
+    const timer = setTimeout(() => {
+      void loadPage(0, false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadPage, options.search, options.status, options.riskLevel, options.pageSize]);
 
   const isStale = useMemo(
@@ -127,7 +134,10 @@ export function useMember(id: string | undefined): QueryState<Member | null> {
   }, [id]);
 
   useEffect(() => {
-    void refresh();
+    const timer = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refresh]);
 
   const isStale = useMemo(

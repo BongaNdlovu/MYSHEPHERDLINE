@@ -54,8 +54,6 @@ export default function AdminTaskFormScreen() {
 
   const loadTask = useCallback(() => {
     if (!id) return;
-    setLoading(true);
-    setLoadError(null);
     void fetchTaskById(id)
       .then((found) => {
         if (!found) {
@@ -71,16 +69,25 @@ export default function AdminTaskFormScreen() {
       })
       .catch(() => setLoadError(createAppError('server', 'Unable to load task.')))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, setAssigneeId, setDescription, setDueDate, setLoadError, setLoading, setPriority, setStatus, setTitle]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      loadTask();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadTask]);
+
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     loadTask();
   }, [loadTask]);
 
   if (isEdit && (loading || loadError)) {
     return (
       <View style={styles.centered}>
-        <QueryStateView loading={loading} error={loadError} onRetry={loadTask} />
+        <QueryStateView loading={loading} error={loadError} onRetry={retryLoad} />
       </View>
     );
   }

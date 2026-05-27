@@ -10,11 +10,15 @@ export async function createVisit(input: {
   followUpRequired: boolean;
 }) {
   const supabase = requireSupabase();
-  const { data: member } = await supabase
+  const { data: member, error: memberLookupError } = await supabase
     .from('members')
     .select('organization_id')
     .eq('id', input.memberId)
     .maybeSingle();
+
+  if (memberLookupError) {
+    throw fromSupabaseError(memberLookupError, 'Unable to save visit.');
+  }
 
   if (!member?.organization_id) {
     throw createAppError('not_found', 'Member not found.');
@@ -38,5 +42,7 @@ export async function createVisit(input: {
     .update({ last_contact_at: payload.visited_at })
     .eq('id', input.memberId);
 
-  if (memberError) throw fromSupabaseError(memberError, 'Visit saved, but member contact date could not be updated.');
+  if (memberError) {
+    throw fromSupabaseError(memberError, 'Visit saved, but member contact date could not be updated.');
+  }
 }

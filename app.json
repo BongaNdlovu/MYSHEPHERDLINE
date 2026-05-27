@@ -4,6 +4,7 @@
     "slug": "myshepherdline",
     "version": "1.0.0",
     "orientation": "portrait",
+    "backgroundColor": "#f0fdf4",
     "icon": "./assets/images/icon.png",
     "scheme": "myshepherdline",
     "userInterfaceStyle": "light",
@@ -28,6 +29,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-system-ui",
       [
         "expo-splash-screen",
         {
@@ -39,7 +41,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#14532d"
         }
       ]

@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -54,16 +53,11 @@ async function fetchProfile(userId: string): Promise<FetchProfileResult> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const sessionRef = useRef<Session | null>(null);
-  sessionRef.current = session;
+  const [loading, setLoading] = useState(envValidation.ok);
 
   const refreshProfile = useCallback(async () => {
-    const userId = sessionRef.current?.user?.id;
-    if (!userId) {
-      setProfile(null);
-      return;
-    }
+    const userId = session?.user?.id;
+    if (!userId) return;
 
     try {
       const result = await fetchProfile(userId);
@@ -88,13 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn('[auth] refreshProfile unexpected error:', err);
     }
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!envValidation.ok) {
-      setLoading(false);
-      return;
-    }
+    if (!envValidation.ok) return;
 
     let active = true;
     const supabase = requireSupabase();
@@ -104,18 +95,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         if (!active) return;
         setSession(data.session);
+        if (!data.session) setProfile(null);
         setLoading(false);
       })
       .catch((err) => {
         console.warn('[auth] getSession failed:', err);
         if (!active) return;
         setSession(null);
+        setProfile(null);
         setLoading(false);
       });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
+      if (!nextSession) setProfile(null);
       setLoading(false);
     });
 
@@ -126,20 +120,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!session?.user?.id) {
-      setProfile(null);
-      return;
-    }
+    if (!session?.user?.id) return;
 
-    void refreshProfile().catch((err) => {
-      console.warn('[auth] refreshProfile rejected:', err);
-    });
+    const timer = setTimeout(() => {
+      void refreshProfile().catch((err) => {
+        console.warn('[auth] refreshProfile rejected:', err);
+      });
+    }, 0);
 
     void registerForPushNotifications(session.access_token).then((result) => {
       if (result.error) {
         console.warn('[notifications] registration failed:', result.error);
       }
     });
+
+    return () => clearTimeout(timer);
   }, [session?.user?.id, session?.access_token, refreshProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
