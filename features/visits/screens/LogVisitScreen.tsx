@@ -229,7 +229,7 @@ export default function LogVisitScreen() {
             <View style={[styles.checkbox, careChanged && styles.checkboxActive]}>
               {careChanged ? <Feather name="check" size={12} color={colors.white} /> : null}
             </View>
-            <Text style={styles.toggleText}>Did this person's care status change?</Text>
+            <Text style={styles.toggleText}>Did this person&apos;s care status change?</Text>
           </Pressable>
 
           {careChanged ? (

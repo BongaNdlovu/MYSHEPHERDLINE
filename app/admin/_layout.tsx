@@ -1,4 +1,4 @@
-import { Redirect, Stack, useSegments } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { QueryStateView } from '@/components/ui/QueryStateView';
@@ -13,8 +13,8 @@ export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
 
 export default function AdminLayout() {
   const { loading, isAdmin } = useAdminAccess();
-  const segments = useSegments();
-  const onUnauthorizedScreen = segments.includes('unauthorized');
+  const pathname = usePathname();
+  const onUnauthorizedScreen = pathname === '/admin/unauthorized';
   const state = { loading, isAdmin, onUnauthorizedScreen };
 
   if (loading && !onUnauthorizedScreen) {

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import React from 'react';
+import { Pressable, View } from 'react-native';
 
 import AccessRequestScreen from '@/features/auth/screens/AccessRequestScreen';
 import { submitAccessRequest } from '@/features/account/services/profile-preferences.service';
@@ -10,6 +12,25 @@ import { mockShowToast } from './test-harness';
 
 const mockReplace = jest.fn();
 
+function MockDistrictCongregationPicker({
+  onDistrictChange,
+  onOrganizationChange,
+  districtTestId,
+  congregationTestId,
+}: {
+  onDistrictChange: (id: string | null) => void;
+  onOrganizationChange: (id: string | null) => void;
+  districtTestId?: string;
+  congregationTestId?: string;
+}) {
+  return (
+    <View>
+      <Pressable testID={districtTestId} onPress={() => onDistrictChange('district-1')} />
+      <Pressable testID={congregationTestId} onPress={() => onOrganizationChange('org-1')} />
+    </View>
+  );
+}
+
 jest.mock('expo-router', () => ({
   router: { replace: (...args: unknown[]) => mockReplace(...args) },
   Link: ({ children }: { children: React.ReactNode }) => children,
@@ -19,35 +40,9 @@ jest.mock('@/features/account/services/profile-preferences.service', () => ({
   submitAccessRequest: jest.fn(),
 }));
 
-jest.mock('@/features/account/components/DistrictCongregationPicker', () => {
-  const React = require('react');
-  const { Pressable, View } = require('react-native');
-  return {
-    DistrictCongregationPicker: ({
-      onDistrictChange,
-      onOrganizationChange,
-      districtTestId,
-      congregationTestId,
-    }: {
-      onDistrictChange: (id: string | null) => void;
-      onOrganizationChange: (id: string | null) => void;
-      districtTestId?: string;
-      congregationTestId?: string;
-    }) =>
-      React.createElement(
-        View,
-        null,
-        React.createElement(Pressable, {
-          testID: districtTestId,
-          onPress: () => onDistrictChange('district-1'),
-        }),
-        React.createElement(Pressable, {
-          testID: congregationTestId,
-          onPress: () => onOrganizationChange('org-1'),
-        }),
-      ),
-  };
-});
+jest.mock('@/features/account/components/DistrictCongregationPicker', () => ({
+  DistrictCongregationPicker: MockDistrictCongregationPicker,
+}));
 
 const submitAccessRequestMock = jest.mocked(submitAccessRequest);
 

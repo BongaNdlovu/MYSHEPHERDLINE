@@ -4,11 +4,10 @@ import React from 'react';
 export const mockShowToast = jest.fn();
 
 jest.mock('react-native-safe-area-context', () => {
-  const { View } = require('react-native');
   return {
     useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
     SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
-    SafeAreaView: View,
+    SafeAreaView: ({ children }: { children?: React.ReactNode }) => children ?? null,
   };
 });
 

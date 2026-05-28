@@ -1,14 +1,35 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import React from 'react';
+import { Pressable, Text } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 import { fixtureMembers } from '@/__tests__/fixtures/demo-data';
+import { useMember, useMembers } from '@/features/members';
 import LogVisitScreen from '@/features/visits/screens/LogVisitScreen';
 import { createCareAction } from '@/features/visits';
+import { useAuth } from '@/lib/core/auth';
 import { testIds } from '@/constants/testIds';
 import { mockShowToast } from './test-harness';
 import type { MemberListRow } from '@/types/database';
 
 const mockBack = jest.fn();
+
+function MockMemberListItem({
+  member,
+  onPress,
+  testID,
+}: {
+  member: MemberListRow;
+  onPress?: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable testID={testID} onPress={onPress}>
+      <Text>{member.full_name}</Text>
+    </Pressable>
+  );
+}
 
 const fixtureMember = fixtureMembers[1];
 const fixtureMemberListRow: MemberListRow = {
@@ -37,32 +58,11 @@ jest.mock('@/lib/core/auth', () => ({
   useAuth: jest.fn(),
 }));
 
-jest.mock('@/features/members', () => {
-  const React = require('react');
-  const { Pressable, Text } = require('react-native');
-  return {
-    useMember: jest.fn(),
-    useMembers: jest.fn(),
-    MemberListItem: ({
-      member,
-      onPress,
-      testID,
-    }: {
-      member: MemberListRow;
-      onPress?: () => void;
-      testID?: string;
-    }) =>
-      React.createElement(
-        Pressable,
-        { testID, onPress },
-        React.createElement(Text, null, member.full_name),
-      ),
-  };
-});
-
-import { useLocalSearchParams } from 'expo-router';
-import { useAuth } from '@/lib/core/auth';
-import { useMember, useMembers } from '@/features/members';
+jest.mock('@/features/members', () => ({
+  useMember: jest.fn(),
+  useMembers: jest.fn(),
+  MemberListItem: MockMemberListItem,
+}));
 
 const useLocalSearchParamsMock = jest.mocked(useLocalSearchParams);
 const useAuthMock = jest.mocked(useAuth);

@@ -27,18 +27,6 @@ function mask(value) {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
-function ok(message) {
-  console.log(`  + ${message}`);
-}
-
-function warn(message) {
-  console.log(`  ! ${message}`);
-}
-
-function fail(message) {
-  console.log(`  x ${message}`);
-}
-
 function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -1,5 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -16,11 +16,11 @@ type AdminEntityListScreenProps<T extends { id: string }> = {
   subtitle: string;
   addLabel: string;
   addTestId: string;
-  addRoute: string;
+  addRoute: Href;
   query: PaginatedQueryState<T>;
   getItemName: (item: T) => string;
   getItemMeta: (item: T) => string;
-  getItemRoute: (item: T) => string;
+  getItemRoute: (item: T) => Href;
   getItemTestId: (item: T) => string;
 };
 
