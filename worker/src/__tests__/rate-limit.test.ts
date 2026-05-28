@@ -36,4 +36,18 @@ describe('rate limiting', () => {
       true,
     );
   });
+
+  it('treats corrupted KV buckets as expired instead of throwing', async () => {
+    const store = new Map<string, string>([['rl:client-corrupt', '{"count":"bad"}']]);
+    const kv = {
+      get: async (key: string) => store.get(key) ?? null,
+      put: async (key: string, value: string) => {
+        store.set(key, value);
+      },
+    } as KVNamespace;
+
+    await expect(isRateLimited('client-corrupt', { kv, maxRequests: 1, windowMs: 60_000 })).resolves.toBe(
+      false,
+    );
+  });
 });

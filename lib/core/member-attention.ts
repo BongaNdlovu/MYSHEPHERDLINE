@@ -214,8 +214,8 @@ export function buildMemberAttentionList<T extends AttentionMember>(
     .filter((entry): entry is MemberAttentionEntry<T> => Boolean(entry));
 }
 
-export function memberNeedsAttention(member: AttentionMember): boolean {
-  return buildReason(member, [], new Date()) !== null;
+export function memberNeedsAttention(member: AttentionMember, tasks: AttentionTask[] = []): boolean {
+  return buildReason(member, tasks, new Date()) !== null;
 }
 
 export function membersNeedingAttention<T extends AttentionMember>(members: T[]): T[] {

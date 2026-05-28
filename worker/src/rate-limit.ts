@@ -5,6 +5,17 @@ const KV_MAX_RETRIES = 3;
 const MEMORY_MAX_BUCKETS = 1000;
 const MEMORY_PRUNE_INTERVAL_MS = 60_000;
 
+function parseBucket(raw: string): { count: number; resetAt: number } | null {
+  try {
+    const parsed = JSON.parse(raw) as { count?: unknown; resetAt?: unknown };
+    if (typeof parsed.count !== 'number' || typeof parsed.resetAt !== 'number') return null;
+    if (!Number.isFinite(parsed.count) || !Number.isFinite(parsed.resetAt)) return null;
+    return { count: parsed.count, resetAt: parsed.resetAt };
+  } catch {
+    return null;
+  }
+}
+
 function kvTtlSeconds(windowMs: number, resetAt?: number) {
   if (resetAt === undefined) return Math.max(KV_MIN_TTL_SECONDS, Math.ceil(windowMs / 1000));
   const remaining = Math.ceil((resetAt - Date.now()) / 1000);
@@ -62,8 +73,10 @@ async function isRateLimitedKv(
     if (!raw) {
       next = { count: 1, resetAt: now + windowMs };
     } else {
-      const bucket = JSON.parse(raw) as { count: number; resetAt: number };
-      if (bucket.resetAt <= now) {
+      const bucket = parseBucket(raw);
+      if (!bucket) {
+        next = { count: 1, resetAt: now + windowMs };
+      } else if (bucket.resetAt <= now) {
         next = { count: 1, resetAt: now + windowMs };
       } else {
         next = { count: bucket.count + 1, resetAt: bucket.resetAt };
@@ -76,7 +89,8 @@ async function isRateLimitedKv(
 
     const verifyRaw = await kv.get(kvKey);
     if (!verifyRaw) continue;
-    const verified = JSON.parse(verifyRaw) as { count: number; resetAt: number };
+    const verified = parseBucket(verifyRaw);
+    if (!verified) continue;
     if (verified.resetAt <= now) continue;
     if (verified.count === next.count) {
       return verified.count > maxRequests;

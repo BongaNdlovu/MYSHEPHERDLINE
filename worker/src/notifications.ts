@@ -458,7 +458,12 @@ async function sendTaskReminderBatch(
 
     if (!response.ok) return { sent: 0, ok: false };
 
-    const payload = await response.json();
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return { sent: 0, ok: false };
+    }
     const counts = parseTicketCounts(tokens, payload);
     await deactivatePushTokens(supabase, counts.deadTokens);
     return { sent: counts.sent, ok: counts.sent > 0 };

@@ -11,6 +11,7 @@ export function validateWorkerEnv(env: WorkerEnv) {
   const missing: string[] = [];
   if (!env.SUPABASE_URL?.trim()) missing.push('SUPABASE_URL');
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!env.RATE_LIMIT) missing.push('RATE_LIMIT');
   return missing;
 }
 

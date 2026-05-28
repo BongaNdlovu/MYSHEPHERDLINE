@@ -19,7 +19,7 @@ export function formatTaskDueDate(dueDate: string | null | undefined) {
   const key = normalizeDueDateKey(dueDate);
   if (!key) return null;
 
-  const parsed = new Date(`${key}T00:00:00`);
+  const parsed = new Date(`${key}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) return key;
   return parsed.toLocaleDateString();
 }

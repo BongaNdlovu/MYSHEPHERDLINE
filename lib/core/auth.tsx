@@ -164,19 +164,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         inFlightUserId: pushRegistrationInFlightUserIdRef.current,
       })
     ) {
+      if (!accessToken) return () => clearTimeout(timer);
       pushRegistrationInFlightUserIdRef.current = userId;
-      void registerForPushNotifications(accessToken!).then((result) => {
-        if (pushRegistrationInFlightUserIdRef.current === userId) {
-          pushRegistrationInFlightUserIdRef.current = null;
-          if (!result.error) {
-            lastRegisteredPushUserIdRef.current = userId;
+      void registerForPushNotifications(accessToken)
+        .then((result) => {
+          if (pushRegistrationInFlightUserIdRef.current === userId) {
+            pushRegistrationInFlightUserIdRef.current = null;
+            if (!result.error) {
+              lastRegisteredPushUserIdRef.current = userId;
+            }
           }
-        }
 
-        if (result.error) {
-          console.warn('[notifications] registration failed:', result.error);
-        }
-      });
+          if (result.error) {
+            console.warn('[notifications] registration failed:', result.error);
+          }
+        })
+        .catch((err) => {
+          if (pushRegistrationInFlightUserIdRef.current === userId) {
+            pushRegistrationInFlightUserIdRef.current = null;
+          }
+          console.warn('[notifications] registration rejected:', err);
+        });
     }
 
     return () => clearTimeout(timer);

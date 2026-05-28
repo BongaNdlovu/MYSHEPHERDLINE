@@ -1,4 +1,5 @@
 {
+  "npm.exclude": "**/lib/shims/**",
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",

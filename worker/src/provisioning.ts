@@ -73,7 +73,7 @@ export async function inviteAccessRequest(
 
   const invitedUserId = inviteData.user?.id;
   if (invitedUserId) {
-    await supabase
+    const { error: profileError } = await supabase
       .from('profiles')
       .update({
         organization_id: request.preferred_organization_id,
@@ -84,6 +84,9 @@ export async function inviteAccessRequest(
         updated_at: new Date().toISOString(),
       })
       .eq('id', invitedUserId);
+    if (profileError) {
+      return { error: 'Invitation sent but profile setup failed', status: 500 };
+    }
   }
 
   const { error: updateError } = await supabase

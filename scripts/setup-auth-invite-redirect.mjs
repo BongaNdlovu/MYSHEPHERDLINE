@@ -6,11 +6,17 @@
  * Usage:
  *   SUPABASE_ACCESS_TOKEN=... node scripts/setup-auth-invite-redirect.mjs
  */
+import path from 'node:path';
+
 import { loadEnvFile } from './lib/rls-negative-cases.mjs';
 
 const INVITE_REDIRECT = 'myshepherdline://sign-in';
 
-const fileEnv = loadEnvFile();
+const root = process.cwd();
+const fileEnv = {
+  ...loadEnvFile(path.join(root, '.env')),
+  ...loadEnvFile(path.join(root, '.env.local')),
+};
 const env = { ...fileEnv, ...process.env };
 const token = env.SUPABASE_ACCESS_TOKEN?.trim();
 const projectRef =

@@ -6,9 +6,15 @@
  * Usage:
  *   SUPABASE_ACCESS_TOKEN=... SUPABASE_PROJECT_REF=ouaqkrvsswxjogivrxbm node scripts/disable-public-signup.mjs
  */
+import path from 'node:path';
+
 import { loadEnvFile } from './lib/rls-negative-cases.mjs';
 
-const fileEnv = loadEnvFile();
+const root = process.cwd();
+const fileEnv = {
+  ...loadEnvFile(path.join(root, '.env')),
+  ...loadEnvFile(path.join(root, '.env.local')),
+};
 const env = { ...fileEnv, ...process.env };
 const token = env.SUPABASE_ACCESS_TOKEN?.trim();
 const projectRef =

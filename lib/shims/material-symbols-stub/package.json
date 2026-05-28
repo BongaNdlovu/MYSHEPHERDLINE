@@ -1,8 +1,12 @@
 {
   "name": "@expo-google-fonts/material-symbols",
-  "version": "0.0.0-stub",
+  "version": "0.0.0",
   "private": true,
+  "description": "Local stub replacing the 956KB Material Symbols font (app uses Feather/FontAwesome only).",
+  "main": "400Regular/index.js",
+  "type": "commonjs",
   "exports": {
+    ".": "./400Regular/index.js",
     "./400Regular": "./400Regular/index.js"
   }
 }

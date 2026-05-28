@@ -20,17 +20,17 @@ export function useAdminEditForm<T>({
   hydrate,
 }: UseAdminEditFormOptions<T>) {
   const [formReady, setFormReady] = useState(!isEdit);
-  const formInitializedRef = useRef(false);
+  const hydratedEntityRef = useRef<T | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!isEdit || !entity || formInitializedRef.current) return;
+    if (!isEdit || !entity || hydratedEntityRef.current === entity) return;
     hydrate(entity);
-    formInitializedRef.current = true;
+    hydratedEntityRef.current = entity;
     setFormReady(true);
   }, [entity, hydrate, isEdit]);
 
   const retryLoad = useCallback(() => {
-    formInitializedRef.current = false;
+    hydratedEntityRef.current = undefined;
     setFormReady(false);
     void refresh();
   }, [refresh]);

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'node:crypto';
 
 import type { WorkerEnv } from './env';
 
@@ -105,7 +106,11 @@ export function isAdmin(context: AuthContext) {
 export function isInternalDigestRequest(request: Request, env: WorkerEnv) {
   const secret = env.DIGEST_CRON_SECRET?.trim();
   if (!secret) return false;
-  return request.headers.get('X-Cron-Secret') === secret;
+  const incoming = request.headers.get('X-Cron-Secret') ?? '';
+  const incomingBytes = new TextEncoder().encode(incoming);
+  const expectedBytes = new TextEncoder().encode(secret);
+  if (incomingBytes.length !== expectedBytes.length) return false;
+  return timingSafeEqual(incomingBytes, expectedBytes);
 }
 
 export function isValidExpoPushToken(token: string) {

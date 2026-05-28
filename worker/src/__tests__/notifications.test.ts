@@ -467,4 +467,75 @@ describe('task reminders', () => {
       expect(updates).toEqual(['task-1']);
     }
   });
+
+  it('treats invalid Expo reminder JSON as a failed batch instead of throwing', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => {
+        throw new Error('invalid json');
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const updates: string[] = [];
+    const supabase = {
+      from: (table: string) => {
+        if (table === 'tasks') {
+          return {
+            select: () => ({
+              eq: () => ({
+                not: () => ({
+                  is: () => ({
+                    gte: () => ({
+                      lte: async () => ({
+                        data: [
+                          {
+                            id: 'task-1',
+                            organization_id: 'org-1',
+                            title: 'Call member',
+                            due_at: new Date(Date.now() + 20 * 60_000).toISOString(),
+                            assignee_id: 'shepherd-1',
+                          },
+                        ],
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+            update: () => ({
+              in: async (_col: string, ids: string[]) => {
+                updates.push(...ids);
+                return { error: null };
+              },
+            }),
+          };
+        }
+        if (table === 'push_tokens') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  eq: async () => ({
+                    data: [{ expo_push_token: 'ExpoPushToken[abc]' }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected table ${table}`);
+      },
+    };
+
+    const result = await sendTaskReminders(supabase as never, 60);
+    expect('error' in result).toBe(false);
+    if (!('error' in result)) {
+      expect(result.sent).toBe(0);
+      expect(result.marked).toBe(0);
+      expect(updates).toEqual([]);
+    }
+  });
 });

@@ -22,6 +22,8 @@ const provisioningMocks = vi.hoisted(() => ({
   inviteAccessRequest: vi.fn(),
 }));
 
+const rateLimitStore = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('../auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../auth')>();
   return {
@@ -41,6 +43,15 @@ const env = {
   RECENT_ACTIVITY_DAYS: '7',
   DIGEST_CRON_SECRET: 'cron-secret',
   ALLOWED_ORIGINS: 'https://app.test',
+  RATE_LIMIT: {
+    get: async (key: string) => rateLimitStore.get(key) ?? null,
+    put: async (key: string, value: string) => {
+      rateLimitStore.set(key, value);
+    },
+    list: async () => ({ keys: [], list_complete: true, cursor: '' }),
+    getWithMetadata: async () => ({ value: null, metadata: null }),
+    delete: async () => undefined,
+  } as unknown as KVNamespace,
 } as const;
 
 describe('worker routes', () => {
@@ -52,6 +63,7 @@ describe('worker routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimitStore.clear();
     authMocks.createServiceClient.mockReturnValue({});
     reportMocks.buildSummary.mockResolvedValue({ tasksOpen: 1 });
     notificationMocks.parseRegisterPayload.mockReturnValue({
@@ -70,6 +82,7 @@ describe('worker routes', () => {
     const response = await worker.fetch(new Request('https://worker.test/health'), env);
     expect(response.status).toBe(200);
     expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
   it('returns health for HEAD without auth', async () => {
@@ -292,5 +305,20 @@ describe('worker routes', () => {
     );
     expect(response.status).toBe(413);
     expect(notificationMocks.registerToken).not.toHaveBeenCalled();
+  });
+
+  it('returns 405 for a valid path with the wrong method', async () => {
+    const response = await worker.fetch(new Request('https://worker.test/reports/summary', { method: 'DELETE' }), env);
+    expect(response.status).toBe(405);
+    expect(response.headers.get('Allow')).toBe('GET');
+  });
+
+  it('does not leak missing env names in the client response', async () => {
+    const response = await worker.fetch(
+      new Request('https://worker.test/reports/summary'),
+      { ...env, RATE_LIMIT: undefined } as never,
+    );
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: 'Internal server error' });
   });
 });

@@ -88,4 +88,41 @@ describe('inviteAccessRequest', () => {
       }),
     );
   });
+
+  it('surfaces profile update failures after sending the invite', async () => {
+    const select = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: 'req-1',
+            email: 'Shepherd@Example.com',
+            display_name: 'Test Shepherd',
+            preferred_organization_id: 'org-2',
+            preferred_district_id: 'dist-1',
+            status: 'pending',
+          },
+          error: null,
+        }),
+      }),
+    });
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    from.mockImplementation((table: string) => {
+      if (table === 'access_requests') {
+        return { select, update };
+      }
+      if (table === 'profiles') {
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: { message: 'profile update failed' } }),
+          }),
+        };
+      }
+      return { select, update };
+    });
+
+    const result = await inviteAccessRequest(supabase as never, adminAuth, 'req-1', requestContext);
+    expect(result).toEqual({ error: 'Invitation sent but profile setup failed', status: 500 });
+  });
 });

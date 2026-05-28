@@ -262,7 +262,7 @@ async function handleRequest(
 ): Promise<Response> {
   const missing = validateWorkerEnv(env);
   if (missing.length) {
-    return json(request, env, { error: 'Worker misconfigured', missing }, 500, {
+    return json(request, env, { error: 'Internal server error' }, 500, {
       'X-Request-Id': requestContext.requestId,
     });
   }
@@ -277,7 +277,7 @@ async function handleRequest(
   const isHealthRoute = url.pathname === '/health';
 
   if (!isHealthRoute) {
-    const rateKey = `${clientRateLimitKey(request)}:${requestContext.path}`;
+    const rateKey = clientRateLimitKey(request);
     if (await isRateLimited(rateKey, { kv: env.RATE_LIMIT })) {
       logAudit(requestContext, 'rate_limit_exceeded');
       return json(request, env, { error: 'Too many requests' }, 429, {
@@ -301,6 +301,17 @@ async function handleRequest(
   const route = routes.find((entry) => entry.path === url.pathname && entry.method === request.method);
   if (route) {
     return route.handler(routeContext);
+  }
+
+  const pathMatch = routes.find((entry) => entry.path === url.pathname);
+  if (pathMatch) {
+    return json(request, env, { error: 'Method not allowed' }, 405, {
+      Allow: routes
+        .filter((entry) => entry.path === url.pathname)
+        .map((entry) => entry.method)
+        .join(', '),
+      'X-Request-Id': requestContext.requestId,
+    });
   }
 
   return json(request, env, { error: 'Not found' }, 404, {
