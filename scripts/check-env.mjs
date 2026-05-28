@@ -5,14 +5,11 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = process.cwd();
-const envPath = path.join(root, '.env');
-const productionCheck = process.argv.includes('--production');
-
-function loadEnvFile(filePath) {
-  if (!existsSync(filePath)) return {};
-  const lines = readFileSync(filePath, 'utf8').split(/\r?\n/);
+function loadEnvFile(filePath, fileExists = existsSync, readFile = readFileSync) {
+  if (!fileExists(filePath)) return {};
+  const lines = readFile(filePath, 'utf8').split(/\r?\n/);
   const env = {};
   for (const line of lines) {
     const trimmed = line.trim();
@@ -42,157 +39,185 @@ function fail(message) {
   console.log(`  x ${message}`);
 }
 
-const env = { ...process.env, ...loadEnvFile(envPath) };
-const supabaseUrl = env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const supabaseKey = env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-const workerUrl = env.EXPO_PUBLIC_WORKER_API_URL?.trim() || '';
-
-console.log('\nMyShepherdLine environment check\n');
-
-if (!existsSync(envPath) && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
-  fail('.env file not found - copy .env.example to .env first');
-  process.exit(1);
+function defaultSleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-if (existsSync(envPath)) {
-  ok(`.env found at ${envPath}`);
-} else {
-  ok('Using environment variables from the current shell');
-}
+export async function runEnvironmentCheck({
+  cwd = process.cwd(),
+  argv = process.argv.slice(2),
+  env: shellEnv = process.env,
+  fetchImpl = fetch,
+  consoleImpl = console,
+  fileExists = existsSync,
+  readFile = readFileSync,
+  sleep = defaultSleep,
+} = {}) {
+  const root = cwd;
+  const envPath = path.join(root, '.env');
+  const productionCheck = argv.includes('--production');
+  const env = { ...shellEnv, ...loadEnvFile(envPath, fileExists, readFile) };
+  const supabaseUrl = env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const workerUrl = env.EXPO_PUBLIC_WORKER_API_URL?.trim() || '';
+  const log = (message) => consoleImpl.log(message);
+  const logOk = (message) => log(`  + ${message}`);
+  const logWarn = (message) => log(`  ! ${message}`);
+  const logFail = (message) => log(`  x ${message}`);
 
-if (!supabaseUrl || !supabaseKey) {
-  fail('Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
-  process.exit(1);
-}
+  log('\nMyShepherdLine environment check\n');
 
-ok(`Supabase URL: ${supabaseUrl}`);
-ok(`Supabase key: ${mask(supabaseKey)}`);
+  if (!fileExists(envPath) && !shellEnv.EXPO_PUBLIC_SUPABASE_URL) {
+    logFail('.env file not found - copy .env.example to .env first');
+    return 1;
+  }
 
-if (workerUrl) {
-  ok(`Worker URL: ${workerUrl}`);
-} else {
-  warn('EXPO_PUBLIC_WORKER_API_URL is empty - reports/push will use Supabase fallback only');
-}
-
-let exitCode = 0;
-
-if (productionCheck) {
-  console.log('\nProduction gate\n');
-
-  if (env.EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE === 'true') {
-    ok('Legal review flag enabled');
+  if (fileExists(envPath)) {
+    logOk(`.env found at ${envPath}`);
   } else {
-    fail('EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE must be true for production');
+    logOk('Using environment variables from the current shell');
+  }
+
+  if (!supabaseUrl || !supabaseKey) {
+    logFail('Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+    return 1;
+  }
+
+  logOk(`Supabase URL: ${supabaseUrl}`);
+  logOk(`Supabase key: ${mask(supabaseKey)}`);
+
+  if (workerUrl) {
+    logOk(`Worker URL: ${workerUrl}`);
+  } else {
+    logWarn('EXPO_PUBLIC_WORKER_API_URL is empty - reports/push will use Supabase fallback only');
+  }
+
+  let exitCode = 0;
+
+  if (productionCheck) {
+    log('\nProduction gate\n');
+
+    if (env.EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE === 'true') {
+      logOk('Legal review flag enabled');
+    } else {
+      logFail('EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE must be true for production');
+      exitCode = 1;
+    }
+
+    if (env.EXPO_PUBLIC_MONITORING_ENABLED === 'true') {
+      logOk('Monitoring flag enabled');
+    } else {
+      logFail('EXPO_PUBLIC_MONITORING_ENABLED must be true for production');
+      exitCode = 1;
+    }
+
+    if (env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+      logOk('Sentry DSN configured');
+    } else {
+      logFail('EXPO_PUBLIC_SENTRY_DSN is required for production monitoring');
+      exitCode = 1;
+    }
+
+    if (workerUrl) {
+      logOk('Worker URL configured for production');
+    } else {
+      logFail('EXPO_PUBLIC_WORKER_API_URL is required for production');
+      exitCode = 1;
+    }
+
+    if (env.EXPO_PUBLIC_ALLOW_REPORT_FALLBACK === 'true') {
+      logFail('EXPO_PUBLIC_ALLOW_REPORT_FALLBACK must be unset for production');
+      exitCode = 1;
+    } else {
+      logOk('Report fallback disabled for production');
+    }
+  }
+
+  log('\nConnectivity\n');
+
+  try {
+    const response = await fetchImpl(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/health`, {
+      headers: { apikey: supabaseKey },
+    });
+    if (response.ok) {
+      logOk(`Supabase auth health: ${response.status}`);
+    } else {
+      logFail(`Supabase auth health failed: ${response.status}`);
+      exitCode = 1;
+    }
+  } catch (error) {
+    logFail(`Supabase unreachable: ${error instanceof Error ? error.message : error}`);
     exitCode = 1;
   }
 
-  if (env.EXPO_PUBLIC_MONITORING_ENABLED === 'true') {
-    ok('Monitoring flag enabled');
-  } else {
-    fail('EXPO_PUBLIC_MONITORING_ENABLED must be true for production');
-    exitCode = 1;
-  }
-
-  if (env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
-    ok('Sentry DSN configured');
-  } else {
-    fail('EXPO_PUBLIC_SENTRY_DSN is required for production monitoring');
+  try {
+    const response = await fetchImpl(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/`, {
+      headers: { apikey: supabaseKey },
+    });
+    if (response.ok || response.status === 200 || response.status === 401) {
+      logOk(`Supabase REST API reachable: ${response.status}`);
+    } else {
+      logWarn(`Supabase REST returned ${response.status} - check project status`);
+    }
+  } catch (error) {
+    logFail(`Supabase REST unreachable: ${error instanceof Error ? error.message : error}`);
     exitCode = 1;
   }
 
   if (workerUrl) {
-    ok('Worker URL configured for production');
-  } else {
-    fail('EXPO_PUBLIC_WORKER_API_URL is required for production');
-    exitCode = 1;
-  }
-
-  if (env.EXPO_PUBLIC_ALLOW_REPORT_FALLBACK === 'true') {
-    fail('EXPO_PUBLIC_ALLOW_REPORT_FALLBACK must be unset for production');
-    exitCode = 1;
-  } else {
-    ok('Report fallback disabled for production');
-  }
-}
-
-console.log('\nConnectivity\n');
-
-try {
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/health`, {
-    headers: { apikey: supabaseKey },
-  });
-  if (response.ok) {
-    ok(`Supabase auth health: ${response.status}`);
-  } else {
-    fail(`Supabase auth health failed: ${response.status}`);
-    exitCode = 1;
-  }
-} catch (error) {
-  fail(`Supabase unreachable: ${error instanceof Error ? error.message : error}`);
-  exitCode = 1;
-}
-
-try {
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/`, {
-    headers: { apikey: supabaseKey },
-  });
-  if (response.ok || response.status === 200 || response.status === 401) {
-    ok(`Supabase REST API reachable: ${response.status}`);
-  } else {
-    warn(`Supabase REST returned ${response.status} - check project status`);
-  }
-} catch (error) {
-  fail(`Supabase REST unreachable: ${error instanceof Error ? error.message : error}`);
-  exitCode = 1;
-}
-
-if (workerUrl) {
-  try {
-    let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const response = await fetch(`${workerUrl.replace(/\/$/, '')}/health`);
-        const data = await response.json().catch(() => ({}));
-        if (response.ok && data.status === 'healthy') {
-          ok('Worker health: healthy');
-          lastError = null;
-          break;
+    try {
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const response = await fetchImpl(`${workerUrl.replace(/\/$/, '')}/health`);
+          const data = await response.json().catch(() => ({}));
+          if (response.ok && data.status === 'healthy') {
+            logOk('Worker health: healthy');
+            lastError = null;
+            break;
+          }
+          if (response.status === 500) {
+            logFail('Worker health returned 500 - check Worker secrets and bindings');
+            logWarn('Run: npm run setup:worker');
+            exitCode = 1;
+            lastError = null;
+            break;
+          }
+          lastError = `Worker health check failed: ${response.status}`;
+          if (attempt < 3) await sleep(1500 * attempt);
+        } catch (error) {
+          lastError = `Worker unreachable: ${error instanceof Error ? error.message : error}`;
+          if (attempt < 3) await sleep(1500 * attempt);
         }
-        if (response.status === 500) {
-          fail('Worker health returned 500 - check Worker secrets and bindings');
-          warn('Run: npm run setup:worker');
-          exitCode = 1;
-          lastError = null;
-          break;
-        }
-        lastError = `Worker health check failed: ${response.status}`;
-        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
-      } catch (error) {
-        lastError = `Worker unreachable: ${error instanceof Error ? error.message : error}`;
-        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
       }
-    }
-    if (lastError) {
-      fail(lastError);
+      if (lastError) {
+        logFail(lastError);
+        exitCode = 1;
+      }
+    } catch (error) {
+      logFail(`Worker unreachable: ${error instanceof Error ? error.message : error}`);
       exitCode = 1;
     }
-  } catch (error) {
-    fail(`Worker unreachable: ${error instanceof Error ? error.message : error}`);
-    exitCode = 1;
+  } else {
+    logWarn('Skipping Worker health (no URL configured)');
   }
-} else {
-  warn('Skipping Worker health (no URL configured)');
+
+  log('\nNext steps if anything failed\n');
+  log('  1. Apply supabase/fix-rls-security.sql in Supabase SQL Editor');
+  log('  2. Run supabase/verify-policies.sql to confirm RLS policies');
+  log('  3. Run npm run setup:worker to deploy Worker + set secrets');
+  log('  4. Run npm run verify (or verify:win on Windows)');
+  if (productionCheck) {
+    log('  5. Confirm production-only EAS vars are set and EXPO_PUBLIC_ALLOW_REPORT_FALLBACK is unset\n');
+  } else {
+    log('');
+  }
+
+  return exitCode;
 }
 
-console.log('\nNext steps if anything failed\n');
-console.log('  1. Apply supabase/fix-rls-security.sql in Supabase SQL Editor');
-console.log('  2. Run supabase/verify-policies.sql to confirm RLS policies');
-console.log('  3. Run npm run setup:worker to deploy Worker + set secrets');
-console.log('  4. Run npm run verify (or verify:win on Windows)');
-if (productionCheck) {
-  console.log('  5. Confirm production-only EAS vars are set and EXPO_PUBLIC_ALLOW_REPORT_FALLBACK is unset\n');
-} else {
-  console.log('');
-}
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 
-process.exit(exitCode);
+if (isMainModule) {
+  process.exit(await runEnvironmentCheck());
+}

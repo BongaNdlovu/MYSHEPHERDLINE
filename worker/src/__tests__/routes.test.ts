@@ -354,4 +354,26 @@ describe('worker routes', () => {
     expect(notificationMocks.sendTaskReminders).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"event":"cron_unknown_schedule"'));
   });
+
+  it('does not run scheduled jobs when the cron secret is missing', async () => {
+    await worker.scheduled({ cron: '0 8 * * *' } as ScheduledEvent, {
+      ...env,
+      DIGEST_CRON_SECRET: '',
+    });
+
+    expect(notificationMocks.sendDigest).not.toHaveBeenCalled();
+    expect(notificationMocks.sendTaskReminders).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"event":"cron_secret_missing"'));
+  });
+
+  it('does not run scheduled jobs when the worker env is misconfigured', async () => {
+    await worker.scheduled({ cron: '0 8 * * *' } as ScheduledEvent, {
+      ...env,
+      RATE_LIMIT: undefined,
+    } as never);
+
+    expect(notificationMocks.sendDigest).not.toHaveBeenCalled();
+    expect(notificationMocks.sendTaskReminders).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"event":"cron_misconfigured"'));
+  });
 });

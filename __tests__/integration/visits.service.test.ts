@@ -135,4 +135,35 @@ describe('visits service', () => {
       p_follow_up_reminder_minutes_before: 30,
     });
   });
+
+  it('fills care-action defaults when optional follow-up fields are omitted', async () => {
+    rpc.mockResolvedValue({ error: null });
+
+    const { createCareAction } = await import('@/features/visits/services/visits.service');
+
+    await createCareAction({
+      memberId: 'member-1',
+      visitType: 'visit',
+      notes: 'Checked in after service',
+      followUpRequired: false,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('log_care_action', {
+      p_member_id: 'member-1',
+      p_visit_type: 'visit',
+      p_notes: 'Checked in after service',
+      p_follow_up_required: false,
+      p_status: null,
+      p_risk_level: null,
+      p_care_stage: null,
+      p_member_notes: null,
+      p_follow_up_title: null,
+      p_follow_up_description: null,
+      p_follow_up_due_date: null,
+      p_follow_up_due_at: null,
+      p_follow_up_priority: 'medium',
+      p_follow_up_task_type: null,
+      p_follow_up_reminder_minutes_before: 60,
+    });
+  });
 });

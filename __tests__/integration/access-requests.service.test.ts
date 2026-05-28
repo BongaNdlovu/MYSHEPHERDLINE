@@ -11,6 +11,44 @@ describe('access requests service', () => {
     fromMock.mockReset();
   });
 
+  it('submits access requests with trimmed values and empty messages as null', async () => {
+    const insert = vi.fn().mockReturnThis();
+    const select = vi.fn().mockReturnThis();
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        id: 'req-1',
+        email: 'new@church.test',
+        display_name: 'New Shepherd',
+        preferred_district_id: 'district-1',
+        preferred_organization_id: 'org-1',
+        message: null,
+        status: 'pending',
+      },
+      error: null,
+    });
+    fromMock.mockReturnValue({ insert, select, single });
+
+    const { submitAccessRequest } = await import('@/features/account/services/profile-preferences.service');
+
+    const result = await submitAccessRequest({
+      email: '  new@church.test  ',
+      displayName: '  New Shepherd  ',
+      preferredDistrictId: 'district-1',
+      preferredOrganizationId: 'org-1',
+      message: '   ',
+    });
+
+    expect(insert).toHaveBeenCalledWith({
+      email: 'new@church.test',
+      display_name: 'New Shepherd',
+      preferred_district_id: 'district-1',
+      preferred_organization_id: 'org-1',
+      message: null,
+      status: 'pending',
+    });
+    expect(result.status).toBe('pending');
+  });
+
   it('loads pending requests with district and congregation labels', async () => {
     fromMock.mockImplementation((table: string) => {
       if (table === 'access_requests') {
