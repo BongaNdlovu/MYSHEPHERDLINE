@@ -44,7 +44,7 @@ export default function AdminAccessRequestsScreen() {
       if (!result.ok) {
         const message =
           result.reason === 'conflict'
-            ? 'This email already has an account.'
+            ? 'Unable to send invitation for this request.'
             : result.reason === 'unconfigured'
               ? 'Worker API is not configured.'
               : result.reason === 'forbidden'

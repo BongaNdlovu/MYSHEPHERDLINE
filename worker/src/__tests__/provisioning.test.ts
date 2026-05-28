@@ -53,7 +53,7 @@ describe('inviteAccessRequest', () => {
             id: 'req-1',
             email: 'Shepherd@Example.com',
             display_name: 'Test Shepherd',
-            preferred_organization_id: 'org-2',
+            preferred_organization_id: 'org-1',
             preferred_district_id: 'dist-1',
             status: 'pending',
           },
@@ -82,7 +82,7 @@ describe('inviteAccessRequest', () => {
       expect.objectContaining({
         redirectTo: 'myshepherdline://sign-in',
         data: expect.objectContaining({
-          organization_id: 'org-2',
+          organization_id: 'org-1',
           display_name: 'Test Shepherd',
         }),
       }),
@@ -97,7 +97,7 @@ describe('inviteAccessRequest', () => {
             id: 'req-1',
             email: 'Shepherd@Example.com',
             display_name: 'Test Shepherd',
-            preferred_organization_id: 'org-2',
+            preferred_organization_id: 'org-1',
             preferred_district_id: 'dist-1',
             status: 'pending',
           },
@@ -124,5 +124,45 @@ describe('inviteAccessRequest', () => {
 
     const result = await inviteAccessRequest(supabase as never, adminAuth, 'req-1', requestContext);
     expect(result).toEqual({ error: 'Invitation sent but profile setup failed', status: 500 });
+  });
+
+  function mockRequest(preferredOrgId: string) {
+    const select = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: 'req-1',
+            email: 'Shepherd@Example.com',
+            display_name: 'Test Shepherd',
+            preferred_organization_id: preferredOrgId,
+            preferred_district_id: 'dist-1',
+            status: 'pending',
+          },
+          error: null,
+        }),
+      }),
+    });
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return { update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }) };
+      }
+      return { select, update };
+    });
+  }
+
+  it('rejects admins inviting for another organization', async () => {
+    mockRequest('org-2');
+    const result = await inviteAccessRequest(supabase as never, adminAuth, 'req-1', requestContext);
+    expect(result).toEqual({ error: 'Forbidden', status: 403 });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it('allows owners to invite across organizations', async () => {
+    mockRequest('org-2');
+    const ownerAuth = { ...adminAuth, role: 'owner' as const };
+    const result = await inviteAccessRequest(supabase as never, ownerAuth, 'req-1', requestContext);
+    expect(result).toEqual({ ok: true, email: 'shepherd@example.com' });
+    expect(inviteUserByEmail).toHaveBeenCalled();
   });
 });

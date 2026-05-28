@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { AuthContext } from './auth';
-import { hasGlobalScope } from './auth';
+import { hasGlobalScope, isOwner } from './auth';
 import { logAudit, type RequestContext } from './logger';
 
 const INVITE_REDIRECT_TO = 'myshepherdline://sign-in';
@@ -48,6 +48,16 @@ export async function inviteAccessRequest(
     return { error: 'Congregation must be selected before sending an invite', status: 400 };
   }
 
+  if (!isOwner(auth) && request.preferred_organization_id !== auth.organizationId) {
+    logAudit(requestContext, 'access_request_invite_forbidden', {
+      accessRequestId,
+      actorId: auth.userId,
+      actorOrganizationId: auth.organizationId,
+      requestOrganizationId: request.preferred_organization_id,
+    });
+    return { error: 'Forbidden', status: 403 };
+  }
+
   const email = String(request.email).trim().toLowerCase();
   const displayName = String(request.display_name).trim();
 
@@ -66,7 +76,7 @@ export async function inviteAccessRequest(
   if (inviteError) {
     const message = inviteError.message.toLowerCase();
     if (message.includes('already') || message.includes('registered')) {
-      return { error: 'A user with this email already exists', status: 409 };
+      return { error: 'Unable to send invitation', status: 409 };
     }
     return { error: 'Unable to send invitation email', status: 500 };
   }

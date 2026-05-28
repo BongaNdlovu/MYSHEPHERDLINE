@@ -3,7 +3,7 @@
   "name": "myshepherdline",
   "compatibility_date": "2026-05-26",
   "build": {
-    "command": "npx expo export --platform web"
+    "command": "npx expo export --platform web && node scripts/gen-csp-headers.mjs"
   },
   "observability": {
     "enabled": true
