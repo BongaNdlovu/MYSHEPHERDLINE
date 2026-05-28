@@ -1,23 +1,22 @@
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
-
-import { getAppEnv } from '@/lib/core/env';
-import { registerForPushNotifications } from '@/lib/core/notifications';
+import {
+  getPushRegistrationBlocker,
+  registerForPushNotifications,
+} from '@/lib/core/notifications';
 
 export type NotificationStatus =
   | 'unsupported'
   | 'simulator'
+  | 'development_build_required'
   | 'worker_unconfigured'
   | 'denied'
   | 'granted'
   | 'unknown';
 
 export async function getNotificationStatus(): Promise<NotificationStatus> {
-  if (Platform.OS === 'web') return 'unsupported';
-  if (!Device.isDevice) return 'simulator';
-  if (!getAppEnv().workerApiUrl) return 'worker_unconfigured';
+  const blocker = getPushRegistrationBlocker();
+  if (blocker) return blocker;
 
+  const Notifications = await import('expo-notifications');
   const { status } = await Notifications.getPermissionsAsync();
   if (status === 'granted') return 'granted';
   if (status === 'denied') return 'denied';
@@ -30,6 +29,8 @@ export function notificationStatusLabel(status: NotificationStatus): string {
       return 'Notifications are not supported on web.';
     case 'simulator':
       return 'Use a physical device for push notifications.';
+    case 'development_build_required':
+      return 'Push notifications require a development build or installed app. Expo Go cannot register remote push notifications.';
     case 'worker_unconfigured':
       return 'Worker API is not configured for push registration.';
     case 'denied':

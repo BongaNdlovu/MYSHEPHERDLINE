@@ -19,6 +19,7 @@ export function NotificationSettingsCard() {
     Boolean(session?.access_token) &&
     !loading &&
     status !== 'granted' &&
+    status !== 'development_build_required' &&
     status !== 'unsupported' &&
     status !== 'simulator' &&
     status !== 'worker_unconfigured';

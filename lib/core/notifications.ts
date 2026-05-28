@@ -1,22 +1,67 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { isExpoGoRuntime } from '@/lib/core/expo-runtime';
 import { registerPushToken } from '@/lib/core/api';
 import { getAppEnv } from '@/lib/core/env';
 import { createAppError } from '@/lib/core/errors';
 import type { AppError } from '@/lib/core/errors';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+type NotificationsModule = typeof import('expo-notifications');
+
+type PushRegistrationBlocker =
+  | 'unsupported'
+  | 'simulator'
+  | 'development_build_required'
+  | 'worker_unconfigured';
+
+let notificationsModule: NotificationsModule | null = null;
+let notificationHandlerConfigured = false;
+
+async function getNotificationsModule(): Promise<NotificationsModule> {
+  if (!notificationsModule) {
+    notificationsModule = await import('expo-notifications');
+  }
+
+  if (!notificationHandlerConfigured) {
+    notificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    notificationHandlerConfigured = true;
+  }
+
+  return notificationsModule;
+}
+
+export function getPushRegistrationBlocker(): PushRegistrationBlocker | null {
+  if (Platform.OS === 'web') return 'unsupported';
+  if (!Device.isDevice) return 'simulator';
+  if (isExpoGoRuntime()) return 'development_build_required';
+  if (!getAppEnv().workerApiUrl) return 'worker_unconfigured';
+  return null;
+}
+
+export function pushRegistrationBlockerMessage(blocker: PushRegistrationBlocker): string {
+  switch (blocker) {
+    case 'unsupported':
+      return 'Push notifications are only supported on Android and iOS.';
+    case 'simulator':
+      return 'Push notifications require a physical device.';
+    case 'development_build_required':
+      return 'Push notifications require a development build or production app. Expo Go does not support remote push notifications.';
+    case 'worker_unconfigured':
+      return 'Worker API URL is not configured.';
+    default:
+      return 'Push registration failed.';
+  }
+}
 
 export type PushRegistrationResult =
   | { token: string; error: null }
@@ -26,16 +71,12 @@ export async function registerForPushNotifications(
   accessToken: string,
 ): Promise<PushRegistrationResult> {
   try {
-    if (!getAppEnv().workerApiUrl) {
-      return { token: null, error: 'Worker API URL is not configured.' };
-    }
-    if (Platform.OS === 'web') {
-      return { token: null, error: 'Push notifications are only supported on Android and iOS.' };
-    }
-    if (!Device.isDevice) {
-      return { token: null, error: 'Push notifications require a physical device.' };
+    const blocker = getPushRegistrationBlocker();
+    if (blocker) {
+      return { token: null, error: pushRegistrationBlockerMessage(blocker) };
     }
 
+    const Notifications = await getNotificationsModule();
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
