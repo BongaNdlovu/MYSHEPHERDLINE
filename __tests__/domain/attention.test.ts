@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MEMBER_ATTENTION_SHORTLIST_FILTERS,
   MEMBERS_NEEDING_ATTENTION_OR_FILTER,
   memberNeedsAttention,
   membersNeedingAttention,
@@ -42,6 +43,27 @@ describe('members attention selectors', () => {
     expect(membersNeedingAttention([attentionMember, regularMember]).map((member) => member.id)).toEqual([
       'attention',
     ]);
+  });
+
+  it('keeps the shortlist filter aligned with member-only attention reasons', () => {
+    const shortlistCases: Record<string, MemberListRow> = {
+      'risk_level:high': memberRow({ id: 'high-risk', risk_level: 'high' }),
+      'status:inactive': memberRow({ id: 'inactive', status: 'inactive' }),
+      'status:new': memberRow({
+        id: 'new-member',
+        status: 'new',
+        created_at: '2026-05-20T10:00:00.000Z',
+      }),
+      'care_stage:needs_urgent_care': memberRow({
+        id: 'urgent-care',
+        care_stage: 'needs_urgent_care',
+      }),
+    };
+
+    for (const filter of MEMBER_ATTENTION_SHORTLIST_FILTERS) {
+      const key = `${filter.column}:${filter.value}`;
+      expect(memberNeedsAttention(shortlistCases[key])).toBe(true);
+    }
   });
 });
 

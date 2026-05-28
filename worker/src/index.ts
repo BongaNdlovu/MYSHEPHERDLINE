@@ -13,6 +13,8 @@ import { buildSummary } from './reports';
 import { clientRateLimitKey, isRateLimited } from './rate-limit';
 
 const INVITE_MAX_BODY_BYTES = 4 * 1024;
+const DIGEST_CRON_SCHEDULE = '0 8 * * *';
+const REMINDER_CRON_SCHEDULE = '*/15 * * * *';
 
 export type { WorkerEnv } from './env';
 
@@ -80,6 +82,37 @@ async function requireAuthenticatedUser(context: RouteContext): Promise<AuthCont
   return auth;
 }
 
+type OwnerOrInternalAccess =
+  | { internal: true; auth: null }
+  | { internal: false; auth: AuthContext };
+
+async function requireOwnerOrInternal(
+  context: RouteContext,
+  auditEvent: 'digest_send_forbidden' | 'task_reminders_forbidden',
+): Promise<OwnerOrInternalAccess | Response> {
+  const internal = isInternalDigestRequest(context.request, context.env);
+  if (internal) {
+    return { internal: true, auth: null };
+  }
+
+  const auth = await resolveAuth(context.request, context.env, context.supabase);
+  if ('status' in auth) {
+    return authErrorResponse(context.request, context.env, context.requestContext, auth);
+  }
+  if (!isOwner(auth)) {
+    logAudit(context.requestContext, auditEvent, {
+      userId: auth.userId,
+      role: auth.role,
+      internal: false,
+    });
+    return json(context.request, context.env, { error: 'Forbidden' }, 403, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  return { internal: false, auth };
+}
+
 async function handleReportsSummary(context: RouteContext): Promise<Response> {
   const authResult = await requireAuthenticatedUser(context);
   if (authResult instanceof Response) return authResult;
@@ -134,22 +167,8 @@ async function handleRegisterNotification(context: RouteContext): Promise<Respon
 }
 
 async function handleSendTaskReminders(context: RouteContext): Promise<Response> {
-  const internal = isInternalDigestRequest(context.request, context.env);
-  const auth = internal ? null : await resolveAuth(context.request, context.env, context.supabase);
-
-  if (!internal) {
-    if (auth && 'status' in auth) {
-      return authErrorResponse(context.request, context.env, context.requestContext, auth);
-    }
-    if (!auth || !isOwner(auth)) {
-      logAudit(context.requestContext, 'task_reminders_forbidden', {
-        userId: auth && !('status' in auth) ? auth.userId : null,
-      });
-      return json(context.request, context.env, { error: 'Forbidden' }, 403, {
-        'X-Request-Id': context.requestContext.requestId,
-      });
-    }
-  }
+  const access = await requireOwnerOrInternal(context, 'task_reminders_forbidden');
+  if (access instanceof Response) return access;
 
   const result = await sendTaskReminders(context.supabase);
   if ('error' in result) {
@@ -162,7 +181,7 @@ async function handleSendTaskReminders(context: RouteContext): Promise<Response>
     sent: result.sent,
     tasks: result.tasks,
     marked: result.marked,
-    internal,
+    internal: access.internal,
   });
   return json(context.request, context.env, result, 200, {
     'X-Request-Id': context.requestContext.requestId,
@@ -170,24 +189,8 @@ async function handleSendTaskReminders(context: RouteContext): Promise<Response>
 }
 
 async function handleSendDigest(context: RouteContext): Promise<Response> {
-  const internal = isInternalDigestRequest(context.request, context.env);
-  const auth = internal ? null : await resolveAuth(context.request, context.env, context.supabase);
-
-  if (!internal) {
-    if (auth && 'status' in auth) {
-      return authErrorResponse(context.request, context.env, context.requestContext, auth);
-    }
-    if (!auth || !isOwner(auth)) {
-      logAudit(context.requestContext, 'digest_send_forbidden', {
-        userId: auth && !('status' in auth) ? auth.userId : null,
-        internal,
-        role: auth && !('status' in auth) ? auth.role : null,
-      });
-      return json(context.request, context.env, { error: 'Forbidden' }, 403, {
-        'X-Request-Id': context.requestContext.requestId,
-      });
-    }
-  }
+  const access = await requireOwnerOrInternal(context, 'digest_send_forbidden');
+  if (access instanceof Response) return access;
 
   const result = await sendDigest(context.supabase, context.env);
   if ('error' in result) {
@@ -199,12 +202,50 @@ async function handleSendDigest(context: RouteContext): Promise<Response> {
   logAudit(context.requestContext, 'digest_sent', {
     sent: result.sent,
     organizations: result.organizations,
-    internal,
-    userId: auth && !('status' in auth) ? auth.userId : null,
+    internal: access.internal,
+    userId: access.auth?.userId ?? null,
   });
   return json(context.request, context.env, result, 200, {
     'X-Request-Id': context.requestContext.requestId,
   });
+}
+
+async function runDigestCron(supabase: SupabaseClient, env: WorkerEnv) {
+  const digestResult = await sendDigest(supabase, env);
+  if ('error' in digestResult) {
+    console.error(JSON.stringify({ level: 'error', event: 'cron_digest_failed', error: digestResult.error }));
+    return;
+  }
+
+  console.log(
+    JSON.stringify({
+      level: 'audit',
+      event: 'cron_digest_sent',
+      sent: digestResult.sent,
+      organizations: digestResult.organizations,
+      ts: new Date().toISOString(),
+    }),
+  );
+}
+
+async function runReminderCron(supabase: SupabaseClient, cron: string) {
+  const reminderResult = await sendTaskReminders(supabase);
+  if ('error' in reminderResult) {
+    console.error(JSON.stringify({ level: 'error', event: 'cron_reminders_failed', error: reminderResult.error }));
+    return;
+  }
+
+  console.log(
+    JSON.stringify({
+      level: 'audit',
+      event: 'cron_task_reminders_sent',
+      sent: reminderResult.sent,
+      tasks: reminderResult.tasks,
+      marked: reminderResult.marked,
+      cron,
+      ts: new Date().toISOString(),
+    }),
+  );
 }
 
 async function handleInviteAccessRequest(context: RouteContext): Promise<Response> {
@@ -344,40 +385,22 @@ export default {
       }
 
       const supabase = createServiceClient(env);
-      const isDigestCron = event.cron === '0 8 * * *';
-
-      if (isDigestCron) {
-        const digestResult = await sendDigest(supabase, env);
-        if ('error' in digestResult) {
-          console.error(JSON.stringify({ level: 'error', event: 'cron_digest_failed', error: digestResult.error }));
-        } else {
-          console.log(
+      switch (event.cron) {
+        case DIGEST_CRON_SCHEDULE:
+          await runDigestCron(supabase, env);
+          break;
+        case REMINDER_CRON_SCHEDULE:
+          await runReminderCron(supabase, event.cron);
+          break;
+        default:
+          console.error(
             JSON.stringify({
-              level: 'audit',
-              event: 'cron_digest_sent',
-              sent: digestResult.sent,
-              organizations: digestResult.organizations,
+              level: 'error',
+              event: 'cron_unknown_schedule',
+              cron: event.cron,
               ts: new Date().toISOString(),
             }),
           );
-        }
-      }
-
-      const reminderResult = await sendTaskReminders(supabase);
-      if ('error' in reminderResult) {
-        console.error(JSON.stringify({ level: 'error', event: 'cron_reminders_failed', error: reminderResult.error }));
-      } else {
-        console.log(
-          JSON.stringify({
-            level: 'audit',
-            event: 'cron_task_reminders_sent',
-            sent: reminderResult.sent,
-            tasks: reminderResult.tasks,
-            marked: reminderResult.marked,
-            cron: event.cron,
-            ts: new Date().toISOString(),
-          }),
-        );
       }
     } catch (error) {
       console.error(

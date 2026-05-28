@@ -49,7 +49,7 @@ This lets Auth invite metadata set congregation, preferences, and activation on 
 
 ### Disable public signup (required)
 
-The UI hides sign-up, but `/auth/v1/signup` remains open until disabled server-side.
+The app offers an **access-request** flow, but `/auth/v1/signup` remains open until disabled server-side.
 
 **Dashboard:** Authentication → Providers → Email → turn off **Allow new users to sign up**.
 
@@ -112,11 +112,11 @@ npm.cmd run test:rls:live
 Optional inactive-user probe: create `inactive@test.local` in Supabase Auth, leave `profiles.is_active = false`, set
 `E2E_INACTIVE_EMAIL` in `.env`, and re-run live RLS tests.
 
-## Single-organization scope (v1)
+## Multi-congregation scope (v1)
 
-Production v1 targets **one congregation** using the default organization row. The schema retains `organizations` for
-future multi-site work, but org switching and self-serve invites are out of scope. See
-[../product-scope.md](../product-scope.md).
+Production v1 supports **multiple congregations** grouped by **districts**, with each user assigned to exactly one
+congregation at a time. There is no in-app org switcher and no self-serve invite acceptance; those remain operator
+actions. See [../product-scope.md](../product-scope.md).
 
 ## 2. Mobile app
 

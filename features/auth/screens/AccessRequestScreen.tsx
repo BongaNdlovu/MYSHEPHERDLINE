@@ -15,7 +15,7 @@ import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { validateDisplayName, validateEmail } from '@/lib/core/validation';
 import { useToast } from '@/lib/core/toast';
 
-export default function SignUpScreen() {
+export default function AccessRequestScreen() {
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [displayName, setDisplayName] = useState('');
@@ -143,7 +143,7 @@ export default function SignUpScreen() {
         onPress={() => void submit()}
         disabled={saving}
       >
-        <Text style={styles.buttonText}>{saving ? 'Submitting…' : 'Submit access request'}</Text>
+        <Text style={styles.buttonText}>{saving ? 'Submitting...' : 'Submit access request'}</Text>
       </Pressable>
 
       <Link href="/sign-in" asChild>

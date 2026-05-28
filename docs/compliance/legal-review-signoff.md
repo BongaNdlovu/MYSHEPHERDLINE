@@ -2,8 +2,8 @@
 
 **Do not mark production-ready until a qualified POPIA/PAIA practitioner completes this form.**
 
-This template records counsel review of MyShepherdLine as an **internal shepherd tool** for one congregation. It does
-not constitute legal advice.
+This template records counsel review of MyShepherdLine as an **internal shepherd tool** for pastoral teams across
+**multiple congregations** grouped by **districts**. It does not constitute legal advice.
 
 ---
 
@@ -20,14 +20,22 @@ not constitute legal advice.
 
 ## 2. Product scope acknowledged
 
-Reviewer confirms understanding that v1 **excludes** public-facing flows:
+Reviewer confirms understanding that v1 supports **operator-provisioned internal use** across districts and congregations,
+and **excludes** the public-facing flows below:
 
 - [ ] Public visitor registration — out of scope; handled outside the app
 - [ ] Public contact intake — out of scope; internal member CRUD only
 - [ ] Prayer requests — out of scope
 - [ ] Events / public forms — out of scope
 - [ ] CSV / bulk export — out of scope
-- [ ] Multi-church self-serve onboarding — out of scope (single default org)
+- [ ] Multi-church self-serve onboarding — out of scope; users request access and operators provision/activate accounts
+
+Reviewer confirms understanding that v1 **includes**:
+
+- [ ] District → congregation tenancy with data isolation per congregation
+- [ ] Access-request flow for prospective users to request placement in a district/congregation
+- [ ] Operator-managed invite provisioning and account activation
+- [ ] Congregation-level member, visit, task, and report workflows
 
 Reference: [product-scope.md](../product-scope.md)
 

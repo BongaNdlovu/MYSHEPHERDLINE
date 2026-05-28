@@ -90,7 +90,7 @@ npm.cmd run test:e2e:admin
 | 01 | Landing → sign-in screen |
 | 02 | Sign-in success → home |
 | 03 | Sign-in failure toast |
-| 04 | Sign-up restricted screen (no public registration) |
+| 04 | Access-request screen (no public registration) |
 | 05 | Member search + filter |
 | 06 | Member profile |
 | 07 | Log visit end-to-end |

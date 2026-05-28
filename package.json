@@ -64,6 +64,7 @@
     "test:load:health": "k6 run load-tests/k6/worker-health.js",
     "test:load:reports": "k6 run load-tests/k6/worker-reports.js",
     "check:env": "node scripts/check-env.mjs",
+    "check:env:production": "node scripts/check-env.mjs --production",
     "setup:worker": "powershell -ExecutionPolicy Bypass -File scripts/setup-worker.ps1",
     "setup:supabase": "node scripts/open-supabase-sql.mjs",
     "deploy": "wrangler deploy",

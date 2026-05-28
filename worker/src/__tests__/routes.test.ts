@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authMocks = vi.hoisted(() => ({
   resolveAuth: vi.fn(),
@@ -56,6 +56,8 @@ const env = {
 
 describe('worker routes', () => {
   let worker: typeof import('../index').default;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     worker = (await import('../index')).default;
@@ -64,6 +66,8 @@ describe('worker routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     rateLimitStore.clear();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     authMocks.createServiceClient.mockReturnValue({});
     reportMocks.buildSummary.mockResolvedValue({ tasksOpen: 1 });
     notificationMocks.parseRegisterPayload.mockReturnValue({
@@ -76,6 +80,11 @@ describe('worker routes', () => {
     provisioningMocks.parseInvitePayload.mockReturnValue({ accessRequestId: 'req-1' });
     provisioningMocks.inviteAccessRequest.mockResolvedValue({ ok: true, email: 'shepherd@test.local' });
     authMocks.isInternalDigestRequest.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   it('returns health without auth', async () => {
@@ -320,5 +329,29 @@ describe('worker routes', () => {
     );
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: 'Internal server error' });
+  });
+
+  it('runs the daily digest cron only for the digest schedule', async () => {
+    await worker.scheduled({ cron: '0 8 * * *' } as ScheduledEvent, env);
+
+    expect(notificationMocks.sendDigest).toHaveBeenCalledTimes(1);
+    expect(notificationMocks.sendTaskReminders).not.toHaveBeenCalled();
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('runs the reminder cron only for the reminder schedule', async () => {
+    await worker.scheduled({ cron: '*/15 * * * *' } as ScheduledEvent, env);
+
+    expect(notificationMocks.sendTaskReminders).toHaveBeenCalledTimes(1);
+    expect(notificationMocks.sendDigest).not.toHaveBeenCalled();
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('logs unknown schedules without triggering notification jobs', async () => {
+    await worker.scheduled({ cron: '1 2 3 4 5' } as ScheduledEvent, env);
+
+    expect(notificationMocks.sendDigest).not.toHaveBeenCalled();
+    expect(notificationMocks.sendTaskReminders).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"event":"cron_unknown_schedule"'));
   });
 });

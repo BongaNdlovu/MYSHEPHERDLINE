@@ -26,7 +26,7 @@ for these needs until a future phase is explicitly scoped.
 | Events / public web forms | Not implemented | Church website, Eventbrite, manual lists |
 | CSV / bulk export | Not implemented | Admin SQL/reporting exports by operator; future phase if required |
 | In-app org switching for one user | Not implemented | Each account belongs to one congregation; operators re-provision to move |
-| Self-service sign-up | Blocked server-side | Supabase Auth invites / dashboard user creation |
+| Public self-service sign-up | Not implemented | Access requests plus admin/operator email invites |
 
 **Do not treat the rows above as production blockers** for an internal shepherd deployment. They are excluded by
 product decision.

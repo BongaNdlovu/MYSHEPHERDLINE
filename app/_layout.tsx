@@ -55,6 +55,7 @@ function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="landing" />
               <Stack.Screen name="sign-in" />
+              <Stack.Screen name="access-request" />
               <Stack.Screen name="sign-up" />
               <Stack.Screen name="settings/profile" />
               <Stack.Screen name="(tabs)" />

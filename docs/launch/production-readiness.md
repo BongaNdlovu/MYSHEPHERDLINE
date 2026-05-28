@@ -33,4 +33,12 @@ EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE=true
 EXPO_PUBLIC_SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
 EXPO_PUBLIC_MONITORING_ENABLED=true
 EXPO_PUBLIC_WORKER_API_URL=https://your-worker.workers.dev
+# Must be unset in production:
+# EXPO_PUBLIC_ALLOW_REPORT_FALLBACK
+```
+
+Validate a release-shaped env locally before shipping:
+
+```powershell
+npm.cmd run check:env:production
 ```

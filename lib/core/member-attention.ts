@@ -44,9 +44,17 @@ export const ATTENTION_THRESHOLDS = {
   recentUpdateDays: 7,
 } as const;
 
+export const MEMBER_ATTENTION_SHORTLIST_FILTERS = [
+  { column: 'risk_level', value: 'high' },
+  { column: 'status', value: 'inactive' },
+  { column: 'status', value: 'new' },
+  { column: 'care_stage', value: 'needs_urgent_care' },
+] as const;
+
 /** PostgREST `.or()` filter matching the base member-only attention shortlist. */
-export const MEMBERS_NEEDING_ATTENTION_OR_FILTER =
-  'risk_level.eq.high,status.eq.inactive,status.eq.new,care_stage.eq.needs_urgent_care';
+export const MEMBERS_NEEDING_ATTENTION_OR_FILTER = MEMBER_ATTENTION_SHORTLIST_FILTERS
+  .map(({ column, value }) => `${column}.eq.${value}`)
+  .join(',');
 
 function toDateKey(value: Date) {
   const year = value.getFullYear();

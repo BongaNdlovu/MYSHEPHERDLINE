@@ -101,7 +101,7 @@ export default function SignInScreen() {
         </Pressable>
         {!canSubmit && !loading ? <Text style={styles.helper}>Enter your email and password to continue.</Text> : null}
 
-        <Link href="/sign-up" asChild>
+        <Link href="/access-request" asChild>
           <Pressable>
             <Text style={styles.link}>Need an account? Request access</Text>
           </Pressable>

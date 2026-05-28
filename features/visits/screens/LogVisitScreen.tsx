@@ -15,92 +15,27 @@ import { createCareAction } from '@/features/visits';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useAuth } from '@/lib/core/auth';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
-import { validateDueDate, validateDueAt, validateVisitLog } from '@/lib/core/validation';
 import { useToast } from '@/lib/core/toast';
+import { validateDueAt, validateDueDate, validateVisitLog } from '@/lib/core/validation';
 import type { CareStage, MemberStatus, RiskLevel, TaskPriority, VisitType } from '@/types/database';
 
-const actionTypes: { label: string; value: VisitType }[] = [
-  { label: 'Visit', value: 'visit' },
-  { label: 'Call', value: 'call' },
-  { label: 'WhatsApp', value: 'whatsapp' },
-  { label: 'Bible Study', value: 'bible_study' },
-  { label: 'Prayer', value: 'prayer' },
-  { label: 'Pastoral Visit', value: 'pastoral_visit' },
-  { label: 'Home Visit', value: 'home_visit' },
-  { label: 'Baptism Prep', value: 'baptism_prep' },
-  { label: 'Other', value: 'other' },
-];
-
-const careStages: CareStage[] = [
-  'new',
-  'contacted',
-  'visited',
-  'bible_study',
-  'baptism_interest',
-  'integrated',
-  'inactive',
-  'needs_urgent_care',
-];
-
-const statuses: MemberStatus[] = ['new', 'active', 'inactive'];
-const riskLevels: RiskLevel[] = ['low', 'medium', 'high'];
-const priorities: TaskPriority[] = ['low', 'medium', 'high'];
-const followUpTypes = ['call', 'visit', 'whatsapp', 'bible_study', 'prayer', 'invite', 'check_in', 'other'] as const;
-
-function suggestedCareStage(actionType: VisitType): CareStage | null {
-  if (actionType === 'call' || actionType === 'whatsapp' || actionType === 'prayer') return 'contacted';
-  if (actionType === 'visit' || actionType === 'home_visit' || actionType === 'pastoral_visit') return 'visited';
-  if (actionType === 'bible_study') return 'bible_study';
-  if (actionType === 'baptism_prep') return 'baptism_interest';
-  return null;
-}
-
-function titleForFollowUp(type: string, personName: string) {
-  const label = type.replace(/_/g, ' ');
-  const sentence = label.charAt(0).toUpperCase() + label.slice(1);
-  return `${sentence} ${personName}`;
-}
-
-function ChoiceGroup<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-  testIdPrefix,
-}: {
-  label: string;
-  value: T;
-  options: readonly T[];
-  onChange: (value: T) => void;
-  testIdPrefix?: string;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{label}</Text>
-      <View style={styles.typeRow}>
-        {options.map((option) => {
-          const active = option === value;
-          return (
-            <Pressable
-              key={option}
-              style={[styles.typeChip, active && styles.typeChipActive]}
-              onPress={() => onChange(option)}
-              testID={testIdPrefix ? `${testIdPrefix}-${option}` : undefined}
-            >
-              <Text style={[styles.typeText, active && styles.typeTextActive]}>
-                {option.replace(/_/g, ' ')}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
+import { CareChangeSection } from '../components/CareChangeSection';
+import { FollowUpSection } from '../components/FollowUpSection';
+import {
+  actionTypes,
+  followUpTypes,
+  suggestedCareStage,
+  titleForFollowUp,
+} from '../selectors/log-visit';
 
 export default function LogVisitScreen() {
   const { memberId } = useLocalSearchParams<{ memberId?: string }>();
-  const { data: routeMember, loading: memberLoading, error: memberError, refresh: refreshMember } = useMember(memberId);
+  const {
+    data: routeMember,
+    loading: memberLoading,
+    error: memberError,
+    refresh: refreshMember,
+  } = useMember(memberId);
   const { user } = useAuth();
   const { showToast } = useToast();
   const [memberQuery, setMemberQuery] = useState('');
@@ -216,7 +151,13 @@ export default function LogVisitScreen() {
     <FormScreen style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
       <AppHeader title="Log Care Action" subtitle={actionSubtitle} />
 
-      {memberId ? <QueryStateView loading={memberLoading} error={memberError} onRetry={() => void refreshMember()} /> : null}
+      {memberId ? (
+        <QueryStateView
+          loading={memberLoading}
+          error={memberError}
+          onRetry={() => void refreshMember()}
+        />
+      ) : null}
 
       <InlineError message={submitError} />
 
@@ -277,7 +218,6 @@ export default function LogVisitScreen() {
               value={notes}
               onChangeText={setNotes}
               placeholder="What happened?"
-              placeholderTextColor={colors.textMuted}
               multiline
               editable={!saved}
               fieldTestId={testIds.logVisit.notes}
@@ -289,33 +229,23 @@ export default function LogVisitScreen() {
             <View style={[styles.checkbox, careChanged && styles.checkboxActive]}>
               {careChanged ? <Feather name="check" size={12} color={colors.white} /> : null}
             </View>
-            <Text style={styles.toggleText}>Did this person’s care status change?</Text>
+            <Text style={styles.toggleText}>Did this person's care status change?</Text>
           </Pressable>
 
           {careChanged ? (
-            <>
-              <ChoiceGroup
-                label="Care stage"
-                value={careStage}
-                options={careStages}
-                onChange={(value) => {
-                  setStageTouched(true);
-                  setCareStageOverride(value);
-                }}
-              />
-              <ChoiceGroup label="Status" value={status} options={statuses} onChange={setStatusOverride} />
-              <ChoiceGroup label="Risk level" value={riskLevel} options={riskLevels} onChange={setRiskLevelOverride} />
-              <View style={styles.section}>
-                <FormField
-                  label="Care notes"
-                  value={memberNotes}
-                  onChangeText={setMemberNotesOverride}
-                  placeholder="Update the person’s overall care notes if needed."
-                  multiline
-                  style={styles.notesInput}
-                />
-              </View>
-            </>
+            <CareChangeSection
+              careStage={careStage}
+              onCareStageChange={(value) => {
+                setStageTouched(true);
+                setCareStageOverride(value);
+              }}
+              status={status}
+              onStatusChange={setStatusOverride}
+              riskLevel={riskLevel}
+              onRiskLevelChange={setRiskLevelOverride}
+              memberNotes={memberNotes}
+              onMemberNotesChange={setMemberNotesOverride}
+            />
           ) : null}
 
           <Pressable style={styles.toggleRow} onPress={() => setFollowUp((value) => !value)} disabled={saved}>
@@ -326,37 +256,16 @@ export default function LogVisitScreen() {
           </Pressable>
 
           {followUp ? (
-            <>
-              <ChoiceGroup
-                label="Follow-up type"
-                value={followUpType}
-                options={followUpTypes}
-                onChange={setFollowUpType}
-              />
-              <ChoiceGroup
-                label="Priority"
-                value={followUpPriority}
-                options={priorities}
-                onChange={setFollowUpPriority}
-              />
-              <View style={styles.section}>
-                <FormField
-                  label="Due date"
-                  value={followUpDate}
-                  onChangeText={setFollowUpDate}
-                  placeholder="YYYY-MM-DD"
-                />
-                <FormField
-                  label="Reminder time"
-                  value={followUpTime}
-                  onChangeText={setFollowUpTime}
-                  placeholder="HH:mm"
-                />
-                <Text style={styles.helper}>
-                  Follow-ups are assigned to you and will create a care task automatically.
-                </Text>
-              </View>
-            </>
+            <FollowUpSection
+              followUpType={followUpType}
+              onFollowUpTypeChange={setFollowUpType}
+              followUpPriority={followUpPriority}
+              onFollowUpPriorityChange={setFollowUpPriority}
+              followUpDate={followUpDate}
+              onFollowUpDateChange={setFollowUpDate}
+              followUpTime={followUpTime}
+              onFollowUpTimeChange={setFollowUpTime}
+            />
           ) : null}
 
           <Pressable
@@ -379,7 +288,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 32 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
-  sectionTitle: { color: colors.textSecondary, fontWeight: '700', marginBottom: spacing.sm, textTransform: 'none' },
+  sectionTitle: {
+    color: colors.textSecondary,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    textTransform: 'none',
+  },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   typeChip: {
     paddingHorizontal: 14,
@@ -414,12 +328,6 @@ const styles = StyleSheet.create({
   },
   checkboxActive: { backgroundColor: colors.primaryLight, borderColor: colors.primaryLight },
   toggleText: { color: colors.primary, fontWeight: '600', flex: 1 },
-  helper: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: spacing.sm,
-  },
   saveButton: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.xxl,

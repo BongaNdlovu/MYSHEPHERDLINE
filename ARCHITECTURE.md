@@ -19,7 +19,7 @@ infrastructure stays centralized under `lib/core/` and reusable UI primitives un
 ```text
 app/                      Expo Router routes (thin re-exports only)
 features/
-  auth/                   Landing, sign-in, sign-up
+  auth/                   Landing, sign-in, access-request
   account/                More tab: quick actions, legal links, sign out
   home/                   Home dashboard
   members/                Directory, profile, member selectors/services
@@ -149,7 +149,7 @@ features/members/selectors/members.ts
 Escalation rules:
 
 - **Inline query errors:** recoverable fetch failures on list/detail screens (`network`, `server`)
-- **Inline form errors:** validation and sign-in/sign-up/visit submission failures
+- **Inline form errors:** validation and sign-in/access-request/visit submission failures
 - **Toast only:** success confirmations and non-blocking mutation feedback (e.g. task toggle failure on home/tasks)
 - **Fatal boundary:** unexpected React render errors not tied to a known backend failure
 
@@ -181,7 +181,7 @@ signed-in shepherd (RLS: `assigned_to = auth.uid()`).
 
 Access model:
 
-- Public landing no longer promotes open self-service sign-up; `/sign-up` explains admin-provisioned accounts.
+- Public landing no longer promotes open self-service sign-up; `/access-request` explains the access-request and invite model.
 - New auth users get an **inactive** `profiles` row from `handle_new_user`; owners activate access in Admin → Users & Roles.
 - Apply `supabase/security-hardening-migration.sql` on existing projects for inactive-user RLS, atomic visit
   logging, and audit expansion.

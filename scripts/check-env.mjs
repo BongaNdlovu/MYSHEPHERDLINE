@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * Validates local .env and checks Supabase + Worker connectivity.
- * Usage: node scripts/check-env.mjs
+ * Usage: node scripts/check-env.mjs [--production]
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
 const envPath = path.join(root, '.env');
+const productionCheck = process.argv.includes('--production');
 
 function loadEnvFile(filePath) {
   if (!existsSync(filePath)) return {};
@@ -26,11 +27,11 @@ function loadEnvFile(filePath) {
 function mask(value) {
   if (!value) return '(missing)';
   if (value.length <= 8) return '****';
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
 function ok(message) {
-  console.log(`  ✓ ${message}`);
+  console.log(`  + ${message}`);
 }
 
 function warn(message) {
@@ -38,7 +39,7 @@ function warn(message) {
 }
 
 function fail(message) {
-  console.log(`  ✗ ${message}`);
+  console.log(`  x ${message}`);
 }
 
 const env = { ...process.env, ...loadEnvFile(envPath) };
@@ -48,12 +49,16 @@ const workerUrl = env.EXPO_PUBLIC_WORKER_API_URL?.trim() || '';
 
 console.log('\nMyShepherdLine environment check\n');
 
-if (!existsSync(envPath)) {
-  fail('.env file not found — copy .env.example to .env first');
+if (!existsSync(envPath) && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
+  fail('.env file not found - copy .env.example to .env first');
   process.exit(1);
 }
 
-ok(`.env found at ${envPath}`);
+if (existsSync(envPath)) {
+  ok(`.env found at ${envPath}`);
+} else {
+  ok('Using environment variables from the current shell');
+}
 
 if (!supabaseUrl || !supabaseKey) {
   fail('Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
@@ -66,12 +71,51 @@ ok(`Supabase key: ${mask(supabaseKey)}`);
 if (workerUrl) {
   ok(`Worker URL: ${workerUrl}`);
 } else {
-  warn('EXPO_PUBLIC_WORKER_API_URL is empty — reports/push will use Supabase fallback only');
+  warn('EXPO_PUBLIC_WORKER_API_URL is empty - reports/push will use Supabase fallback only');
+}
+
+let exitCode = 0;
+
+if (productionCheck) {
+  console.log('\nProduction gate\n');
+
+  if (env.EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE === 'true') {
+    ok('Legal review flag enabled');
+  } else {
+    fail('EXPO_PUBLIC_LEGAL_REVIEW_COMPLETE must be true for production');
+    exitCode = 1;
+  }
+
+  if (env.EXPO_PUBLIC_MONITORING_ENABLED === 'true') {
+    ok('Monitoring flag enabled');
+  } else {
+    fail('EXPO_PUBLIC_MONITORING_ENABLED must be true for production');
+    exitCode = 1;
+  }
+
+  if (env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+    ok('Sentry DSN configured');
+  } else {
+    fail('EXPO_PUBLIC_SENTRY_DSN is required for production monitoring');
+    exitCode = 1;
+  }
+
+  if (workerUrl) {
+    ok('Worker URL configured for production');
+  } else {
+    fail('EXPO_PUBLIC_WORKER_API_URL is required for production');
+    exitCode = 1;
+  }
+
+  if (env.EXPO_PUBLIC_ALLOW_REPORT_FALLBACK === 'true') {
+    fail('EXPO_PUBLIC_ALLOW_REPORT_FALLBACK must be unset for production');
+    exitCode = 1;
+  } else {
+    ok('Report fallback disabled for production');
+  }
 }
 
 console.log('\nConnectivity\n');
-
-let exitCode = 0;
 
 try {
   const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/health`, {
@@ -95,7 +139,7 @@ try {
   if (response.ok || response.status === 200 || response.status === 401) {
     ok(`Supabase REST API reachable: ${response.status}`);
   } else {
-    warn(`Supabase REST returned ${response.status} — check project status`);
+    warn(`Supabase REST returned ${response.status} - check project status`);
   }
 } catch (error) {
   fail(`Supabase REST unreachable: ${error instanceof Error ? error.message : error}`);
@@ -114,18 +158,18 @@ if (workerUrl) {
           lastError = null;
           break;
         }
-        if (response.status === 500 && data.missing) {
-          fail(`Worker misconfigured — missing secrets: ${data.missing.join(', ')}`);
+        if (response.status === 500) {
+          fail('Worker health returned 500 - check Worker secrets and bindings');
           warn('Run: npm run setup:worker');
           exitCode = 1;
           lastError = null;
           break;
         }
         lastError = `Worker health check failed: ${response.status}`;
-        if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt));
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
       } catch (error) {
         lastError = `Worker unreachable: ${error instanceof Error ? error.message : error}`;
-        if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt));
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
       }
     }
     if (lastError) {
@@ -144,6 +188,11 @@ console.log('\nNext steps if anything failed\n');
 console.log('  1. Apply supabase/fix-rls-security.sql in Supabase SQL Editor');
 console.log('  2. Run supabase/verify-policies.sql to confirm RLS policies');
 console.log('  3. Run npm run setup:worker to deploy Worker + set secrets');
-console.log('  4. Run npm run verify (or verify:win on Windows)\n');
+console.log('  4. Run npm run verify (or verify:win on Windows)');
+if (productionCheck) {
+  console.log('  5. Confirm production-only EAS vars are set and EXPO_PUBLIC_ALLOW_REPORT_FALLBACK is unset\n');
+} else {
+  console.log('');
+}
 
 process.exit(exitCode);
