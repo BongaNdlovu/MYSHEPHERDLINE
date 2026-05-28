@@ -1,10 +1,7 @@
-const appJson = require('./app.json');
-
-const baseConfig = appJson.expo ?? appJson;
-
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
 
-module.exports = () => {
+module.exports = ({ config }) => {
+  const baseConfig = config ?? {};
   const plugins = (baseConfig.plugins ?? []).filter((plugin) => {
     if (typeof plugin === 'string') {
       return plugin !== '@sentry/react-native/expo';
