@@ -115,6 +115,7 @@ export const testIds = {
     },
     accessRequests: {
       screen: 'admin-access-requests-screen',
+      invite: (id: string) => `admin-access-invite-${id}`,
       review: (id: string) => `admin-access-review-${id}`,
     },
   },

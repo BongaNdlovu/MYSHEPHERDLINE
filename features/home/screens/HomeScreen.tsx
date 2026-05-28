@@ -101,9 +101,8 @@ export default function HomeScreen() {
   }, [query]);
 
   const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } =
-    useMembers({ pageSize: 200, search: debouncedQuery || undefined });
+    useMembers({ search: debouncedQuery || undefined });
   const { data: tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks } = useTasks({
-    pageSize: 200,
     status: 'open',
   });
 

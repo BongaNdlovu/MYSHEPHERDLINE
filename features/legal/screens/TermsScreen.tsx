@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { LegalReviewBanner } from '@/features/legal/components/LegalReviewBanner';
 import { colors, spacing } from '@/constants/theme';
 
 export const options = { headerShown: true, title: 'Terms & Conditions' };
@@ -22,6 +23,7 @@ Counsel must complete legal review before production use.`;
 export default function TermsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <LegalReviewBanner />
       <Text style={styles.body}>{termsContent}</Text>
     </ScrollView>
   );

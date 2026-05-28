@@ -56,7 +56,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   {
     id: 'access-requests',
     title: 'Access Requests',
-    subtitle: 'Review sign-up requests with district and congregation',
+    subtitle: 'Review requests and send email invitations',
     icon: 'users',
     route: '/admin/access-requests',
   },

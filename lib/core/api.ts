@@ -80,6 +80,44 @@ export async function registerPushToken(
   }
 }
 
+export type InviteAccessRequestResult =
+  | { ok: true; email: string }
+  | { ok: false; reason: 'unconfigured' | 'network' | 'auth' | 'forbidden' | 'conflict' | 'validation' | 'server' };
+
+export async function inviteAccessRequest(
+  accessToken: string,
+  accessRequestId: string,
+): Promise<InviteAccessRequestResult> {
+  const url = workerUrl('/admin/access-requests/invite');
+  if (!url) return { ok: false, reason: 'unconfigured' };
+
+  try {
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        ...JSON_HEADERS,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ accessRequestId }),
+    });
+
+    if (response.ok) {
+      const body = (await response.json().catch(() => null)) as { email?: string } | null;
+      return { ok: true, email: body?.email ?? '' };
+    }
+
+    if (response.status === 401) return { ok: false, reason: 'auth' };
+    if (response.status === 403) return { ok: false, reason: 'forbidden' };
+    if (response.status === 400) return { ok: false, reason: 'validation' };
+    if (response.status === 409) return { ok: false, reason: 'conflict' };
+    if (response.status >= 500) return { ok: false, reason: 'server' };
+    return { ok: false, reason: 'network' };
+  } catch {
+    return { ok: false, reason: 'network' };
+  }
+}
+
 export async function checkWorkerHealth(): Promise<boolean> {
   try {
     const url = workerUrl('/health');

@@ -104,7 +104,7 @@ function UserRow({
         <Text style={styles.note}>Owner account — role and access are locked.</Text>
       ) : (
         <Text style={styles.note}>
-          New accounts are created in Supabase Auth by the owner, then appear here after first sign-in.
+          New shepherds are invited from Admin → Access Requests, then appear here after they accept and sign in.
         </Text>
       )}
     </Card>

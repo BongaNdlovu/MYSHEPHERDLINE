@@ -7,27 +7,73 @@ import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
+import { inviteAccessRequest } from '@/lib/core/api';
+import { useAuth } from '@/lib/core/auth';
+import { getAppEnv } from '@/lib/core/env';
 import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import type { AccessRequestDetail } from '@/features/account/services/profile-preferences.service';
 
 export default function AdminAccessRequestsScreen() {
+  const { session } = useAuth();
   const { data: requests, loading, error, refresh } = usePendingAccessRequests();
   const { showToast } = useToast();
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
+  const workerConfigured = Boolean(getAppEnv().workerApiUrl);
+
+  const sendInvite = async (request: AccessRequestDetail) => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      showToast('Sign in again to send invitations.');
+      return;
+    }
+    if (!workerConfigured) {
+      showToast('Worker API is not configured. Set EXPO_PUBLIC_WORKER_API_URL.');
+      return;
+    }
+    if (!request.preferred_organization_id) {
+      showToast('This request is missing a congregation selection.');
+      return;
+    }
+
+    if (actingId) return;
+    setActingId(request.id);
+    try {
+      const result = await inviteAccessRequest(accessToken, request.id);
+      if (!result.ok) {
+        const message =
+          result.reason === 'conflict'
+            ? 'This email already has an account.'
+            : result.reason === 'unconfigured'
+              ? 'Worker API is not configured.'
+              : result.reason === 'forbidden'
+                ? 'Only admins can send invitations.'
+                : 'Unable to send invitation. Try again.';
+        showToast(message);
+        return;
+      }
+
+      showToast(`Invitation sent to ${result.email || request.email}.`);
+      await refresh();
+    } catch (err) {
+      showToast(getUserMessage(toAppError(err, 'Unable to send invitation.')));
+    } finally {
+      setActingId(null);
+    }
+  };
 
   const markReviewed = async (request: AccessRequestDetail) => {
-    if (reviewingId) return;
-    setReviewingId(request.id);
+    if (actingId) return;
+    setActingId(request.id);
     try {
       await markAccessRequestReviewed(request.id);
-      showToast('Marked reviewed. Provision the user in Supabase Auth when ready.');
+      showToast('Marked reviewed.');
       await refresh();
     } catch (err) {
       showToast(getUserMessage(toAppError(err, 'Unable to update access request.')));
     } finally {
-      setReviewingId(null);
+      setActingId(null);
     }
   };
 
@@ -39,11 +85,11 @@ export default function AdminAccessRequestsScreen() {
     >
       <AppHeader
         title="Access Requests"
-        subtitle="People requesting shepherd accounts"
+        subtitle="Review and invite new shepherds"
       />
       <Text style={styles.intro}>
-        Review each request, then create the user in Supabase Auth and assign their congregation in
-        Users & Roles. Mark reviewed when handled.
+        Approve a request to email an invitation link. The shepherd sets their password from the email, then signs in
+        here. Use “Mark reviewed” only if you handled the account outside the app.
       </Text>
       <QueryStateView
         loading={loading}
@@ -70,14 +116,22 @@ export default function AdminAccessRequestsScreen() {
             Submitted {new Date(request.created_at).toLocaleString()}
           </Text>
           <Pressable
-            style={[styles.button, reviewingId === request.id && styles.buttonDisabled]}
-            testID={testIds.admin.accessRequests.review(request.id)}
-            disabled={reviewingId === request.id}
-            onPress={() => void markReviewed(request)}
+            style={[styles.button, actingId === request.id && styles.buttonDisabled]}
+            testID={testIds.admin.accessRequests.invite(request.id)}
+            disabled={actingId === request.id || !workerConfigured}
+            onPress={() => void sendInvite(request)}
           >
             <Text style={styles.buttonText}>
-              {reviewingId === request.id ? 'Updating…' : 'Mark as reviewed'}
+              {actingId === request.id ? 'Sending…' : 'Approve & send invite'}
             </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.buttonSecondary, actingId === request.id && styles.buttonDisabled]}
+            testID={testIds.admin.accessRequests.review(request.id)}
+            disabled={actingId === request.id}
+            onPress={() => void markReviewed(request)}
+          >
+            <Text style={styles.buttonSecondaryText}>Mark reviewed (no invite)</Text>
           </Pressable>
         </Card>
       ))}
@@ -119,6 +173,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
+  buttonSecondary: {
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   buttonDisabled: { opacity: 0.55 },
   buttonText: { color: colors.white, fontWeight: '700' },
+  buttonSecondaryText: { color: colors.primary, fontWeight: '600' },
 });

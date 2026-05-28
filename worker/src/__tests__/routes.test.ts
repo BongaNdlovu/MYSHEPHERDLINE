@@ -17,6 +17,11 @@ const notificationMocks = vi.hoisted(() => ({
   sendTaskReminders: vi.fn(),
 }));
 
+const provisioningMocks = vi.hoisted(() => ({
+  parseInvitePayload: vi.fn(),
+  inviteAccessRequest: vi.fn(),
+}));
+
 vi.mock('../auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../auth')>();
   return {
@@ -28,6 +33,7 @@ vi.mock('../auth', async (importOriginal) => {
 });
 vi.mock('../reports', () => reportMocks);
 vi.mock('../notifications', () => notificationMocks);
+vi.mock('../provisioning', () => provisioningMocks);
 
 const env = {
   SUPABASE_URL: 'https://abc.supabase.co',
@@ -55,6 +61,8 @@ describe('worker routes', () => {
     notificationMocks.registerToken.mockResolvedValue({ ok: true });
     notificationMocks.sendDigest.mockResolvedValue({ sent: 1, organizations: 1, results: [] });
     notificationMocks.sendTaskReminders.mockResolvedValue({ sent: 2, tasks: 1, marked: 1 });
+    provisioningMocks.parseInvitePayload.mockReturnValue({ accessRequestId: 'req-1' });
+    provisioningMocks.inviteAccessRequest.mockResolvedValue({ ok: true, email: 'shepherd@test.local' });
     authMocks.isInternalDigestRequest.mockReturnValue(false);
   });
 
@@ -240,6 +248,26 @@ describe('worker routes', () => {
     );
     expect(response.status).toBe(200);
     expect(notificationMocks.sendTaskReminders).toHaveBeenCalled();
+  });
+
+  it('sends access-request invites for admin users', async () => {
+    authMocks.resolveAuth.mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org-1',
+      role: 'admin',
+      email: 'a@test.local',
+      isActive: true,
+    });
+    const response = await worker.fetch(
+      new Request('https://worker.test/admin/access-requests/invite', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessRequestId: 'req-1' }),
+      }),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(provisioningMocks.inviteAccessRequest).toHaveBeenCalled();
   });
 
   it('rejects oversized register payloads', async () => {

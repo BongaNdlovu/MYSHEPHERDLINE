@@ -4,6 +4,7 @@ import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
 import type { PaginatedResult } from '@/lib/core/pagination';
 import { appendUniquePage } from '@/lib/core/paginated-state';
+import { retainPaginatedDataOnError } from '@/lib/core/query-cache';
 import { computeIsStale, type PaginatedQueryState } from '@/lib/core/query-types';
 
 type ItemWithId = {
@@ -35,6 +36,11 @@ export function usePaginatedQuery<T extends ItemWithId>(
   const [hasMore, setHasMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const requestIdRef = useRef(0);
+  const dataRef = useRef<T[]>([]);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   const loadPage = useCallback(
     async (pageToLoad: number, append: boolean) => {
@@ -58,8 +64,10 @@ export function usePaginatedQuery<T extends ItemWithId>(
         if (requestId !== requestIdRef.current) return;
 
         setError(toAppError(err, errorMessage));
-        if (!append) setData([]);
-        setHasMore(false);
+        if (!append) {
+          setData((current) => retainPaginatedDataOnError(current));
+          if (dataRef.current.length === 0) setHasMore(false);
+        }
       } finally {
         if (requestId !== requestIdRef.current) return;
 

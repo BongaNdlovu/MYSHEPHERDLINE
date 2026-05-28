@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
+import { retainQueryDataOnError } from '@/lib/core/query-cache';
 import { computeIsStale, type QueryState } from '@/lib/core/query-types';
 
 type UseQueryOptions<T> = {
@@ -37,11 +38,11 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
       setLastLoadedAt(Date.now());
     } catch (err) {
       setError(toAppError(err, errorMessage));
-      setData(initialData);
+      setData((current) => retainQueryDataOnError(current, initialData, dataLength));
     } finally {
       setLoading(false);
     }
-  }, [enabled, errorMessage, fetch, initialData]);
+  }, [dataLength, enabled, errorMessage, fetch, initialData]);
 
   useEffect(() => {
     if (!enabled) return;

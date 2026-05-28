@@ -35,6 +35,17 @@ audit triggers.
 For older installs that never received tenant helpers, run `supabase/fix-rls-security.sql` first, then the security
 hardening migration.
 
+### Invite provisioning migration
+
+After security hardening, run:
+
+```sql
+-- Paste contents of supabase/invite-provisioning-migration.sql
+```
+
+This lets Auth invite metadata set congregation, preferences, and activation on new profiles. Configure Supabase
+**Authentication → URL Configuration** so invite links can redirect to `myshepherdline://sign-in`.
+
 ### Disable public signup (required)
 
 The UI hides sign-up, but `/auth/v1/signup` remains open until disabled server-side.

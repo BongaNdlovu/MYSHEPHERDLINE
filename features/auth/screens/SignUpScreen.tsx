@@ -72,8 +72,8 @@ export default function SignUpScreen() {
         <LogoMark size={88} />
         <Text style={styles.title}>Request received</Text>
         <Text style={styles.subtitle}>
-          Your administrator will review your district and conference/congregation selection, then
-          provision your account in Supabase Auth.
+          Your administrator will review your district and congregation. If approved, you will receive an email
+          invitation to set your password and sign in.
         </Text>
         <Pressable style={styles.button} onPress={() => router.replace('/sign-in')}>
           <Text style={styles.buttonText}>Back to Sign In</Text>
@@ -90,8 +90,8 @@ export default function SignUpScreen() {
       <LogoMark size={88} />
       <Text style={styles.title}>Request access</Text>
       <Text style={styles.subtitle}>
-        Accounts are admin-provisioned. Submit your details and where you serve so your
-        administrator can create your shepherd account.
+        Submit your details and where you serve. Your administrator reviews requests and sends email invitations to
+        approved shepherds.
       </Text>
 
       <InlineError message={submitError} />

@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { LegalReviewBanner } from '@/features/legal/components/LegalReviewBanner';
 import { colors, spacing } from '@/constants/theme';
 
 export const options = { headerShown: true, title: 'Privacy Policy' };
@@ -49,6 +50,7 @@ Counsel must complete legal review before production use. See docs/compliance/le
 export default function PrivacyScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <LegalReviewBanner />
       <Text style={styles.body}>{privacyContent}</Text>
     </ScrollView>
   );

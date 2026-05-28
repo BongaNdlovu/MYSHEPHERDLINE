@@ -32,7 +32,10 @@ After the owner signs in once in Auth:
 
 ## Step 4 — Create test users (5 min)
 
-In Supabase **Authentication → Users → Add user** (or invite):
+Preferred: **Admin → Access Requests → Approve & send invite** (requires Worker URL and
+`supabase/invite-provisioning-migration.sql`).
+
+Fallback: Supabase **Authentication → Users → Add user** (or dashboard invite):
 
 | Email | Notes |
 | --- | --- |

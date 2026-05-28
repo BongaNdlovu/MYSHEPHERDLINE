@@ -8,8 +8,11 @@ import {
   sendDigest,
   sendTaskReminders,
 } from './notifications';
+import { inviteAccessRequest, parseInvitePayload } from './provisioning';
 import { buildSummary } from './reports';
 import { clientRateLimitKey, isRateLimited } from './rate-limit';
+
+const INVITE_MAX_BODY_BYTES = 4 * 1024;
 
 export type { WorkerEnv } from './env';
 
@@ -204,11 +207,51 @@ async function handleSendDigest(context: RouteContext): Promise<Response> {
   });
 }
 
+async function handleInviteAccessRequest(context: RouteContext): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(context);
+  if (authResult instanceof Response) return authResult;
+
+  const parsedBody = await readJsonBody(context.request, INVITE_MAX_BODY_BYTES);
+  if (!parsedBody.ok) {
+    return json(context.request, context.env, { error: parsedBody.error }, parsedBody.status, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  const parsed = parseInvitePayload(parsedBody.body);
+  if ('error' in parsed) {
+    return json(context.request, context.env, { error: parsed.error }, 400, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  const result = await inviteAccessRequest(
+    context.supabase,
+    authResult,
+    parsed.accessRequestId,
+    context.requestContext,
+  );
+  if ('error' in result) {
+    return json(context.request, context.env, { error: result.error }, result.status, {
+      'X-Request-Id': context.requestContext.requestId,
+    });
+  }
+
+  return json(
+    context.request,
+    context.env,
+    { ok: true, email: result.email },
+    200,
+    { 'X-Request-Id': context.requestContext.requestId },
+  );
+}
+
 const routes: { method: string; path: string; handler: RouteHandler }[] = [
   { method: 'GET', path: '/reports/summary', handler: handleReportsSummary },
   { method: 'POST', path: '/notifications/register', handler: handleRegisterNotification },
   { method: 'POST', path: '/notifications/send-digest', handler: handleSendDigest },
   { method: 'POST', path: '/notifications/send-reminders', handler: handleSendTaskReminders },
+  { method: 'POST', path: '/admin/access-requests/invite', handler: handleInviteAccessRequest },
 ];
 
 async function handleRequest(

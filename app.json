@@ -44,7 +44,8 @@
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#14532d"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true
