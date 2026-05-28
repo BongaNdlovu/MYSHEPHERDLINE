@@ -32,9 +32,14 @@
     "react-native-worklets": "0.8.3"
   },
   "devDependencies": {
+    "@react-native/jest-preset": "^0.85.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
     "eslint": "^9.29.0",
     "eslint-config-expo": "~56.0.4",
+    "jest": "~29.7.0",
+    "jest-expo": "~56.0.4",
     "typescript": "~6.0.3",
     "vitest": "^3.2.4",
     "wrangler": "^4.94.0"
@@ -48,6 +53,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:win": "vitest run --pool=forks --poolOptions.forks.singleFork=true",
+    "test:ui": "jest --config jest.ui.config.cjs --runInBand",
     "test:worker": "npm run typecheck --workspace myshepherdline-worker && npm run test --workspace myshepherdline-worker",
     "test:worker:win": "npm run typecheck --workspace myshepherdline-worker && npm run test:win --workspace myshepherdline-worker",
     "test:e2e": "maestro test .maestro/flows",

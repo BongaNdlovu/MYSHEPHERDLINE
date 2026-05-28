@@ -27,6 +27,7 @@ This runs, in order:
 | `npm.cmd run lint` | ESLint |
 | `npm.cmd run test` | App tests |
 | `npm.cmd run test:win` | App tests with single-fork pool (Windows fallback) |
+| `npm.cmd run test:ui` | React Native UI tests (Jest + jest-expo + Testing Library) |
 | `npm.cmd run test:worker:win` | Worker typecheck + tests (Windows-friendly pool) |
 | `npm.cmd run verify:win` | Full gate using Windows-friendly test pools |
 
@@ -76,10 +77,33 @@ npm.cmd install
 npm.cmd run verify
 ```
 
+## React Native UI test lane (`test:ui`)
+
+Screen-level tests for Expo Router routes and feature screens run in a **separate Jest lane**
+(`jest.ui.config.cjs`), not through root Vitest. Vitest stays on `node` for pure logic, services, and
+security tests.
+
+Jest + `jest-expo` + `@testing-library/react-native` handles React Native rendering;
+`expo-router/testing-library` covers redirect checks.
+
+`test:ui` is **not** part of default `verify` or `verify:win` during burn-in. Run it explicitly when you
+change UI flows covered by `__tests__/ui/`.
+
+### Local order when validating RN UI changes (Windows)
+
+```powershell
+npm.cmd run typecheck
+npm.cmd run test:win
+npm.cmd run test:ui
+```
+
+If `test:ui` is green and Vitest lanes stay green, the UI lane is ready for a later promotion into `verify` / `verify:win`.
+
 ## Test layout
 
 | Location | What it covers |
 | --- | --- |
+| `__tests__/ui/` | RN screen tests: access request, log visit, `/sign-up` redirect (Jest lane) |
 | `__tests__/security/` | Env fail-fast, RLS schema shape, admin route auth gates, secure auth storage |
 | `scripts/test-rls-negative-cases.mjs` | Live forbidden-query RLS checks against configured Supabase (staging gate) |
 | `__tests__/domain/assignment.test.ts` | Shepherd assignment helpers and validation |
