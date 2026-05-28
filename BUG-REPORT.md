@@ -209,8 +209,10 @@ Four additional defects found in a follow-up code review. All are fixed in sourc
 
 - **Files:** `lib/core/useQuery.ts`, `features/reports/hooks/useReportSummary.ts`
 - **Status:** Fixed (pending manual smoke)
-- **Notes:** Added `requestIdRef` guards matching the existing `usePaginatedQuery` pattern so superseded fetches
-  cannot overwrite newer state.
+- **Notes:** Added `requestIdRef` guards matching the existing `usePaginatedQuery` pattern. `useQuery` now also
+  invalidates in-flight work when `enabled` flips false, so disabled states cannot be overwritten by stale results.
+  Automated coverage now includes a focused `useQuery` regression test for this path; `useReportSummary` still relies
+  on source review plus full-gate verification rather than a dedicated race test.
 
 ### Manual smoke checklist
 

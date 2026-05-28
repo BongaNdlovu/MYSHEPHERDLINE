@@ -50,7 +50,10 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
   }, [dataLength, enabled, errorMessage, fetch, initialData]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      requestIdRef.current += 1;
+      return;
+    }
 
     const timer = setTimeout(() => {
       void refresh();
@@ -59,12 +62,21 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps drive refetch when query inputs change
   }, [enabled, refresh, ...deps]);
 
-  const length = dataLength ? dataLength(data) : Array.isArray(data) ? data.length : data ? 1 : 0;
+  const displayedData = enabled ? data : initialData;
+  const displayedLoading = enabled ? loading || lastLoadedAt === null : false;
+  const displayedError = enabled ? error : null;
+  const length = dataLength
+    ? dataLength(displayedData)
+    : Array.isArray(displayedData)
+      ? displayedData.length
+      : displayedData
+        ? 1
+        : 0;
 
   const isStale = useMemo(
-    () => computeIsStale({ loading, error, lastLoadedAt, dataLength: length }),
-    [error, lastLoadedAt, length, loading],
+    () => computeIsStale({ loading: displayedLoading, error: displayedError, lastLoadedAt, dataLength: length }),
+    [displayedError, displayedLoading, lastLoadedAt, length],
   );
 
-  return { data, loading, error, refresh, lastLoadedAt, isStale };
+  return { data: displayedData, loading: displayedLoading, error: displayedError, refresh, lastLoadedAt, isStale };
 }
