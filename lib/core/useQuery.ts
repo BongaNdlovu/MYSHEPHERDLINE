@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AppError } from '@/lib/core/errors';
 import { toAppError } from '@/lib/core/errors';
@@ -22,6 +22,8 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
   const [error, setError] = useState<AppError | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
 
+  const requestIdRef = useRef(0);
+
   const refresh = useCallback(async () => {
     if (!enabled) {
       setData(initialData);
@@ -30,17 +32,20 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
       return;
     }
 
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const next = await fetch();
+      if (requestId !== requestIdRef.current) return;
       setData(next);
       setLastLoadedAt(Date.now());
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(toAppError(err, errorMessage));
       setData((current) => retainQueryDataOnError(current, initialData, dataLength));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [dataLength, enabled, errorMessage, fetch, initialData]);
 

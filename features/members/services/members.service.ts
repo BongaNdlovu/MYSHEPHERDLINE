@@ -10,7 +10,7 @@ import {
 } from '@/lib/core/pagination';
 import { requireSupabase } from '@/lib/core/supabase';
 import { getCurrentOrganizationId } from '@/lib/core/tenant';
-import { escapeLikePattern } from '@/lib/core/validation';
+import { buildIlikeOrFilter } from '@/lib/core/validation';
 import type { Member, MemberListRow } from '@/types/database';
 
 export const MEMBER_LIST_COLUMNS =
@@ -23,6 +23,10 @@ export type MemberListQuery = PageParams & {
   status?: Member['status'];
   riskLevel?: Member['risk_level'];
   careStage?: Member['care_stage'];
+  /** Restrict to members assigned to this user id (e.g. "My Assigned People"). */
+  assignedTo?: string;
+  /** Restrict to members with no recorded contact yet. */
+  notContacted?: boolean;
   /** When true, useMembers loads via fetchMembersNeedingAttention instead of pagination. */
   attentionOnly?: boolean;
 };
@@ -43,12 +47,13 @@ export async function fetchMembersPage(
 
   const search = query.search?.trim();
   if (search) {
-    const pattern = `%${escapeLikePattern(search)}%`;
-    request = request.or(`full_name.ilike.${pattern},phone.ilike.${pattern}`);
+    request = request.or(buildIlikeOrFilter(['full_name', 'phone'], search));
   }
   if (query.status) request = request.eq('status', query.status);
   if (query.riskLevel) request = request.eq('risk_level', query.riskLevel);
   if (query.careStage) request = request.eq('care_stage', query.careStage);
+  if (query.assignedTo) request = request.eq('assigned_to', query.assignedTo);
+  if (query.notContacted) request = request.is('last_contact_at', null);
 
   const { data, error } = await request;
   if (error) throw fromSupabaseError(error, 'Unable to load members.');
@@ -76,8 +81,7 @@ export async function fetchMembersNeedingAttention(
 
   const search = query.search?.trim();
   if (search) {
-    const pattern = `%${escapeLikePattern(search)}%`;
-    request = request.or(`full_name.ilike.${pattern},phone.ilike.${pattern}`);
+    request = request.or(buildIlikeOrFilter(['full_name', 'phone'], search));
   }
 
   const { data, error } = await request;

@@ -21,8 +21,8 @@ async function getChunkedItem(key: string): Promise<string | null> {
   return chunks.join('');
 }
 
-async function deleteChunkKeys(key: string, chunkCount: number, prefix = '') {
-  for (let index = 0; index < chunkCount; index += 1) {
+async function deleteChunkKeys(key: string, chunkCount: number, prefix = '', startIndex = 0) {
+  for (let index = startIndex; index < chunkCount; index += 1) {
     await SecureStore.deleteItemAsync(`${key}${prefix}_chunk_${index}`).catch(() => undefined);
   }
 }
@@ -75,7 +75,7 @@ async function commitChunkedValue(key: string, value: string): Promise<void> {
   await deleteStagingKeys(key);
 
   if (Number.isFinite(previousChunkCount) && previousChunkCount > chunkCount) {
-    await deleteChunkKeys(key, previousChunkCount);
+    await deleteChunkKeys(key, previousChunkCount, '', chunkCount);
   }
 }
 

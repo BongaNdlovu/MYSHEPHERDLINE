@@ -34,6 +34,7 @@ export function filterMembers(members: MemberLike[], query: string, filter: Memb
     if (filter === 'inactive') return member.status === 'inactive' || member.care_stage === 'inactive';
     if (filter === 'bible_study') return member.care_stage === 'bible_study';
     if (filter === 'baptism_interest') return member.care_stage === 'baptism_interest';
+    // Assignment scoping is enforced server-side (RLS + assignedTo query); pass through here.
     if (filter === 'my_people') return true;
     return true;
   });

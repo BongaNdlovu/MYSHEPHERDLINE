@@ -5,6 +5,17 @@ export function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, '\\$&');
 }
 
+/**
+ * Build a PostgREST `.or()` ILIKE filter across columns. Wraps the value in
+ * double quotes so reserved characters (`,` `(` `)` `.`) are treated literally
+ * instead of as filter syntax, while preserving LIKE wildcard escaping.
+ */
+export function buildIlikeOrFilter(columns: string[], rawSearch: string): string {
+  const escaped = escapeLikePattern(rawSearch).replace(/"/g, '\\"');
+  const pattern = `"%${escaped}%"`;
+  return columns.map((column) => `${column}.ilike.${pattern}`).join(',');
+}
+
 export function hasFieldErrors<T extends Record<string, string>>(errors: FieldErrors<T>): boolean {
   return Object.values(errors).some(Boolean);
 }

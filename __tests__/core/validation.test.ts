@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildIlikeOrFilter,
   escapeLikePattern,
   hasFieldErrors,
   validateDueDate,
@@ -54,5 +55,27 @@ describe('validation', () => {
     expect(validateDueDate('2026-05-30')).toBeUndefined();
     expect(validateDueDate('2026-02-30')).toContain('valid due date');
     expect(validateDueDate('')).toBeUndefined();
+  });
+});
+
+describe('buildIlikeOrFilter', () => {
+  it('quotes the pattern so commas do not split conditions', () => {
+    expect(buildIlikeOrFilter(['full_name', 'phone'], 'Smith, John')).toBe(
+      'full_name.ilike."%Smith, John%",phone.ilike."%Smith, John%"',
+    );
+  });
+
+  it('keeps parentheses literal inside the quoted value', () => {
+    expect(buildIlikeOrFilter(['full_name'], 'John (Snr)')).toBe('full_name.ilike."%John (Snr)%"');
+  });
+
+  it('escapes LIKE wildcards and embedded quotes', () => {
+    expect(buildIlikeOrFilter(['full_name'], '50% "VIP"')).toBe(
+      'full_name.ilike."%50\\% \\"VIP\\"%"',
+    );
+  });
+
+  it('still escapes plain wildcards via escapeLikePattern', () => {
+    expect(escapeLikePattern('a_b%c')).toBe('a\\_b\\%c');
   });
 });

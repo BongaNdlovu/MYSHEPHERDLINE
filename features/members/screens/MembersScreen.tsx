@@ -10,6 +10,7 @@ import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { FilterChips, MemberListItem, filterMembers, useMembers, useCongregation, type MemberFilter } from '@/features/members';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
+import { useAuth } from '@/lib/core/auth';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 
@@ -36,14 +37,19 @@ export default function MembersScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const serverFilter = useMemo(() => {
     if (filter === 'inactive') return { status: 'inactive' as const };
     if (filter === 'new') return { status: 'new' as const };
     if (filter === 'urgent') return { riskLevel: 'high' as const };
     if (filter === 'bible_study') return { careStage: 'bible_study' as const };
     if (filter === 'baptism_interest') return { careStage: 'baptism_interest' as const };
+    if (filter === 'not_contacted') return { notContacted: true as const };
+    if (filter === 'my_people') return userId ? { assignedTo: userId } : {};
     return {};
-  }, [filter]);
+  }, [filter, userId]);
 
   const { data: members, loading, error, refresh, loadMore, hasMore, loadingMore } = useMembers({
     search: debouncedQuery || undefined,

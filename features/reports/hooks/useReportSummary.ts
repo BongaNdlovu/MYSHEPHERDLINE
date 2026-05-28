@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resolveReportFailure } from '@/features/reports/selectors/reports';
 import { fetchLocalReportSummary } from '@/features/reports/services/reports.service';
@@ -30,7 +30,11 @@ export function useReportSummary(): ReportState {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const allowFallback = getAppEnv().allowReportFallback;
 
+  const requestIdRef = useRef(0);
+
   const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     if (!accessToken) {
       setSummary(null);
       setLoading(false);
@@ -45,6 +49,7 @@ export function useReportSummary(): ReportState {
     setWorkerUnavailable(false);
 
     const remote = await fetchReportSummary(accessToken);
+    if (requestId !== requestIdRef.current) return;
     if (remote.ok) {
       setSummary(remote.data);
       setSource('worker');
@@ -66,15 +71,17 @@ export function useReportSummary(): ReportState {
 
     try {
       const fallbackSummary = await fetchLocalReportSummary();
+      if (requestId !== requestIdRef.current) return;
       setSummary(fallbackSummary);
       setSource('supabase');
       setLastLoadedAt(Date.now());
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setSummary(null);
       setSource(null);
       setError(toAppError(err, 'Unable to load reports.'));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [accessToken, allowFallback]);
 

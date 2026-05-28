@@ -45,13 +45,31 @@ export function useMembers(options: UseMembersOptions = {}): PaginatedQueryState
         status: options.status,
         riskLevel: options.riskLevel,
         careStage: options.careStage,
+        assignedTo: options.assignedTo,
+        notContacted: options.notContacted,
       }),
-    [options.careStage, options.pageSize, options.riskLevel, options.search, options.status],
+    [
+      options.assignedTo,
+      options.careStage,
+      options.notContacted,
+      options.pageSize,
+      options.riskLevel,
+      options.search,
+      options.status,
+    ],
   );
 
   const paginatedQuery = usePaginatedQuery({
     fetchPage,
-    deps: [options.careStage, options.pageSize, options.riskLevel, options.search, options.status],
+    deps: [
+      options.assignedTo,
+      options.careStage,
+      options.notContacted,
+      options.pageSize,
+      options.riskLevel,
+      options.search,
+      options.status,
+    ],
     errorMessage: 'Unable to load members.',
     enabled: !attentionOnly,
   });

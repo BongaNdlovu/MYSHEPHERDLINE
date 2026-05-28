@@ -175,3 +175,48 @@ These may still be worth addressing, but they were not all verified as defects r
 - **Implemented from this review:** 14 concrete source fixes across worker and app code
 
 This file now reflects the reviewed state of the codebase rather than the original automated sweep output.
+
+---
+
+## Second sweep — 2026-05-28
+
+Four additional defects found in a follow-up code review. All are fixed in source; manual smoke is recommended before closing.
+
+### BUG-A: Chunked SecureStore write deletes freshly written chunks → silent logout
+
+- **File:** `lib/core/supabase-storage.ts`
+- **Status:** Fixed (pending manual smoke)
+- **Notes:** When a chunked session shrinks (e.g. 6 → 3 chunks), stale-chunk cleanup now deletes only indices
+  `chunkCount .. previousChunkCount-1`, preserving the new data.
+
+### BUG-C: Member search breaks on commas and parentheses in PostgREST `.or()` values
+
+- **Files:** `lib/core/validation.ts`, `features/members/services/members.service.ts`
+- **Status:** Fixed (pending manual smoke)
+- **Notes:** Added `buildIlikeOrFilter` to double-quote ILIKE patterns so reserved PostgREST characters are
+  literal.
+
+### BUG-D: "My Assigned People" and "Not Contacted" filters were no-ops
+
+- **Files:** `features/members/services/members.service.ts`, `features/members/hooks/useMembers.ts`,
+  `features/members/screens/MembersScreen.tsx`
+- **Status:** Fixed (pending manual smoke)
+- **Notes:** `assignedTo` and `notContacted` are now applied server-side in `fetchMembersPage`.
+  "My Assigned People" filters to `assigned_to = current user`; "Not Contacted" filters to
+  `last_contact_at IS NULL`.
+
+### BUG-B: Stale-response races in `useQuery` and `useReportSummary`
+
+- **Files:** `lib/core/useQuery.ts`, `features/reports/hooks/useReportSummary.ts`
+- **Status:** Fixed (pending manual smoke)
+- **Notes:** Added `requestIdRef` guards matching the existing `usePaginatedQuery` pattern so superseded fetches
+  cannot overwrite newer state.
+
+### Manual smoke checklist
+
+1. Sign in on a native device/emulator. Trigger or wait for a token refresh; confirm you are not signed out
+   unexpectedly.
+2. On the People tab, search for `Smith, John` and `John (Snr)`; confirm results load without
+   "Unable to load members."
+3. As an admin/owner, toggle **My Assigned People**; confirm only members assigned to you appear.
+4. Toggle **Not Contacted**; confirm only members with no `last_contact_at` appear across pagination.

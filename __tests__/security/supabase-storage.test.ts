@@ -67,4 +67,16 @@ describe('supabase auth storage', () => {
     const { SUPABASE_AUTH_STORAGE_KEY } = await import('@/lib/core/supabase-storage');
     expect(SUPABASE_AUTH_STORAGE_KEY).toBe('myshepherdline.auth.session');
   });
+
+  it('preserves the new session when a chunked write shrinks the chunk count', async () => {
+    const large = 'x'.repeat(12000); // 6 chunks
+    await supabaseAuthStorage.setItem('auth-token', large);
+
+    const smaller = 'y'.repeat(4500); // 3 chunks, still chunked
+    await supabaseAuthStorage.setItem('auth-token', smaller);
+
+    await expect(supabaseAuthStorage.getItem('auth-token')).resolves.toBe(smaller);
+    expect(secureStore.values.get('auth-token_chunk_count')).toBe('3');
+    expect(secureStore.values.has('auth-token_chunk_3')).toBe(false);
+  });
 });
