@@ -101,18 +101,17 @@ async function removeChunkedItem(key: string): Promise<void> {
   await SecureStore.deleteItemAsync(key).catch(() => undefined);
 }
 
+const memoryStore = new Map<string, string>();
+
 const webStorage = {
   getItem(key: string) {
-    if (typeof localStorage === 'undefined') return null;
-    return localStorage.getItem(key);
+    return memoryStore.has(key) ? (memoryStore.get(key) as string) : null;
   },
   setItem(key: string, value: string) {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(key, value);
+    memoryStore.set(key, value);
   },
   removeItem(key: string) {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(key);
+    memoryStore.delete(key);
   },
 };
 
