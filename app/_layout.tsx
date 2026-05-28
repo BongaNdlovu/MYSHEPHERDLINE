@@ -16,8 +16,6 @@ import { envValidation } from '@/lib/core/env';
 import { initMonitoring } from '@/lib/core/monitoring';
 import { ToastProvider } from '@/lib/core/toast';
 
-export { ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
-
 initMonitoring();
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
