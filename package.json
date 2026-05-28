@@ -2,6 +2,9 @@
   "name": "myshepherdline",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@expo-google-fonts/material-symbols": "file:lib/shims/material-symbols-stub",
     "@expo/vector-icons": "^15.1.1",
