@@ -22,6 +22,7 @@ export function initSentry() {
   Sentry.init({
     dsn,
     enabled: !__DEV__,
+    environment: __DEV__ ? 'development' : 'production',
     tracesSampleRate: 0.2,
     attachStacktrace: true,
   });

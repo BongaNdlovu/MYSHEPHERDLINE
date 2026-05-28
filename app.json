@@ -45,7 +45,14 @@
           "color": "#14532d"
         }
       ],
-      "@sentry/react-native"
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "lift-prayer-network",
+          "project": "android-wx"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -37,6 +37,11 @@ yarn-error.*
 .env*.local
 .secrets/
 
+# Sentry (auth token for source map upload — use EAS secrets in CI)
+sentry.properties
+android/sentry.properties
+ios/sentry.properties
+
 # typescript
 *.tsbuildinfo
 

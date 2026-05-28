@@ -24,7 +24,10 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_MONITORING_ENABLED": "true"
+      }
     }
   },
   "submit": {

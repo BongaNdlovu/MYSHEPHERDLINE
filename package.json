@@ -57,6 +57,7 @@
     "check:lockfiles": "node scripts/check-lockfiles.mjs",
     "check:audit": "node scripts/check-audit.mjs",
     "setup:auth-signup-off": "node scripts/disable-public-signup.mjs",
+    "setup:auth-invite-redirect": "node scripts/setup-auth-invite-redirect.mjs",
     "verify": "npm run typecheck && npm run lint && npm run check:lockfiles && npm run check:audit && npm run test && npm run test:worker",
     "verify:ci": "npm run verify && npx expo export -p web && npm run deploy -- --dry-run",
     "verify:win": "npm run typecheck && npm run lint && npm run test:win && npm run test:worker:win",

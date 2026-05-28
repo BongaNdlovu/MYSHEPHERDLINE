@@ -44,7 +44,8 @@ After security hardening, run:
 ```
 
 This lets Auth invite metadata set congregation, preferences, and activation on new profiles. Configure Supabase
-**Authentication → URL Configuration** so invite links can redirect to `myshepherdline://sign-in`.
+**Authentication → URL Configuration** so invite links can redirect to `myshepherdline://sign-in`, or run
+`npm run setup:auth-invite-redirect` with `SUPABASE_ACCESS_TOKEN` set.
 
 ### Disable public signup (required)
 
