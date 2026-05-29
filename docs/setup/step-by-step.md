@@ -18,9 +18,12 @@ npm.cmd run check:env
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
 2. **New project:** run full `supabase/schema.sql`.
 3. **Existing project:** run `supabase/security-hardening-migration.sql`.
-4. Disable public signup: **Authentication → Providers → Email → disable “Allow new users to sign up”** (or
+4. Run `supabase/care-reminders-migration.sql` and `supabase/profile-preferences-migration.sql` (safe to re-run).
+5. Confirm: `npm run verify:migrations` (needs `SUPABASE_ACCESS_TOKEN` in `.env`) or paste
+   `supabase/verify-required-migrations.sql` in SQL Editor — all columns should be `true`.
+6. Disable public signup: **Authentication → Providers → Email → disable “Allow new users to sign up”** (or
    `npm run setup:auth-signup-off` with a Management API token).
-5. Run `supabase/verify-policies.sql` — permissive-read probe should return **0 rows**.
+7. Run `supabase/verify-policies.sql` — permissive-read probe should return **0 rows**.
 
 ## Step 3 — Bootstrap owner (5 min)
 
@@ -49,13 +52,10 @@ Look up UUIDs:
 select id, email from auth.users order by created_at desc;
 ```
 
-## Step 5 — Seed E2E data (5 min)
+## Step 5 — Provision real congregation data
 
-1. Open `supabase/seed-e2e-data.sql`.
-2. Replace the three UUID literals at the top of the `do $$` block with your Auth user IDs.
-3. Run in SQL Editor.
-
-Creates **Sarah Mkhize** (other shepherd) and **Sipho Dlamini** (test shepherd) for Maestro and RLS live tests.
+Create real districts, congregations, members, tasks, and provisioned shepherd accounts in Supabase for your
+environment. Maestro and live RLS checks require real records configured through `.env` (see `.env.example`).
 
 ## Step 6 — Deploy Worker (10 min)
 

@@ -40,6 +40,14 @@ async function getNotificationsModule(): Promise<NotificationsModule> {
   return notificationsModule;
 }
 
+async function ensureAndroidNotificationChannel(Notifications: NotificationsModule) {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'default',
+    importance: Notifications.AndroidImportance.MAX,
+  });
+}
+
 export function getPushRegistrationBlocker(): PushRegistrationBlocker | null {
   if (Platform.OS === 'web') return 'unsupported';
   if (!Device.isDevice) return 'simulator';
@@ -77,6 +85,7 @@ export async function registerForPushNotifications(
     }
 
     const Notifications = await getNotificationsModule();
+    await ensureAndroidNotificationChannel(Notifications);
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -95,13 +104,6 @@ export async function registerForPushNotifications(
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenResponse.data;
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
 
     const result = await registerPushToken(accessToken, token, Device.modelName ?? 'unknown');
     if (result.error) {

@@ -16,7 +16,13 @@ export function FilterChips<T extends string>({
   testIdForValue,
 }: FilterChipsProps<T>) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}
+    >
       {options.map((option) => {
         const active = option.value === value;
         return (

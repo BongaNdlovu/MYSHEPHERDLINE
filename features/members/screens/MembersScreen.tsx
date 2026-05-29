@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
-import { FilterChips, MemberListItem, filterMembers, useMembers, useCongregation, type MemberFilter } from '@/features/members';
+import { FilterChips, MemberListItem, useMembers, useCongregation, type MemberFilter } from '@/features/members';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { useAuth } from '@/lib/core/auth';
 import { testIds } from '@/constants/testIds';
@@ -57,23 +57,21 @@ export default function MembersScreen() {
   });
   const { congregationLabel } = useCongregation();
 
-  const filtered = useMemo(
-    () => (filter === 'all' ? members : filterMembers(members, '', filter)),
-    [filter, members],
-  );
-  const initialLoad = isInitialLoad(loading, filtered.length);
+  const initialLoad = isInitialLoad(loading, members.length);
   const headerSubtitle = congregationLabel
-    ? `${filtered.length} in care · ${congregationLabel}`
-    : `${filtered.length} in care`;
+    ? `${members.length} in care · ${congregationLabel}`
+    : `${members.length} in care`;
 
   return (
       <View style={styles.screen} testID={testIds.people.screen}>
       <PaginatedFlatList
-        data={filtered}
+        data={members}
         keyExtractor={(member) => member.id}
         hasMore={hasMore}
         loadingMore={loadingMore}
         onLoadMore={() => void loadMore()}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         ListHeaderComponent={
           <>
             <AppHeader
@@ -101,15 +99,15 @@ export default function MembersScreen() {
             <Card title="People Directory">
               <QueryStateView
                 loading={initialLoad}
-                error={queryDisplayError(error, filtered.length)}
-                isEmpty={!initialLoad && !error && !filtered.length}
+                error={queryDisplayError(error, members.length)}
+                isEmpty={!initialLoad && !error && !members.length}
                 emptyMessage="No people match your search or filter."
                 onRetry={() => void refresh()}
               />
               <QueryRefreshFeedback
                 loading={loading}
                 error={error}
-                dataLength={filtered.length}
+                dataLength={members.length}
                 refreshingLabel="Refreshing people…"
                 staleErrorLabel="Could not refresh people. Showing last loaded data."
               />

@@ -140,8 +140,9 @@ Worker route tests may print audit JSON to stdout during digest scenarios — th
 Schema-string tests in `__tests__/security/rls-negative-cases.test.ts` do not execute real forbidden queries. For
 security-grade negative-path validation against your Supabase project:
 
-1. Apply `supabase/seed-e2e-data.sql` on the target project (E2E users + cross-assignee fixtures).
-2. Ensure `.env` points at that project with publishable key only (never service role in the app).
+1. Ensure the target Supabase project has real staging users, members, and tasks configured for your environment.
+2. Set `E2E_*` and `RLS_*` variables in `.env` (see `.env.example`) to match those real records.
+3. Ensure `.env` points at that project with publishable key only (never service role in the app).
 
 ```powershell
 npm.cmd run test:rls:live
@@ -154,4 +155,4 @@ $env:RLS_LIVE_TESTS = "1"
 npm.cmd run test -- __tests__/security/rls-negative-cases.live.test.ts
 ```
 
-This gate is **not** part of default `npm run verify` because it requires live credentials and seeded data.
+This gate is **not** part of default `npm run verify` because it requires live credentials and real staging data.

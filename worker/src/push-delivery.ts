@@ -34,7 +34,17 @@ type TicketCounts = {
 
 const EXPO_PUSH_CHUNK_SIZE = 100;
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+const EXPO_PUSH_MAX_ATTEMPTS = 3;
+const EXPO_PUSH_RETRY_BASE_MS = 250;
 const DEAD_TOKEN_ERRORS = new Set(['DeviceNotRegistered', 'InvalidCredentials', 'MismatchSenderId']);
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryExpoStatus(status: number) {
+  return status === 429 || status >= 500;
+}
 
 function digestBody(summary: ReportSummary) {
   return `${summary.membersNeedingAttention} people need care today. ${summary.tasksOpen} follow-ups are still open.`;
@@ -99,28 +109,43 @@ export async function deactivatePushTokens(supabase: SupabaseClient | undefined,
 }
 
 export async function sendExpoMessages(messages: ExpoPushMessage[]) {
-  try {
-    const response = await fetch(EXPO_PUSH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(messages),
-    });
+  let lastError = 'Expo push network failure';
 
-    if (!response.ok) {
-      return { ok: false as const, error: `Expo push API returned ${response.status}` };
-    }
-
-    let payload: unknown;
+  for (let attempt = 1; attempt <= EXPO_PUSH_MAX_ATTEMPTS; attempt += 1) {
     try {
-      payload = await response.json();
-    } catch {
-      return { ok: false as const, error: 'Expo push API returned invalid JSON' };
-    }
+      const response = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messages),
+      });
 
-    return { ok: true as const, payload };
-  } catch {
-    return { ok: false as const, error: 'Expo push network failure' };
+      if (!response.ok) {
+        lastError = `Expo push API returned ${response.status}`;
+        if (shouldRetryExpoStatus(response.status) && attempt < EXPO_PUSH_MAX_ATTEMPTS) {
+          await sleep(EXPO_PUSH_RETRY_BASE_MS * attempt);
+          continue;
+        }
+        return { ok: false as const, error: lastError };
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        return { ok: false as const, error: 'Expo push API returned invalid JSON' };
+      }
+
+      return { ok: true as const, payload };
+    } catch {
+      lastError = 'Expo push network failure';
+      if (attempt < EXPO_PUSH_MAX_ATTEMPTS) {
+        await sleep(EXPO_PUSH_RETRY_BASE_MS * attempt);
+        continue;
+      }
+    }
   }
+
+  return { ok: false as const, error: lastError };
 }
 
 export async function sendExpoPushBatch(

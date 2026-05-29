@@ -25,9 +25,11 @@ type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
+  profileError: AppError | null;
   signIn: (email: string, password: string) => Promise<{ error: AppError | null }>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<AppError | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(envValidation.ok);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<AppError | null>(null);
   const lastRegisteredPushUserIdRef = useRef<string | null>(null);
   const pushRegistrationInFlightUserIdRef = useRef<string | null>(null);
 
@@ -68,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
     setProfile(null);
     setSession(null);
+    setProfileLoading(false);
+    setProfileError(null);
   }, []);
 
   const applyProfileResult = useCallback(
@@ -85,23 +91,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [clearInactiveSession],
   );
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (): Promise<AppError | null> => {
     const userId = session?.user?.id;
-    if (!userId) return;
+    if (!userId) {
+      setProfile(null);
+      setProfileLoading(false);
+      setProfileError(null);
+      return null;
+    }
 
+    setProfileLoading(true);
+    setProfileError(null);
     try {
       const result = await fetchProfile(userId);
       if (result.kind === 'error') {
         console.warn('[auth] refreshProfile failed:', result.error.message);
-        return;
+        setProfileError(result.error);
+        return result.error;
       }
       if (result.kind === 'missing' || !isProfileActive(result.profile)) {
         await clearInactiveSession();
-        return;
+        const error = createAppError('auth', DEACTIVATED_ACCOUNT_MESSAGE);
+        setProfileError(error);
+        return error;
       }
       setProfile(result.profile);
+      return null;
     } catch (err) {
       console.warn('[auth] refreshProfile unexpected error:', err);
+      const error = createAppError('unknown', 'Unable to load your profile.');
+      setProfileError(error);
+      return error;
+    } finally {
+      setProfileLoading(false);
     }
   }, [clearInactiveSession, session?.user?.id]);
 
@@ -130,7 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
-      if (!nextSession) setProfile(null);
+      if (!nextSession) {
+        setProfile(null);
+        setProfileLoading(false);
+        setProfileError(null);
+      }
       setLoading(false);
     });
 
@@ -217,9 +243,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
       await supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
       setProfile(null);
+      setProfileLoading(false);
+      setProfileError(null);
     } catch (err) {
       console.warn('[auth] signOut failed:', err);
       setProfile(null);
+      setProfileLoading(false);
+      setProfileError(null);
     }
   }, []);
 
@@ -229,11 +259,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       profile,
       loading,
+      profileLoading,
+      profileError,
       refreshProfile,
       signIn,
       signOut,
     }),
-    [session, profile, loading, refreshProfile, signIn, signOut],
+    [session, profile, loading, profileLoading, profileError, refreshProfile, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -30,11 +30,12 @@ const SECTION_TITLES: Record<AttentionSection, string> = {
 
 function AttentionCard({ entry }: { entry: MemberAttentionEntry }) {
   const phone = entry.member.phone?.trim() ?? '';
+  const openProfile = () => router.push(`/member/${entry.member.id}`);
 
   return (
     <View style={styles.personCard}>
       <View style={styles.personTopRow}>
-        <View style={styles.personBody}>
+        <Pressable style={styles.personBody} onPress={openProfile} accessibilityRole="button">
           <Text style={styles.personName}>{entry.member.full_name}</Text>
           <Text style={styles.personReason}>{entry.reasonLabel}</Text>
           <Text style={styles.personMeta}>
@@ -43,8 +44,8 @@ function AttentionCard({ entry }: { entry: MemberAttentionEntry }) {
               ? ` · Last contact ${new Date(entry.member.last_contact_at).toLocaleDateString()}`
               : ' · No contact logged'}
           </Text>
-        </View>
-        <Pressable style={styles.profileLink} onPress={() => router.push(`/member/${entry.member.id}`)}>
+        </Pressable>
+        <Pressable style={styles.profileLink} onPress={openProfile} accessibilityRole="button">
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
         </Pressable>
       </View>

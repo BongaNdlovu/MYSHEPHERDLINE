@@ -51,7 +51,7 @@ npm.cmd run verify
 
 Runs TypeScript, ESLint, lockfile/audit checks, app unit/integration tests, and Worker tests.
 
-Optional live security gate (requires `.env` + seeded Supabase):
+Optional live security gate (requires `.env` + real staging data in Supabase):
 
 ```powershell
 npm.cmd run test:rls:live
@@ -88,7 +88,6 @@ npm.cmd run test:e2e
   logs with `X-Request-Id`.
 - Worker rate limiting uses in-memory buckets in dev; bind a Cloudflare KV namespace as `RATE_LIMIT` for production.
 - Worker reports are role-scoped for shepherds.
-- Demo data is test-only under `__tests__/fixtures/`.
 - Full production checklist: [docs/security/production-hardening.md](docs/security/production-hardening.md).
 
 ## Compliance

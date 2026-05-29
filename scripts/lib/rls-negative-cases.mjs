@@ -36,8 +36,9 @@ export function resolveRlsLiveConfig(source = process.env) {
     adminPassword: env.E2E_ADMIN_PASSWORD?.trim() || env.E2E_PASSWORD?.trim() || 'ChangeMe123!',
     inactiveEmail: env.E2E_INACTIVE_EMAIL?.trim() || '',
     inactivePassword: env.E2E_INACTIVE_PASSWORD?.trim() || env.E2E_PASSWORD?.trim() || 'ChangeMe123!',
-    otherMemberName: env.RLS_OTHER_MEMBER_NAME?.trim() || 'Sarah Mkhize',
-    adminTaskTitle: env.RLS_ADMIN_TASK_TITLE?.trim() || 'Admin backlog review',
+    otherMemberName: env.RLS_OTHER_MEMBER_NAME?.trim() || '',
+    adminTaskTitle: env.RLS_ADMIN_TASK_TITLE?.trim() || '',
+    assignedMemberName: env.RLS_ASSIGNED_MEMBER_NAME?.trim() || '',
   };
 }
 
@@ -51,7 +52,7 @@ async function signIn(url, key, email, password) {
 
 /**
  * Executes forbidden-operation checks against a configured Supabase project.
- * Requires seeded E2E users/members (see supabase/seed-e2e-data.sql).
+ * Requires real staging users/members configured via .env (see .env.example).
  */
 export async function runRlsNegativeCases(config) {
   const failures = [];
@@ -59,6 +60,15 @@ export async function runRlsNegativeCases(config) {
   const assert = (condition, message) => {
     if (!condition) failures.push(message);
   };
+
+  if (!config.otherMemberName || !config.adminTaskTitle || !config.assignedMemberName) {
+    return {
+      ok: false,
+      failures: [
+        'Set RLS_OTHER_MEMBER_NAME, RLS_ADMIN_TASK_TITLE, and RLS_ASSIGNED_MEMBER_NAME in .env to match real staging data.',
+      ],
+    };
+  }
 
   const { client: shepherdClient, session: shepherdSession } = await signIn(
     config.url,
@@ -110,13 +120,15 @@ export async function runRlsNegativeCases(config) {
   const { data: assignedMember, error: assignedMemberError } = await shepherdClient
     .from('members')
     .select('id, full_name')
-    .eq('full_name', 'Sipho Dlamini')
+    .eq('full_name', config.assignedMemberName)
     .maybeSingle();
 
   if (assignedMemberError) {
     failures.push(`shepherd assigned member lookup failed: ${assignedMemberError.message}`);
   } else if (!assignedMember) {
-    failures.push('seed member Sipho Dlamini not visible to test shepherd — run supabase/seed-e2e-data.sql');
+    failures.push(
+      `assigned member "${config.assignedMemberName}" not visible to test shepherd — verify staging data and RLS_ASSIGNED_MEMBER_NAME`,
+    );
   } else {
     const { error: spoofVisitError } = await shepherdClient.from('visits').insert({
       member_id: assignedMember.id,

@@ -102,6 +102,29 @@ describe('expo push batching', () => {
       deactivated: 0,
       error: 'Expo push API returned 429',
     });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries transient Expo network failures before giving up', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ status: 'ok' }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await sendExpoPushBatch(['ExpoPushToken[a]'], {
+      membersNeedingAttention: 1,
+      visitsCompleted: 1,
+      tasksOpen: 1,
+      recentActivityDays: 7,
+      visitBreakdown: { visits: 0, calls: 0, bibleStudies: 0, newConverts: 0 },
+    });
+
+    expect(result.sent).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('preserves partial delivery when a later chunk fails', async () => {
@@ -111,7 +134,7 @@ describe('expo push batching', () => {
         ok: true,
         json: async () => ({ data: Array.from({ length: 100 }, () => ({ status: 'ok' })) }),
       })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) });
+      .mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);
 
     const tokens = Array.from({ length: 150 }, (_, index) => `ExpoPushToken[${index}]`);
@@ -131,6 +154,7 @@ describe('expo push batching', () => {
       deactivated: 0,
       error: 'Expo push API returned 503',
     });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('continues sending later chunks when an earlier chunk fails', async () => {
@@ -163,7 +187,7 @@ describe('expo push batching', () => {
       deactivated: 0,
       error: 'Expo push API returned 500',
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('returns structured errors for network failures', async () => {

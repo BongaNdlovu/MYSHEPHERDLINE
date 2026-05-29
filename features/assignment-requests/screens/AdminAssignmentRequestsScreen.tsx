@@ -12,14 +12,14 @@ import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { useToast } from '@/lib/core/toast';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
-import type { AssignmentRequest } from '@/types/database';
+import type { AssignmentRequestDetail } from '@/features/assignment-requests/services/assignment-requests.service';
 
 export default function AdminAssignmentRequestsScreen() {
   const { data: requests, loading, error, refresh } = usePendingAssignmentRequests();
   const { showToast } = useToast();
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
-  const review = async (request: AssignmentRequest, status: 'approved' | 'rejected') => {
+  const review = async (request: AssignmentRequestDetail, status: 'approved' | 'rejected') => {
     if (reviewingId) return;
     setReviewingId(request.id);
     try {
@@ -51,24 +51,30 @@ export default function AdminAssignmentRequestsScreen() {
         emptyMessage="No pending assignment requests."
       />
       {requests.map((request) => (
-        <Card key={request.id} title={request.member_id ? 'Member request' : 'Task request'}>
+        <Card
+          key={request.id}
+          title={request.memberName ?? request.taskTitle ?? (request.member_id ? 'Member request' : 'Task request')}
+        >
+          <Text style={styles.meta}>
+            Requested by {request.requestedByName ?? 'Unknown shepherd'}
+          </Text>
           <Text style={styles.reason}>{request.reason}</Text>
           <Text style={styles.meta}>
             Submitted {new Date(request.created_at).toLocaleString()}
           </Text>
           <View style={styles.actions}>
             <Pressable
-              style={[styles.button, styles.reject]}
+              style={[styles.button, styles.reject, Boolean(reviewingId) && styles.buttonDisabled]}
               testID={testIds.admin.assignmentRequests.reject(request.id)}
-              disabled={reviewingId === request.id}
+              disabled={Boolean(reviewingId)}
               onPress={() => void review(request, 'rejected')}
             >
               <Text style={styles.rejectText}>Reject</Text>
             </Pressable>
             <Pressable
-              style={[styles.button, styles.approve]}
+              style={[styles.button, styles.approve, Boolean(reviewingId) && styles.buttonDisabled]}
               testID={testIds.admin.assignmentRequests.approve(request.id)}
-              disabled={reviewingId === request.id}
+              disabled={Boolean(reviewingId)}
               onPress={() => void review(request, 'approved')}
             >
               <Text style={styles.approveText}>Approve</Text>
@@ -96,6 +102,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
+  buttonDisabled: { opacity: 0.55 },
   reject: { borderColor: colors.border, backgroundColor: colors.surface },
   rejectText: { color: colors.textSecondary, fontWeight: '700' },
   approve: { borderColor: colors.primary, backgroundColor: colors.primary },

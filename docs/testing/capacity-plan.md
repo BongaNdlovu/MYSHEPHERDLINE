@@ -53,25 +53,10 @@ Default organization UUID for backfill: `a0000000-0000-4000-8000-000000000001`.
 - Worker auth context includes `organizationId`; report summaries are cached ~60s per tenant/user.
 - Push digests run per organization (tenant-scoped summary + tokens).
 
-## Staging capacity seed
+## Staging data
 
-**Staging only** — do not run on production.
-
-```sql
--- After organization-capacity-migration.sql
--- supabase/seed-capacity-data.sql
-```
-
-Defaults: 25,000 members, 250,000 visits, 50,000 tasks across 4 organizations. Adjust the
-configuration block at the top of the script for smaller smoke volumes.
-
-Cleanup before re-seed (comments at bottom of the seed file):
-
-```sql
-delete from public.visits where notes = 'capacity-seed';
-delete from public.tasks where title like 'Capacity task %';
-delete from public.members where notes = 'capacity-seed';
-```
+Use real congregation data in staging for performance and capacity validation. Do not rely on repository
+SQL seed scripts for production or steady-state staging.
 
 ## Release gates
 
@@ -90,7 +75,7 @@ delete from public.members where notes = 'capacity-seed';
 
 ### Capacity (staging, nightly or pre-release)
 
-- Seed realistic data (`supabase/seed-capacity-data.sql`; E2E seed for smoke)
+- Validate against real staging congregation data
 - k6 load suite in `load-tests/k6/`
 - Pass only if latency budgets hold and error rate &lt; 1%
 

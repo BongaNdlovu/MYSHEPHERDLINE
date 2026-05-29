@@ -192,11 +192,12 @@ export async function runEnvironmentCheck({
 
   log('\nNext steps if anything failed\n');
   log('  1. Apply supabase/fix-rls-security.sql in Supabase SQL Editor');
-  log('  2. Run supabase/verify-policies.sql to confirm RLS policies');
-  log('  3. Run npm run setup:worker to deploy Worker + set secrets');
-  log('  4. Run npm run verify (or verify:win on Windows)');
+  log('  2. Run npm run verify:migrations (care-reminders + profile-preferences)');
+  log('  3. Run supabase/verify-policies.sql to confirm RLS policies');
+  log('  4. Run npm run setup:worker to deploy Worker + set secrets');
+  log('  5. Run npm run verify (or verify:win on Windows)');
   if (productionCheck) {
-    log('  5. Confirm production-only EAS vars are set and EXPO_PUBLIC_ALLOW_REPORT_FALLBACK is unset\n');
+    log('  6. Confirm production-only EAS vars are set and EXPO_PUBLIC_ALLOW_REPORT_FALLBACK is unset\n');
   } else {
     log('');
   }

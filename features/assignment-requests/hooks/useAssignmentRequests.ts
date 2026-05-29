@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
 
-import { fetchPendingAssignmentRequests } from '@/features/assignment-requests/services/assignment-requests.service';
+import {
+  fetchPendingAssignmentRequests,
+  type AssignmentRequestDetail,
+} from '@/features/assignment-requests/services/assignment-requests.service';
 import type { QueryState } from '@/lib/core/query-types';
 import { useQuery } from '@/lib/core/useQuery';
-import type { AssignmentRequest } from '@/types/database';
 
-export function usePendingAssignmentRequests(): QueryState<AssignmentRequest[]> {
+export function usePendingAssignmentRequests(): QueryState<AssignmentRequestDetail[]> {
   const fetch = useCallback(() => fetchPendingAssignmentRequests(), []);
 
   return useQuery({

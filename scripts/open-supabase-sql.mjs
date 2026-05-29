@@ -22,8 +22,11 @@ const url = `https://supabase.com/dashboard/project/${projectRef}/sql/new`;
 console.log(`Opening Supabase SQL Editor:\n${url}\n`);
 console.log('Run these files in order:');
 console.log('  1. supabase/fix-rls-security.sql  (or schema.sql for new projects)');
-console.log('  2. supabase/verify-policies.sql');
-console.log('  3. supabase/seed-e2e-data.sql       (after creating test users)\n');
+console.log('  2. supabase/care-reminders-migration.sql');
+console.log('  3. supabase/profile-preferences-migration.sql');
+console.log('  4. supabase/verify-required-migrations.sql (all checks should be true)');
+console.log('  5. supabase/verify-policies.sql\n');
+console.log('Or: npm run verify:migrations (needs SUPABASE_ACCESS_TOKEN in .env)\n');
 
 try {
   if (process.platform === 'win32') {

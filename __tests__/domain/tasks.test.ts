@@ -8,7 +8,45 @@ import {
   toDateKey,
 } from '@/features/tasks/selectors/tasks';
 import { getInitials } from '@/lib/core/names';
-import { fixtureTasks } from '@/__tests__/fixtures/demo-data';
+import type { Task } from '@/types/database';
+
+const orgId = 'a0000000-0000-4000-8000-000000000001';
+const now = '2026-05-26T10:00:00.000Z';
+
+function task(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 't1',
+    organization_id: orgId,
+    title: 'Call member',
+    description: null,
+    assignee_id: 'user-1',
+    member_id: '1',
+    due_date: '2026-05-26',
+    due_at: '2026-05-26T09:00:00.000Z',
+    reminder_sent_at: null,
+    reminder_minutes_before: 60,
+    status: 'open',
+    priority: 'high',
+    task_type: 'call',
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
+const fixtureTasks: Task[] = [
+  task(),
+  task({
+    id: 't2',
+    title: 'Visit family',
+    assignee_id: null,
+    member_id: null,
+    due_date: '2026-05-28',
+    due_at: '2026-05-28T09:00:00.000Z',
+    priority: 'medium',
+    task_type: 'visit',
+  }),
+];
 
 describe('tasks domain', () => {
   it('groups tasks by due date', () => {

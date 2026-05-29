@@ -7,6 +7,6 @@ appId: ${E2E_APP_ID}
     id: tasks-screen
 # Seed data guarantees at least one open task for the test shepherd.
 - tapOn:
-    text: "Follow up with Sipho"
+    text: ${E2E_TASK_TITLE}
 - tapOn:
     id: "task-toggle-.*"

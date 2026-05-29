@@ -126,6 +126,13 @@ export default function MemberProfileScreen() {
         </Pressable>
         <Pressable
           style={styles.secondaryButton}
+          testID={testIds.memberProfile.careProgress}
+          onPress={() => router.push(`/member/${member.id}/care-progress`)}
+        >
+          <Text style={styles.secondaryButtonText}>Update Care Progress</Text>
+        </Pressable>
+        <Pressable
+          style={styles.secondaryButton}
           testID={testIds.memberProfile.assignmentRequest}
           onPress={() => router.push(`/member/${member.id}/assignment-request`)}
         >

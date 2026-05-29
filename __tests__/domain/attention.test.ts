@@ -8,7 +8,6 @@ import {
 } from '@/lib/core/member-attention';
 import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
 import { DEFAULT_PAGE_SIZE } from '@/lib/core/pagination';
-import { fixtureMembers } from '@/__tests__/fixtures/demo-data';
 import type { MemberListRow } from '@/types/database';
 
 function memberRow(overrides: Partial<MemberListRow> = {}): MemberListRow {
@@ -81,9 +80,12 @@ describe('home attention preview', () => {
     expect(countAttentionMatches(attentionMembers)).toBe(DEFAULT_PAGE_SIZE + 3);
   });
 
-  it('works with fixture members needing attention', () => {
-    const attention = membersNeedingAttention(fixtureMembers);
+  it('works with members needing attention', () => {
+    const attention = membersNeedingAttention([
+      memberRow({ risk_level: 'high' }),
+      memberRow({ id: 'regular', status: 'active', risk_level: 'low' }),
+    ]);
     expect(attention.length).toBeGreaterThan(0);
-    expect(countAttentionMatches(fixtureMembers)).toBe(attention.length);
+    expect(countAttentionMatches(attention)).toBe(attention.length);
   });
 });

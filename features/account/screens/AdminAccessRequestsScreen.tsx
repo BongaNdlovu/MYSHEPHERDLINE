@@ -91,6 +91,11 @@ export default function AdminAccessRequestsScreen() {
         Approve a request to email an invitation link. The shepherd sets their password from the email, then signs in
         here. Use “Mark reviewed” only if you handled the account outside the app.
       </Text>
+      {!workerConfigured ? (
+        <Text style={styles.warning}>
+          Worker API is not configured. Set EXPO_PUBLIC_WORKER_API_URL before sending invitations.
+        </Text>
+      ) : null}
       <QueryStateView
         loading={loading}
         error={error}
@@ -118,7 +123,7 @@ export default function AdminAccessRequestsScreen() {
           <Pressable
             style={[styles.button, actingId === request.id && styles.buttonDisabled]}
             testID={testIds.admin.accessRequests.invite(request.id)}
-            disabled={actingId === request.id || !workerConfigured}
+            disabled={actingId === request.id}
             onPress={() => void sendInvite(request)}
           >
             <Text style={styles.buttonText}>
@@ -157,6 +162,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
+  },
+  warning: {
+    color: colors.accent,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    fontWeight: '600',
   },
   row: {
     paddingVertical: spacing.sm,

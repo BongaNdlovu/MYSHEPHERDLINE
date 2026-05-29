@@ -5,7 +5,7 @@
  *
  * Requires:
  * - .env with EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
- * - E2E auth users + supabase/seed-e2e-data.sql applied on the target project
+ * - E2E auth users and real staging members/tasks configured via .env
  */
 import { resolveRlsLiveConfig, runRlsNegativeCases } from './lib/rls-negative-cases.mjs';
 

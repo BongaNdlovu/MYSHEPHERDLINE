@@ -4,14 +4,13 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { fixtureMembers } from '@/__tests__/fixtures/demo-data';
 import { useMember, useMembers } from '@/features/members';
 import LogVisitScreen from '@/features/visits/screens/LogVisitScreen';
 import { createCareAction } from '@/features/visits';
 import { useAuth } from '@/lib/core/auth';
 import { testIds } from '@/constants/testIds';
 import { mockShowToast } from './test-harness';
-import type { MemberListRow } from '@/types/database';
+import type { Member, MemberListRow } from '@/types/database';
 
 const mockBack = jest.fn();
 
@@ -31,7 +30,22 @@ function MockMemberListItem({
   );
 }
 
-const fixtureMember = fixtureMembers[1];
+const fixtureMember: Member = {
+  id: '2',
+  organization_id: 'a0000000-0000-4000-8000-000000000001',
+  full_name: 'Sipho Dlamini',
+  phone: '+27 84 345 6789',
+  email: null,
+  address: null,
+  risk_level: 'medium',
+  status: 'new',
+  care_stage: 'new',
+  last_contact_at: null,
+  notes: null,
+  assigned_to: 'user-1',
+  created_at: '2026-05-26T10:00:00.000Z',
+  updated_at: '2026-05-26T10:00:00.000Z',
+};
 const fixtureMemberListRow: MemberListRow = {
   id: fixtureMember.id,
   organization_id: fixtureMember.organization_id,
