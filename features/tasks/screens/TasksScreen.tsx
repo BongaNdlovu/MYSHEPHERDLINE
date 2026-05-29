@@ -33,10 +33,10 @@ export default function TasksScreen() {
 
   const sections = useMemo(
     () => [
-      { key: 'overdue', title: 'Overdue', badge: overdue.length, items: overdue },
-      { key: 'today', title: 'Today', badge: today.length, items: today },
-      { key: 'upcoming', title: 'This Week', badge: upcoming.length, items: upcoming },
-      { key: 'unscheduled', title: 'No Due Date', badge: unscheduled.length, items: unscheduled },
+      { key: 'overdue', title: 'Overdue', badge: overdue.length, badgeTone: 'urgent' as const, items: overdue },
+      { key: 'today', title: 'Today', badge: today.length, badgeTone: 'success' as const, items: today },
+      { key: 'upcoming', title: 'This Week', badge: upcoming.length, badgeTone: 'info' as const, items: upcoming },
+      { key: 'unscheduled', title: 'No Due Date', badge: unscheduled.length, badgeTone: 'neutral' as const, items: unscheduled },
     ],
     [overdue, today, upcoming, unscheduled],
   );
@@ -96,7 +96,7 @@ export default function TasksScreen() {
         renderItem={({ item }) => {
           if (item.type === 'header') {
             return (
-              <Card title={item.section.title} badge={`${item.section.badge}`}>
+              <Card title={item.section.title} badge={`${item.section.badge}`} badgeTone={item.section.badgeTone}>
                 <QueryStateView
                   isEmpty={!item.section.items.length}
                   emptyMessage={

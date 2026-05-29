@@ -73,6 +73,7 @@ describe('MemberProfileScreen navigation', () => {
       loadMore: jest.fn(),
       hasMore: false,
       loadingMore: false,
+      page: 0,
       lastLoadedAt: Date.now(),
       isStale: false,
     } as ReturnType<typeof useMemberVisits>);

@@ -22,7 +22,7 @@ const filterOptions: { label: string; value: MemberFilter }[] = [
   { label: 'New', value: 'new' },
   { label: 'Bible Study', value: 'bible_study' },
   { label: 'Baptism Interest', value: 'baptism_interest' },
-  { label: 'My Assigned People', value: 'my_people' },
+  { label: 'My People', value: 'my_people' },
 ];
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -88,7 +88,7 @@ export default function MembersScreen() {
               onPress={() => router.push('/members/new')}
             >
               <Feather name="plus" size={18} color={colors.white} />
-              <Text style={styles.addText}>Add person</Text>
+              <Text style={styles.addText}>+ Add person</Text>
             </Pressable>
             <FilterChips
               options={filterOptions}

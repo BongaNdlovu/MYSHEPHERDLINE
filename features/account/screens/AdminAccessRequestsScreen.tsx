@@ -5,6 +5,7 @@ import { usePendingAccessRequests } from '@/features/account/hooks/useAccessRequ
 import { markAccessRequestReviewed } from '@/features/account/services/profile-preferences.service';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
+import { NoticeCard } from '@/components/ui/NoticeCard';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { inviteAccessRequest } from '@/lib/core/api';
@@ -92,9 +93,12 @@ export default function AdminAccessRequestsScreen() {
         here. Use “Mark reviewed” only if you handled the account outside the app.
       </Text>
       {!workerConfigured ? (
-        <Text style={styles.warning}>
-          Worker API is not configured. Set EXPO_PUBLIC_WORKER_API_URL before sending invitations.
-        </Text>
+        <View style={styles.noticeWrap}>
+          <NoticeCard
+            tone="warning"
+            message="Worker API is not configured. Set EXPO_PUBLIC_WORKER_API_URL before sending invitations."
+          />
+        </View>
       ) : null}
       <QueryStateView
         loading={loading}
@@ -163,14 +167,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  warning: {
-    color: colors.accent,
-    fontSize: 13,
-    lineHeight: 18,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    fontWeight: '600',
-  },
+  noticeWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   row: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,

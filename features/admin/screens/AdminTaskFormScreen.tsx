@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { FormField } from '@/components/ui/FormField';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { testIds } from '@/constants/testIds';
 import { AdminEntityFormScreen } from '@/features/admin/components/AdminEntityFormScreen';
 import { ChoiceChipGroup } from '@/features/admin/components/ChoiceChipGroup';
@@ -142,8 +143,10 @@ export default function AdminTaskFormScreen() {
       onSave={save}
       onDelete={isEdit ? remove : undefined}
     >
+      <SectionHeader title="Task" />
       <FormField label="Title" value={title} onChangeText={setTitle} />
       <FormField label="Description" value={description} onChangeText={setDescription} multiline />
+      <SectionHeader title="Schedule" />
       <FormField
         label="Due date (YYYY-MM-DD)"
         value={dueDate}
@@ -164,6 +167,7 @@ export default function AdminTaskFormScreen() {
         error={dueAtError}
         placeholder="2026-05-30T14:00"
       />
+      <SectionHeader title="Status" />
       <ChoiceChipGroup label="Priority" options={priorities} value={priority} onChange={setPriority} />
       <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />
     </AdminEntityFormScreen>

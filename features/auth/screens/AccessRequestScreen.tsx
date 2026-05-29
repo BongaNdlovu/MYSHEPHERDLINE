@@ -5,15 +5,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DistrictCongregationPicker } from '@/features/account/components/DistrictCongregationPicker';
 import { submitAccessRequest } from '@/features/account/services/profile-preferences.service';
+import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { NoticeCard } from '@/components/ui/NoticeCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
 import { validateDisplayName, validateEmail } from '@/lib/core/validation';
 import { useToast } from '@/lib/core/toast';
+
+const MESSAGE_MAX_LENGTH = 250;
 
 export default function AccessRequestScreen() {
   const insets = useSafeAreaInsets();
@@ -71,13 +76,11 @@ export default function AccessRequestScreen() {
       >
         <LogoMark size={88} />
         <Text style={styles.title}>Request received</Text>
-        <Text style={styles.subtitle}>
-          Your administrator will review your district and congregation. If approved, you will receive an email
-          invitation to set your password and sign in.
-        </Text>
-        <Pressable style={styles.button} onPress={() => router.replace('/sign-in')}>
-          <Text style={styles.buttonText}>Back to Sign In</Text>
-        </Pressable>
+        <NoticeCard
+          tone="success"
+          message="Your administrator will review your district and congregation. If approved, you will receive an email invitation to set your password and sign in."
+        />
+        <Button label="Back to Sign In" onPress={() => router.replace('/sign-in')} style={styles.successButton} />
       </FormScreen>
     );
   }
@@ -96,6 +99,7 @@ export default function AccessRequestScreen() {
 
       <InlineError message={submitError} />
 
+      <SectionHeader title="Your details" />
       <FormField
         label="Full name"
         fieldTestId={testIds.auth.displayName}
@@ -119,6 +123,7 @@ export default function AccessRequestScreen() {
         keyboardType="email-address"
       />
 
+      <SectionHeader title="Where you serve" />
       <DistrictCongregationPicker
         districtId={districtId}
         organizationId={organizationId}
@@ -132,19 +137,22 @@ export default function AccessRequestScreen() {
         label="Message (optional)"
         fieldTestId={testIds.auth.signUpMessage}
         value={message}
-        onChangeText={setMessage}
+        onChangeText={(value) => setMessage(value.slice(0, MESSAGE_MAX_LENGTH))}
         multiline
+        maxLength={MESSAGE_MAX_LENGTH}
+        helperText={`${message.length}/${MESSAGE_MAX_LENGTH}`}
         placeholder="e.g. Elder in Durban Central district"
       />
 
-      <Pressable
-        style={[styles.button, saving && styles.buttonDisabled]}
+      <Button
+        label="Submit access request"
+        loadingLabel="Submitting..."
+        loading={saving}
+        disabled={saving}
         testID={testIds.auth.signUpSubmit}
         onPress={() => void submit()}
-        disabled={saving}
-      >
-        <Text style={styles.buttonText}>{saving ? 'Submitting...' : 'Submit access request'}</Text>
-      </Pressable>
+        style={styles.submitButton}
+      />
 
       <Link href="/sign-in" asChild>
         <Pressable>
@@ -159,14 +167,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xxl, flexGrow: 1 },
   title: { fontSize: 28, fontWeight: '800', color: colors.primary, marginTop: spacing.xl },
   subtitle: { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xl, lineHeight: 22 },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  buttonDisabled: { opacity: 0.55 },
-  buttonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  submitButton: { marginTop: spacing.sm },
+  successButton: { marginTop: spacing.xl },
   link: { color: colors.primarySoft, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
 });

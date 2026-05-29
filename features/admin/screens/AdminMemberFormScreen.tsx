@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { FormField } from '@/components/ui/FormField';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { testIds } from '@/constants/testIds';
 import { AdminEntityFormScreen } from '@/features/admin/components/AdminEntityFormScreen';
 import { ChoiceChipGroup } from '@/features/admin/components/ChoiceChipGroup';
@@ -145,6 +146,7 @@ export default function AdminMemberFormScreen() {
       onSave={save}
       onDelete={isEdit ? remove : undefined}
     >
+      <SectionHeader title="Identity" />
       <FormField label="Full name" value={fullName} onChangeText={setFullName} />
       <FormField
         label="Phone"
@@ -165,10 +167,12 @@ export default function AdminMemberFormScreen() {
         error={emailError}
         autoCapitalize="none"
       />
-      <FormField label="Address" value={address} onChangeText={setAddress} />
-      <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
+      <SectionHeader title="Care details" />
       <ChoiceChipGroup label="Risk level" options={riskLevels} value={riskLevel} onChange={setRiskLevel} />
       <ChoiceChipGroup label="Status" options={statuses} value={status} onChange={setStatus} />
+      <SectionHeader title="Location & notes" />
+      <FormField label="Address" value={address} onChangeText={setAddress} />
+      <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
     </AdminEntityFormScreen>
   );
 }

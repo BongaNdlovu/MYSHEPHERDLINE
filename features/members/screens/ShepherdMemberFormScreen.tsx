@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FormField } from '@/components/ui/FormField';
-import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { createMemberAsShepherd } from '@/features/members/services/members.service';
 import { useAndroidBackNavigation } from '@/lib/app-shell';
 import { useAuth } from '@/lib/core/auth';
@@ -69,53 +71,67 @@ export default function ShepherdMemberFormScreen() {
   };
 
   return (
-    <FormScreen
+    <KeyboardAvoidingView
       style={styles.screen}
-      contentContainerStyle={styles.content}
-      testID={testIds.people.addForm}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
     >
-      <Text style={styles.title}>Add member</Text>
-      <Text style={styles.lead}>
-        New members are saved to your congregation and assigned to you for follow-up.
-      </Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        testID={testIds.people.addForm}
+      >
+        <Text style={styles.title}>Add person</Text>
+        <Text style={styles.lead}>
+          New members are saved to your congregation and assigned to you for follow-up.
+        </Text>
 
-      <FormField label="Full name" value={fullName} onChangeText={setFullName} />
-      <FormField
-        label="Phone"
-        value={phone}
-        onChangeText={(value) => {
-          setPhone(value);
-          setPhoneError(undefined);
-        }}
-        error={phoneError}
-      />
-      <FormField
-        label="Email"
-        value={email}
-        onChangeText={(value) => {
-          setEmail(value);
-          setEmailError(undefined);
-        }}
-        error={emailError}
-        autoCapitalize="none"
-      />
-      <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
+        <SectionHeader title="Basic details" />
+        <View style={styles.sectionBody}>
+          <FormField label="Full name" value={fullName} onChangeText={setFullName} />
+          <FormField
+            label="Phone"
+            value={phone}
+            onChangeText={(value) => {
+              setPhone(value);
+              setPhoneError(undefined);
+            }}
+            error={phoneError}
+          />
+          <FormField
+            label="Email"
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              setEmailError(undefined);
+            }}
+            error={emailError}
+            autoCapitalize="none"
+          />
+        </View>
 
-      {submitError ? <InlineError message={submitError} /> : null}
+        <SectionHeader title="Care information" />
+        <View style={styles.sectionBody}>
+          <View style={styles.defaultsRow}>
+            <StatusBadge label="New" tone="success" />
+            <StatusBadge label="Low risk" tone="neutral" />
+          </View>
+          <Text style={styles.defaultsHint}>New people start as new status with low risk.</Text>
+          <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
+        </View>
 
-      <Pressable
-        style={styles.primary}
+        {submitError ? <InlineError message={submitError} /> : null}
+      </ScrollView>
+
+      <StickyActionBar
+        label="Add to my care list"
+        loadingLabel="Saving…"
+        loading={saving}
         disabled={saving}
         testID={testIds.people.addSave}
         onPress={save}
-      >
-        <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save member'}</Text>
-      </Pressable>
-
-      <Pressable style={styles.secondary} disabled={saving} onPress={goBackToMembers}>
-        <Text style={styles.secondaryText}>Cancel</Text>
-      </Pressable>
-    </FormScreen>
+      />
+    </KeyboardAvoidingView>
   );
 }
 
@@ -124,14 +140,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   title: { fontSize: 24, fontWeight: '800', color: colors.primary, marginBottom: spacing.sm },
   lead: { color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 22 },
-  primary: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  primaryText: { color: colors.white, fontWeight: '700', fontSize: 16 },
-  secondary: { paddingVertical: 14, alignItems: 'center', marginTop: spacing.sm },
-  secondaryText: { color: colors.primarySoft, fontWeight: '600' },
+  sectionBody: { paddingHorizontal: spacing.lg },
+  defaultsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  defaultsHint: { color: colors.textMuted, fontSize: 12, marginBottom: spacing.md, lineHeight: 18 },
 });

@@ -8,6 +8,7 @@ import { useReportSummary } from '@/features/reports';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { testIds } from '@/constants/testIds';
 import { colors, spacing } from '@/constants/theme';
 import { checkWorkerHealth } from '@/lib/core/api';
@@ -32,6 +33,22 @@ export default function AdminReportsScreen() {
     };
   }, []);
 
+  const workerLabel = workerConfigured
+    ? workerHealthy === null
+      ? 'Checking…'
+      : workerHealthy
+        ? 'Healthy'
+        : 'Unreachable'
+    : 'Not configured';
+
+  const workerTone = !workerConfigured
+    ? 'neutral'
+    : workerHealthy === null
+      ? 'info'
+      : workerHealthy
+        ? 'success'
+        : 'urgent';
+
   return (
     <ScrollView style={styles.screen} testID={testIds.admin.reports.screen}>
       <View style={styles.topBar}>
@@ -52,9 +69,10 @@ export default function AdminReportsScreen() {
       ) : null}
 
       <Card title="Operations">
-        <Text style={styles.line}>
-          Worker API: {workerConfigured ? (workerHealthy ? 'Healthy' : 'Unreachable') : 'Not configured'}
-        </Text>
+        <View style={styles.workerRow}>
+          <Text style={styles.lineLabel}>Worker API</Text>
+          <StatusBadge label={workerLabel} tone={workerTone} />
+        </View>
         {workerUnavailable ? (
           <Text style={styles.note}>
             Reports are using local Supabase fallback because the Worker was unavailable.
@@ -80,6 +98,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  line: { color: colors.textSecondary, fontSize: 14, marginBottom: spacing.sm },
+  workerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  lineLabel: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
   note: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: spacing.sm },
 });

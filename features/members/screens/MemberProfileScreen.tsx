@@ -2,20 +2,39 @@ import Feather from '@expo/vector-icons/Feather';
 import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { InfoRow } from '@/components/ui/InfoRow';
+import { QuickActionButton } from '@/components/ui/QuickActionButton';
 import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { testIds } from '@/constants/testIds';
-import { colors, gradients, radii, spacing } from '@/constants/theme';
+import { colors, gradients, spacing } from '@/constants/theme';
 import { useAdminAccess } from '@/features/admin';
 import { useMember } from '@/features/members';
 import { VisitTimelineItem, useMemberVisits } from '@/features/visits';
 import { getInitials } from '@/lib/core/names';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
+import type { CareStage, RiskLevel } from '@/types/database';
+
+const careStageTones: Partial<Record<CareStage, 'info' | 'purple' | 'teal' | 'success' | 'urgent' | 'neutral'>> = {
+  new: 'info',
+  bible_study: 'purple',
+  baptism_interest: 'teal',
+  integrated: 'success',
+  needs_urgent_care: 'urgent',
+  inactive: 'neutral',
+};
+
+const riskTones: Record<RiskLevel, 'urgent' | 'warning' | 'neutral'> = {
+  high: 'urgent',
+  medium: 'warning',
+  low: 'neutral',
+};
 
 export default function MemberProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -42,6 +61,8 @@ export default function MemberProfileScreen() {
 
   const initials = getInitials(member.full_name);
   const visitsInitialLoad = isInitialLoad(visitsLoading, visits.length);
+  const careStageLabel = member.care_stage.replace(/_/g, ' ');
+  const careStageTone = careStageTones[member.care_stage] ?? 'neutral';
 
   return (
     <ScrollView style={styles.screen} testID={testIds.memberProfile.screen}>
@@ -62,25 +83,11 @@ export default function MemberProfileScreen() {
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.name}>{member.full_name}</Text>
-        <Text style={styles.meta}>
-          {member.care_stage.replace(/_/g, ' ').toUpperCase()} | {member.risk_level.toUpperCase()} RISK
-        </Text>
+        <View style={styles.badges}>
+          <StatusBadge label={careStageLabel} tone={careStageTone} />
+          <StatusBadge label={`${member.risk_level} risk`} tone={riskTones[member.risk_level]} />
+        </View>
       </LinearGradient>
-
-      <Card title="Overview">
-        <InfoRow label="Phone" value={member.phone ?? 'Not provided'} />
-        <InfoRow label="Email" value={member.email ?? 'Not provided'} />
-        <InfoRow label="Address" value={member.address ?? 'Not provided'} />
-        <InfoRow
-          label="Last contact"
-          value={
-            member.last_contact_at
-              ? new Date(member.last_contact_at).toLocaleDateString()
-              : 'No contact logged'
-          }
-        />
-        <InfoRow label="Notes" value={member.notes ?? 'No notes yet'} />
-      </Card>
 
       <View style={styles.quickActions}>
         <QuickActionButton
@@ -117,28 +124,40 @@ export default function MemberProfileScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Pressable
-          style={styles.primaryButton}
+        <Button
+          label="Log Care Action"
           testID={testIds.memberProfile.logVisit}
           onPress={() => router.push(`/log-action/${member.id}`)}
-        >
-          <Text style={styles.primaryButtonText}>Log Care Action</Text>
-        </Pressable>
-        <Pressable
-          style={styles.secondaryButton}
+        />
+        <Button
+          label="Update Care Progress"
+          variant="outline"
           testID={testIds.memberProfile.careProgress}
           onPress={() => router.push(`/member/${member.id}/care-progress`)}
-        >
-          <Text style={styles.secondaryButtonText}>Update Care Progress</Text>
-        </Pressable>
-        <Pressable
-          style={styles.secondaryButton}
+        />
+        <Button
+          label="Request Assignment Change"
+          variant="outline"
           testID={testIds.memberProfile.assignmentRequest}
           onPress={() => router.push(`/member/${member.id}/assignment-request`)}
-        >
-          <Text style={styles.secondaryButtonText}>Request Assignment Change</Text>
-        </Pressable>
+        />
       </View>
+
+      <Card title="Overview">
+        <InfoRow icon="phone" label="Phone" value={member.phone ?? 'Not provided'} />
+        <InfoRow icon="mail" label="Email" value={member.email ?? 'Not provided'} />
+        <InfoRow icon="map-pin" label="Address" value={member.address ?? 'Not provided'} />
+        <InfoRow
+          icon="clock"
+          label="Last contact"
+          value={
+            member.last_contact_at
+              ? new Date(member.last_contact_at).toLocaleDateString()
+              : 'No contact logged'
+          }
+        />
+        <InfoRow icon="file-text" label="Notes" value={member.notes ?? 'No notes yet'} />
+      </Card>
 
       <Card title="Care History" badge={visitsInitialLoad ? undefined : `${visits.length}`}>
         <QueryStateView
@@ -155,9 +174,21 @@ export default function MemberProfileScreen() {
           refreshingLabel="Refreshing visits…"
           staleErrorLabel="Could not refresh visits. Showing last loaded data."
         />
-        {!visitsInitialLoad && !visitsError
-          ? visits.map((visit) => <VisitTimelineItem key={visit.id} visit={visit} />)
-          : null}
+        {!visitsInitialLoad && !visitsError ? (
+          <View style={styles.timeline}>
+            {visits.map((visit, index) => (
+              <View key={visit.id} style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <View style={styles.timelineDot} />
+                  {index < visits.length - 1 ? <View style={styles.timelineLine} /> : null}
+                </View>
+                <View style={styles.timelineContent}>
+                  <VisitTimelineItem visit={visit} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
         {hasMore && !visitsLoading ? (
           <Pressable style={styles.loadMore} onPress={() => void loadMore()} disabled={loadingMore}>
             <Text style={styles.loadMoreText}>{loadingMore ? 'Loading…' : 'Load more care history'}</Text>
@@ -165,41 +196,6 @@ export default function MemberProfileScreen() {
         ) : null}
       </Card>
     </ScrollView>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-function QuickActionButton({
-  icon,
-  label,
-  onPress,
-  disabled,
-  testID,
-}: {
-  icon: ComponentProps<typeof Feather>['name'];
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  testID?: string;
-}) {
-  return (
-    <Pressable
-      style={[styles.quickActionButton, disabled && styles.quickActionDisabled]}
-      onPress={onPress}
-      disabled={disabled}
-      testID={testID}
-    >
-      <Feather name={icon} size={16} color={disabled ? colors.textMuted : colors.primary} />
-      <Text style={[styles.quickActionText, disabled && styles.quickActionTextDisabled]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -235,18 +231,12 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: colors.white, fontSize: 28, fontWeight: '800' },
   name: { color: colors.white, fontSize: 24, fontWeight: '800' },
-  meta: { color: 'rgba(255,255,255,0.7)', marginTop: 6, fontWeight: '600', fontSize: 12 },
-  infoRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  infoLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  infoValue: { color: colors.primary, fontSize: 15, fontWeight: '600', marginTop: 4 },
-  actions: {
-    marginHorizontal: spacing.lg,
-    marginVertical: spacing.lg,
+  badges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   quickActions: {
     flexDirection: 'row',
@@ -254,35 +244,28 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
-  quickActionButton: {
+  actions: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  timeline: { marginTop: spacing.sm },
+  timelineRow: { flexDirection: 'row', gap: spacing.md },
+  timelineRail: { width: 16, alignItems: 'center' },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primaryLight,
+    marginTop: spacing.lg + 4,
+  },
+  timelineLine: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: spacing.xs,
+    width: 2,
+    backgroundColor: colors.border,
+    marginTop: spacing.xs,
   },
-  quickActionDisabled: { opacity: 0.5 },
-  quickActionText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  quickActionTextDisabled: { color: colors.textMuted },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
-  secondaryButton: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryButtonText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
+  timelineContent: { flex: 1 },
   loadMore: { paddingVertical: spacing.md, alignItems: 'center' },
   loadMoreText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
 });

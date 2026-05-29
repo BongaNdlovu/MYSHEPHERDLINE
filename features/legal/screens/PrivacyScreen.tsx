@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { Card } from '@/components/ui/Card';
 import { LegalReviewBanner } from '@/features/legal/components/LegalReviewBanner';
 import { colors, spacing } from '@/constants/theme';
 
@@ -47,17 +48,55 @@ Cross-border transfers:
 
 Counsel must complete legal review before production use. See docs/compliance/legal-review-signoff.md.`;
 
+type PrivacySection = { title: string; body: string };
+
+function parsePrivacySections(content: string): PrivacySection[] {
+  const blocks = content.trim().split(/\n\n+/);
+  if (blocks.length === 0) return [];
+
+  const [intro, ...rest] = blocks;
+  const introLines = intro.split('\n');
+  const sections: PrivacySection[] = [
+    {
+      title: introLines[0] ?? 'Privacy Notice',
+      body: introLines.slice(1).join('\n').trim() || (introLines[0] ?? ''),
+    },
+  ];
+
+  for (const block of rest) {
+    const lines = block.split('\n');
+    const titleLine = lines[0] ?? '';
+    const inlineColon = titleLine.match(/^([^:]+):\s*(.*)$/);
+    if (inlineColon && lines.length === 1) {
+      sections.push({ title: inlineColon[1].trim(), body: inlineColon[2].trim() });
+      continue;
+    }
+    const title = titleLine.endsWith(':') ? titleLine.slice(0, -1).trim() : titleLine;
+    const body = lines.length > 1 ? lines.slice(1).join('\n').trim() : '';
+    sections.push({ title, body });
+  }
+
+  return sections;
+}
+
+const privacySections = parsePrivacySections(privacyContent);
+
 export default function PrivacyScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <LegalReviewBanner />
-      <Text style={styles.body}>{privacyContent}</Text>
+      {privacySections.map((section) => (
+        <Card key={section.title} title={section.title} style={styles.sectionCard}>
+          <Text style={styles.body}>{section.body}</Text>
+        </Card>
+      ))}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.xl },
-  body: { color: colors.text, lineHeight: 22, fontSize: 14 },
+  content: { paddingBottom: spacing.xxl },
+  sectionCard: { marginTop: 0 },
+  body: { color: colors.textSecondary, lineHeight: 22, fontSize: 14, fontWeight: '500' },
 });

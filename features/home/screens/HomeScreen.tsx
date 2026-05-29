@@ -1,22 +1,25 @@
 import Feather from '@expo/vector-icons/Feather';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
+import { NoticeCard } from '@/components/ui/NoticeCard';
 import { QueryRefreshFeedback } from '@/components/ui/QueryRefreshFeedback';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { QuickActionButton } from '@/components/ui/QuickActionButton';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buildAttentionPreview, countAttentionMatches } from '@/features/home/selectors/dashboard';
 import { useMembers } from '@/features/members';
 import { useTasks } from '@/features/tasks';
 import { useAuth } from '@/lib/core/auth';
 import { buildMemberAttentionList, type AttentionSection, type MemberAttentionEntry } from '@/lib/core/member-attention';
+import { getInitials } from '@/lib/core/names';
 import { isInitialLoad, queryDisplayError } from '@/lib/core/query-types';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const SECTION_ORDER: AttentionSection[] = ['overdue', 'urgent_care', 'new_people', 'follow_ups_due', 'recently_updated'];
@@ -28,66 +31,61 @@ const SECTION_TITLES: Record<AttentionSection, string> = {
   recently_updated: 'Recently Updated',
 };
 
+function formatCareMeta(member: MemberAttentionEntry['member']) {
+  const stage = member.care_stage.replace(/_/g, ' ');
+  const risk = `${member.risk_level} risk`;
+  const contact = member.last_contact_at
+    ? `Last contact ${new Date(member.last_contact_at).toLocaleDateString()}`
+    : 'No contact logged';
+  return `${stage} · ${risk} · ${contact}`;
+}
+
+function reasonTone(section: AttentionSection): 'urgent' | 'warning' | 'info' {
+  if (section === 'overdue' || section === 'urgent_care') return 'urgent';
+  if (section === 'new_people') return 'info';
+  return 'warning';
+}
+
 function AttentionCard({ entry }: { entry: MemberAttentionEntry }) {
   const phone = entry.member.phone?.trim() ?? '';
   const openProfile = () => router.push(`/member/${entry.member.id}`);
+  const initials = getInitials(entry.member.full_name);
 
   return (
     <View style={styles.personCard}>
       <View style={styles.personTopRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
         <Pressable style={styles.personBody} onPress={openProfile} accessibilityRole="button">
           <Text style={styles.personName}>{entry.member.full_name}</Text>
-          <Text style={styles.personReason}>{entry.reasonLabel}</Text>
-          <Text style={styles.personMeta}>
-            {entry.member.care_stage.replace(/_/g, ' ')} · {entry.member.risk_level} risk
-            {entry.member.last_contact_at
-              ? ` · Last contact ${new Date(entry.member.last_contact_at).toLocaleDateString()}`
-              : ' · No contact logged'}
-          </Text>
+          <StatusBadge label={entry.reasonLabel} tone={reasonTone(entry.section)} />
+          <Text style={styles.personMeta}>{formatCareMeta(entry.member)}</Text>
         </Pressable>
         <Pressable style={styles.profileLink} onPress={openProfile} accessibilityRole="button">
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
         </Pressable>
       </View>
       <View style={styles.personActions}>
-        <QuickButton
+        <QuickActionButton
           label="Call"
           icon="phone"
           disabled={!phone}
           onPress={() => void Linking.openURL(`tel:${phone}`)}
         />
-        <QuickButton
+        <QuickActionButton
           label="WhatsApp"
           icon="message-circle"
           disabled={!phone}
           onPress={() => void Linking.openURL(`https://wa.me/${phone.replace(/[^\d]/g, '')}`)}
         />
-        <QuickButton
+        <QuickActionButton
           label="Log Action"
           icon="edit-3"
           onPress={() => router.push(`/log-action/${entry.member.id}`)}
         />
       </View>
     </View>
-  );
-}
-
-function QuickButton({
-  label,
-  icon,
-  onPress,
-  disabled,
-}: {
-  label: string;
-  icon: ComponentProps<typeof Feather>['name'];
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable style={[styles.quickButton, disabled && styles.quickButtonDisabled]} onPress={onPress} disabled={disabled}>
-      <Feather name={icon} size={14} color={disabled ? colors.textMuted : colors.primary} />
-      <Text style={[styles.quickButtonText, disabled && styles.quickButtonTextDisabled]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -121,29 +119,27 @@ export default function HomeScreen() {
   );
   const membersInitialLoad = isInitialLoad(membersLoading, members.length);
   const tasksInitialLoad = isInitialLoad(tasksLoading, tasks.length);
+  const showAlertBanner = !membersInitialLoad && !tasksInitialLoad && attentionCount > 0;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID={testIds.today.screen}>
       <AppHeader
         title={`Hello, ${profile?.display_name?.split(' ')[0] ?? 'Shepherd'}`}
-        subtitle="Here is who you must care for today."
+        subtitle="Here is who needs care today."
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search people in care..."
       />
 
-      <Pressable style={styles.alertBanner} onPress={() => router.push('/(tabs)/members')}>
-        <View style={styles.alertIcon}>
-          <Feather name="heart" size={20} color={colors.white} />
-        </View>
-        <View style={styles.alertContent}>
-          <Text style={styles.alertTitle}>
-            {membersInitialLoad || tasksInitialLoad ? 'Building today’s care list…' : `${attentionCount} people need care`}
-          </Text>
-          <Text style={styles.alertText}>Open People in Care to manage the full list</Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={colors.accent} />
-      </Pressable>
+      {showAlertBanner ? (
+        <Pressable style={styles.alertWrap} onPress={() => router.push('/(tabs)/members')}>
+          <NoticeCard
+            tone="urgent"
+            title={`${attentionCount} people need care`}
+            message="Open People in Care to manage the full list"
+          />
+        </Pressable>
+      ) : null}
 
       <Card title="Today" badge={membersInitialLoad || tasksInitialLoad ? undefined : `${attentionCount}`}>
         <View testID={testIds.today.attentionList}>
@@ -186,29 +182,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 24 },
-  alertBanner: {
+  alertWrap: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 1.5,
-    borderColor: 'rgba(239,68,68,0.15)',
   },
-  alertIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertContent: { flex: 1 },
-  alertTitle: { color: '#dc2626', fontWeight: '700', fontSize: 14 },
-  alertText: { color: '#991b1b', fontSize: 13, marginTop: 3, opacity: 0.8 },
   personCard: {
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
@@ -219,9 +196,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     alignItems: 'flex-start',
   },
-  personBody: { flex: 1 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryPale,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  avatarText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  personBody: { flex: 1, gap: spacing.xs },
   personName: { fontSize: 15, fontWeight: '700', color: colors.primary },
-  personReason: { fontSize: 13, color: colors.accent, fontWeight: '700', marginTop: 4 },
   personMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 4, textTransform: 'capitalize' },
   profileLink: { paddingTop: 4 },
   personActions: {
@@ -229,18 +216,4 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  quickButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  quickButtonDisabled: { opacity: 0.5 },
-  quickButtonText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  quickButtonTextDisabled: { color: colors.textMuted },
 });

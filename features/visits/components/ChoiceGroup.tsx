@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { ChoiceChips } from '@/components/ui/ChoiceChips';
+import { spacing } from '@/constants/theme';
 
 export function ChoiceGroup<T extends string>({
   label,
@@ -17,39 +18,20 @@ export function ChoiceGroup<T extends string>({
 }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{label}</Text>
-      <View style={styles.typeRow}>
-        {options.map((option) => {
-          const active = option === value;
-          return (
-            <Pressable
-              key={option}
-              style={[styles.typeChip, active && styles.typeChipActive]}
-              onPress={() => onChange(option)}
-              testID={testIdPrefix ? `${testIdPrefix}-${option}` : undefined}
-            >
-              <Text style={[styles.typeText, active && styles.typeTextActive]}>{option.replace(/_/g, ' ')}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <ChoiceChips
+        label={label}
+        options={options.map((option) => ({
+          label: option.replace(/_/g, ' '),
+          value: option,
+        }))}
+        value={value}
+        onChange={onChange}
+        testIdForValue={testIdPrefix ? (option) => `${testIdPrefix}-${option}` : undefined}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
-  sectionTitle: { color: colors.textSecondary, fontWeight: '700', marginBottom: spacing.sm, textTransform: 'none' },
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  typeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  typeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  typeText: { color: colors.textSecondary, fontWeight: '600', textTransform: 'capitalize' },
-  typeTextActive: { color: colors.white },
 });

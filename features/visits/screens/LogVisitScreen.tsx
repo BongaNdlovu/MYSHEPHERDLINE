@@ -1,13 +1,15 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
 import { FormField } from '@/components/ui/FormField';
-import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
+import { ToggleCard } from '@/components/ui/ToggleCard';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { MemberListItem, useMember, useMembers } from '@/features/members';
@@ -27,6 +29,18 @@ import {
   suggestedCareStage,
   titleForFollowUp,
 } from '../selectors/log-visit';
+
+const actionIcons: Record<VisitType, ComponentProps<typeof Feather>['name']> = {
+  visit: 'home',
+  call: 'phone',
+  whatsapp: 'message-circle',
+  bible_study: 'book-open',
+  prayer: 'heart',
+  pastoral_visit: 'users',
+  home_visit: 'map-pin',
+  baptism_prep: 'droplet',
+  other: 'more-horizontal',
+};
 
 export default function LogVisitScreen() {
   const { memberId } = useLocalSearchParams<{ memberId?: string }>();
@@ -146,196 +160,203 @@ export default function LogVisitScreen() {
   };
 
   const actionSubtitle = selectedMember ? selectedMember.full_name : 'Choose who you cared for today';
+  const stepOffset = selectedMemberId ? 0 : 1;
 
   return (
-    <FormScreen style={styles.screen} contentContainerStyle={styles.content} testID={testIds.logVisit.screen}>
-      <AppHeader title="Log Care Action" subtitle={actionSubtitle} />
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        testID={testIds.logVisit.screen}
+      >
+        <AppHeader title="Log Care Action" subtitle={actionSubtitle} />
 
-      {memberId ? (
-        <QueryStateView
-          loading={memberLoading}
-          error={memberError}
-          onRetry={() => void refreshMember()}
-        />
-      ) : null}
-
-      <InlineError message={submitError} />
-
-      {!selectedMemberId ? (
-        <View style={styles.section}>
-          <FormField
-            label="Select person"
-            value={memberQuery}
-            onChangeText={setMemberQuery}
-            placeholder="Search people in care..."
-            fieldTestId={testIds.logVisit.memberSearch}
-          />
+        {memberId ? (
           <QueryStateView
-            loading={peopleQuery.loading}
-            error={peopleQuery.error}
-            isEmpty={!peopleQuery.loading && !peopleQuery.error && !peopleQuery.data.length}
-            emptyMessage="No people match that search."
-            onRetry={() => void peopleQuery.refresh()}
+            loading={memberLoading}
+            error={memberError}
+            onRetry={() => void refreshMember()}
           />
-          {!peopleQuery.loading && !peopleQuery.error
-            ? peopleQuery.data.slice(0, 8).map((member) => (
-                <MemberListItem
-                  key={member.id}
-                  member={member}
-                  onPress={() => onSelectMember(member.id)}
-                  testID={testIds.people.member(member.id)}
-                />
-              ))
-            : null}
-        </View>
-      ) : null}
+        ) : null}
+
+        <InlineError message={submitError} />
+
+        {!selectedMemberId ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>1. Select person</Text>
+            <FormField
+              label="Select person"
+              value={memberQuery}
+              onChangeText={setMemberQuery}
+              placeholder="Search people in care..."
+              fieldTestId={testIds.logVisit.memberSearch}
+            />
+            <QueryStateView
+              loading={peopleQuery.loading}
+              error={peopleQuery.error}
+              isEmpty={!peopleQuery.loading && !peopleQuery.error && !peopleQuery.data.length}
+              emptyMessage="No people match that search."
+              onRetry={() => void peopleQuery.refresh()}
+            />
+            {!peopleQuery.loading && !peopleQuery.error
+              ? peopleQuery.data.slice(0, 8).map((member) => (
+                  <MemberListItem
+                    key={member.id}
+                    member={member}
+                    onPress={() => onSelectMember(member.id)}
+                    testID={testIds.people.member(member.id)}
+                  />
+                ))
+              : null}
+          </View>
+        ) : null}
+
+        {selectedMember ? (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{stepOffset + 1}. Action type</Text>
+              <View style={styles.typeGrid}>
+                {actionTypes.map((type) => {
+                  const active = visitType === type.value;
+                  return (
+                    <Pressable
+                      key={type.value}
+                      testID={testIds.logVisit.type(type.value)}
+                      style={[styles.typeChip, active && styles.typeChipActive]}
+                      onPress={() => setVisitType(type.value)}
+                      disabled={saved}
+                    >
+                      <Feather
+                        name={actionIcons[type.value]}
+                        size={22}
+                        color={active ? colors.white : colors.primary}
+                      />
+                      <Text style={[styles.typeText, active && styles.typeTextActive]}>{type.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{stepOffset + 2}. Short note</Text>
+              <FormField
+                label="Short note"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="What happened?"
+                multiline
+                editable={!saved}
+                fieldTestId={testIds.logVisit.notes}
+                style={styles.notesInput}
+              />
+            </View>
+
+            <ToggleCard
+              title="Did this person's care status change?"
+              enabled={careChanged}
+              onToggle={() => setCareChanged((value) => !value)}
+              disabled={saved}
+            />
+
+            {careChanged ? (
+              <CareChangeSection
+                careStage={careStage}
+                onCareStageChange={(value) => {
+                  setStageTouched(true);
+                  setCareStageOverride(value);
+                }}
+                status={status}
+                onStatusChange={setStatusOverride}
+                riskLevel={riskLevel}
+                onRiskLevelChange={setRiskLevelOverride}
+                memberNotes={memberNotes}
+                onMemberNotesChange={setMemberNotesOverride}
+              />
+            ) : null}
+
+            <ToggleCard
+              title="Follow-up required"
+              enabled={followUp}
+              onToggle={() => setFollowUp((value) => !value)}
+              disabled={saved}
+            />
+
+            {followUp ? (
+              <FollowUpSection
+                followUpType={followUpType}
+                onFollowUpTypeChange={setFollowUpType}
+                followUpPriority={followUpPriority}
+                onFollowUpPriorityChange={setFollowUpPriority}
+                followUpDate={followUpDate}
+                onFollowUpDateChange={setFollowUpDate}
+                followUpTime={followUpTime}
+                onFollowUpTimeChange={setFollowUpTime}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </ScrollView>
 
       {selectedMember ? (
-        <>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Action type</Text>
-            <View style={styles.typeRow}>
-              {actionTypes.map((type) => {
-                const active = visitType === type.value;
-                return (
-                  <Pressable
-                    key={type.value}
-                    testID={testIds.logVisit.type(type.value)}
-                    style={[styles.typeChip, active && styles.typeChipActive]}
-                    onPress={() => setVisitType(type.value)}
-                    disabled={saved}
-                  >
-                    <Text style={[styles.typeText, active && styles.typeTextActive]}>{type.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <FormField
-              label="Short note"
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="What happened?"
-              multiline
-              editable={!saved}
-              fieldTestId={testIds.logVisit.notes}
-              style={styles.notesInput}
-            />
-          </View>
-
-          <Pressable style={styles.toggleRow} onPress={() => setCareChanged((value) => !value)} disabled={saved}>
-            <View style={[styles.checkbox, careChanged && styles.checkboxActive]}>
-              {careChanged ? <Feather name="check" size={12} color={colors.white} /> : null}
-            </View>
-            <Text style={styles.toggleText}>Did this person&apos;s care status change?</Text>
-          </Pressable>
-
-          {careChanged ? (
-            <CareChangeSection
-              careStage={careStage}
-              onCareStageChange={(value) => {
-                setStageTouched(true);
-                setCareStageOverride(value);
-              }}
-              status={status}
-              onStatusChange={setStatusOverride}
-              riskLevel={riskLevel}
-              onRiskLevelChange={setRiskLevelOverride}
-              memberNotes={memberNotes}
-              onMemberNotesChange={setMemberNotesOverride}
-            />
-          ) : null}
-
-          <Pressable style={styles.toggleRow} onPress={() => setFollowUp((value) => !value)} disabled={saved}>
-            <View style={[styles.checkbox, followUp && styles.checkboxActive]}>
-              {followUp ? <Feather name="check" size={12} color={colors.white} /> : null}
-            </View>
-            <Text style={styles.toggleText}>Follow-up required</Text>
-          </Pressable>
-
-          {followUp ? (
-            <FollowUpSection
-              followUpType={followUpType}
-              onFollowUpTypeChange={setFollowUpType}
-              followUpPriority={followUpPriority}
-              onFollowUpPriorityChange={setFollowUpPriority}
-              followUpDate={followUpDate}
-              onFollowUpDateChange={setFollowUpDate}
-              followUpTime={followUpTime}
-              onFollowUpTimeChange={setFollowUpTime}
-            />
-          ) : null}
-
-          <Pressable
-            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-            testID={testIds.logVisit.save}
-            onPress={() => void onSave()}
-            disabled={!canSave}
-          >
-            <Text style={styles.saveButtonText}>
-              {saved ? 'Saved' : saving ? 'Saving...' : 'Save Care Action'}
-            </Text>
-          </Pressable>
-        </>
+        <StickyActionBar
+          label={saved ? 'Saved' : 'Save Care Action'}
+          loadingLabel="Saving..."
+          loading={saving}
+          disabled={!canSave}
+          testID={testIds.logVisit.save}
+          onPress={() => void onSave()}
+        />
       ) : null}
-    </FormScreen>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingBottom: 32 },
+  content: { paddingBottom: spacing.lg },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
   sectionTitle: {
-    color: colors.textSecondary,
-    fontWeight: '700',
+    color: colors.primary,
+    fontWeight: '800',
     marginBottom: spacing.sm,
-    textTransform: 'none',
+    fontSize: 15,
   },
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  typeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  typeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  typeText: { color: colors.textSecondary, fontWeight: '600', textTransform: 'capitalize' },
-  typeTextActive: { color: colors.white },
   notesInput: {
     minHeight: 110,
     textAlignVertical: 'top',
   },
-  toggleRow: {
+  typeGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.border,
+  typeChip: {
+    width: '31%',
+    minWidth: 100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkboxActive: { backgroundColor: colors.primaryLight, borderColor: colors.primaryLight },
-  toggleText: { color: colors.primary, fontWeight: '600', flex: 1 },
-  saveButton: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.xxl,
-    backgroundColor: colors.primary,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  saveButtonDisabled: { opacity: 0.55 },
-  saveButtonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  typeChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  typeText: {
+    color: colors.textSecondary,
+    fontWeight: '700',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  typeTextActive: { color: colors.white },
 });

@@ -1,3 +1,4 @@
+import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -40,12 +41,13 @@ export function AppHeader({
       </View>
       {onSearchChange ? (
         <View style={styles.searchBar}>
+          <Feather name="search" size={16} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             testID={searchTestID}
             value={searchValue ?? ''}
             onChangeText={onSearchChange}
             placeholder={searchPlaceholder}
-            placeholderTextColor="rgba(255,255,255,0.45)"
+            placeholderTextColor={colors.textMuted}
             style={styles.input}
           />
         </View>
@@ -72,21 +74,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
     marginTop: 3,
     fontWeight: '500',
   },
   searchBar: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
+  searchIcon: { marginRight: spacing.sm },
   input: {
-    color: colors.white,
+    flex: 1,
+    color: colors.text,
     fontSize: 14,
     padding: 0,
   },

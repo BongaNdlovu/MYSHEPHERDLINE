@@ -14,6 +14,20 @@ import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import type { AssignmentRequestDetail } from '@/features/assignment-requests/services/assignment-requests.service';
 
+function requestCardTitle(request: AssignmentRequestDetail): string {
+  if (request.memberName?.trim()) return request.memberName.trim();
+  if (request.member_id) return 'Member (name unavailable)';
+  if (request.taskTitle?.trim()) return request.taskTitle.trim();
+  return request.member_id ? 'Member request' : 'Task request';
+}
+
+function requestCardSubtitle(request: AssignmentRequestDetail): string | undefined {
+  if (request.memberName?.trim() && request.taskTitle?.trim()) return `Task: ${request.taskTitle.trim()}`;
+  if (request.member_id && !request.memberName?.trim()) return 'Assignment change for member';
+  if (!request.member_id && request.taskTitle?.trim()) return 'Task assignment request';
+  return undefined;
+}
+
 export default function AdminAssignmentRequestsScreen() {
   const { data: requests, loading, error, refresh } = usePendingAssignmentRequests();
   const { showToast } = useToast();
@@ -53,8 +67,14 @@ export default function AdminAssignmentRequestsScreen() {
       {requests.map((request) => (
         <Card
           key={request.id}
-          title={request.memberName ?? request.taskTitle ?? (request.member_id ? 'Member request' : 'Task request')}
+          title={requestCardTitle(request)}
+          subtitle={requestCardSubtitle(request)}
+          badge="Pending"
+          badgeTone="warning"
         >
+          <Text style={styles.memberLine}>
+            Member: {request.memberName?.trim() || (request.member_id ? 'Unknown member' : '—')}
+          </Text>
           <Text style={styles.meta}>
             Requested by {request.requestedByName ?? 'Unknown shepherd'}
           </Text>
@@ -92,7 +112,8 @@ export default function AdminAssignmentRequestsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxl },
-  reason: { color: colors.primary, fontSize: 15, lineHeight: 22 },
+  memberLine: { color: colors.primary, fontSize: 15, fontWeight: '800', marginBottom: spacing.xs },
+  reason: { color: colors.textSecondary, fontSize: 14, lineHeight: 22, marginTop: spacing.sm },
   meta: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   button: {

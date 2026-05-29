@@ -4,9 +4,10 @@ import * as Linking from 'expo-linking';
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatTaskDueDate } from '@/features/tasks/selectors/tasks';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { formatTaskDueDate, normalizeDueDateKey, toDateKey } from '@/features/tasks/selectors/tasks';
 import { colors, radii, spacing } from '@/constants/theme';
-import type { TaskListRow } from '@/types/database';
+import type { TaskListRow, TaskPriority } from '@/types/database';
 
 type TaskItemProps = {
   task: TaskListRow;
@@ -26,11 +27,25 @@ const iconMap: Record<string, ComponentProps<typeof FontAwesome>['name']> = {
   other: 'check',
 };
 
+const priorityLabels: Record<TaskPriority, string> = {
+  high: 'HIGH',
+  medium: 'MED',
+  low: 'LOW',
+};
+
+const priorityTones: Record<TaskPriority, 'urgent' | 'warning' | 'neutral'> = {
+  high: 'urgent',
+  medium: 'warning',
+  low: 'neutral',
+};
+
 export function TaskItem({ task, onToggle, toggleTestID, toggleDisabled }: TaskItemProps) {
   const completed = task.status === 'completed';
   const iconName = iconMap[task.task_type ?? 'other'] ?? 'check';
   const formattedDueDate = formatTaskDueDate(task.due_date);
   const phone = task.member?.phone?.trim() ?? '';
+  const dueKey = normalizeDueDateKey(task.due_date);
+  const isOverdue = !completed && dueKey !== null && dueKey < toDateKey();
 
   return (
     <View style={styles.item} testID={`task-item-${task.id}`}>
@@ -38,13 +53,22 @@ export function TaskItem({ task, onToggle, toggleTestID, toggleDisabled }: TaskI
         <FontAwesome name={iconName} size={16} color={colors.info} />
       </View>
       <View style={styles.info}>
-        <Text style={[styles.name, completed && styles.completedName]}>{task.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.name, completed && styles.completedName]}>{task.title}</Text>
+          {!completed ? (
+            isOverdue ? (
+              <StatusBadge label="OVERDUE" tone="urgent" />
+            ) : (
+              <StatusBadge label={priorityLabels[task.priority]} tone={priorityTones[task.priority]} />
+            )
+          ) : null}
+        </View>
         {task.member?.full_name ? <Text style={styles.memberName}>{task.member.full_name}</Text> : null}
         <Text style={styles.status}>
           {completed
             ? 'Completed'
             : formattedDueDate
-              ? `Due ${formattedDueDate} · ${task.priority} priority`
+              ? `Due ${formattedDueDate}${isOverdue ? '' : ` · ${task.priority} priority`}`
               : `${task.priority} priority`}
         </Text>
         {!completed && phone ? (
@@ -81,6 +105,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -92,7 +117,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '600', color: colors.primary },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  name: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primary },
   completedName: { textDecorationLine: 'line-through', color: colors.textMuted },
   status: { fontSize: 13, color: colors.textMuted, marginTop: 3 },
   memberName: { fontSize: 12, color: colors.textSecondary, marginTop: 3, fontWeight: '600' },

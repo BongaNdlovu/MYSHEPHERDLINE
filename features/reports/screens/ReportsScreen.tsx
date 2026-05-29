@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { NoticeCard } from '@/components/ui/NoticeCard';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { QueryStateView } from '@/components/ui/QueryStateView';
@@ -28,10 +29,12 @@ export default function ReportsScreen() {
       {summary ? (
         <>
           {workerUnavailable ? (
-            <View style={styles.notice}>
-              <Text style={styles.noticeText}>
-                Live report service is unavailable. Showing locally aggregated data.
-              </Text>
+            <View style={styles.noticeWrap}>
+              <NoticeCard
+                tone="warning"
+                title="Using local data"
+                message="Live report service is unavailable. Showing locally aggregated data."
+              />
             </View>
           ) : null}
 
@@ -74,16 +77,10 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 24 },
-  notice: {
+  noticeWrap: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.15)',
   },
-  noticeText: { color: '#991b1b', fontWeight: '600', lineHeight: 18, fontSize: 13 },
   rangePill: {
     alignSelf: 'flex-start',
     marginHorizontal: spacing.lg,

@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { Card } from '@/components/ui/Card';
 import { LegalReviewBanner } from '@/features/legal/components/LegalReviewBanner';
 import { colors, spacing } from '@/constants/theme';
 
@@ -20,17 +21,85 @@ const termsContent = `MyShepherdLine Terms & Conditions (Draft — Internal Shep
 
 Counsel must complete legal review before production use.`;
 
+type TermsSection = { number: number | null; title: string; body: string };
+
+function parseTermsSections(content: string): TermsSection[] {
+  const lines = content.trim().split('\n');
+  const sections: TermsSection[] = [];
+  let intro = '';
+  let current: TermsSection | null = null;
+
+  const flush = () => {
+    if (current) {
+      sections.push(current);
+      current = null;
+    }
+  };
+
+  for (const line of lines) {
+    const numbered = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numbered) {
+      flush();
+      const rest = numbered[2];
+      const dotIndex = rest.indexOf('. ');
+      if (dotIndex > 0 && dotIndex < 80) {
+        current = {
+          number: Number(numbered[1]),
+          title: rest.slice(0, dotIndex),
+          body: rest.slice(dotIndex + 2).trim(),
+        };
+      } else {
+        current = {
+          number: Number(numbered[1]),
+          title: `Section ${numbered[1]}`,
+          body: rest.trim(),
+        };
+      }
+      continue;
+    }
+
+    if (current) {
+      current.body = current.body ? `${current.body}\n${line}` : line;
+    } else {
+      intro = intro ? `${intro}\n${line}` : line;
+    }
+  }
+  flush();
+
+  if (intro.trim()) {
+    const introLines = intro.trim().split('\n');
+    sections.unshift({
+      number: null,
+      title: introLines[0] ?? 'Terms & Conditions',
+      body: introLines.slice(1).join('\n').trim() || (introLines[0] ?? ''),
+    });
+  }
+
+  return sections;
+}
+
+const termsSections = parseTermsSections(termsContent);
+
 export default function TermsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <LegalReviewBanner />
-      <Text style={styles.body}>{termsContent}</Text>
+      {termsSections.map((section) => (
+        <Card
+          key={section.number ?? section.title}
+          title={section.number != null ? `${section.number}. ${section.title}` : section.title}
+          style={styles.sectionCard}
+        >
+          <Text style={styles.body}>{section.body}</Text>
+        </Card>
+      ))}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.xl },
-  body: { color: colors.text, lineHeight: 22, fontSize: 14 },
+  content: { paddingBottom: spacing.xxl },
+  sectionCard: { marginTop: 0 },
+  body: { color: colors.textSecondary, lineHeight: 22, fontSize: 14, fontWeight: '500' },
 });

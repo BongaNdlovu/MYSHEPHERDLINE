@@ -1,17 +1,19 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DistrictCongregationPicker } from '@/features/account/components/DistrictCongregationPicker';
 import { NotificationSettingsCard } from '@/features/account/components/NotificationSettingsCard';
 import { updateProfilePreferences } from '@/features/account/services/profile-preferences.service';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { Button } from '@/components/ui/Button';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
+import { NoticeCard } from '@/components/ui/NoticeCard';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/core/auth';
 import { createAppError, getUserMessage, toAppError } from '@/lib/core/errors';
 import { useToast } from '@/lib/core/toast';
@@ -65,14 +67,15 @@ function ProfilePreferencesForm({
         districtTestId={testIds.profileSettings.district}
         congregationTestId={testIds.profileSettings.congregation}
       />
-      <Pressable
-        style={[styles.button, saving && styles.buttonDisabled]}
+      <Button
+        label="Save preferences"
+        loadingLabel="Saving…"
+        loading={saving}
+        disabled={saving}
         testID={testIds.profileSettings.save}
         onPress={() => void save()}
-        disabled={saving}
-      >
-        <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save preferences'}</Text>
-      </Pressable>
+        style={styles.button}
+      />
     </>
   );
 }
@@ -95,10 +98,12 @@ export default function ProfileSettingsScreen() {
         title="Profile Settings"
         subtitle="Your district and conference/congregation"
       />
-      <Text style={styles.helper}>
-        These preferences help administrators assign you to the right congregation. They do not
-        change your active access until an admin updates your account.
-      </Text>
+      <View style={styles.noticeWrap}>
+        <NoticeCard
+          tone="info"
+          message="These preferences help administrators assign you to the right congregation. They do not change your active access until an admin updates your account."
+        />
+      </View>
       <QueryStateView
         loading={loading || profileLoading || waitingForProfile}
         error={profileStateError}
@@ -115,14 +120,6 @@ export default function ProfileSettingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  helper: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: spacing.lg },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonDisabled: { opacity: 0.55 },
-  buttonText: { color: colors.white, fontWeight: '700', fontSize: 16 },
+  noticeWrap: { marginBottom: spacing.lg },
+  button: { marginTop: spacing.md },
 });

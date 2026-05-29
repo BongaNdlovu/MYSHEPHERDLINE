@@ -1,10 +1,11 @@
 import Feather from '@expo/vector-icons/Feather';
 import { type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FormScreen } from '@/components/ui/FormScreen';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { colors } from '@/constants/theme';
 import { adminFormStyles as styles } from '@/features/admin/components/adminFormStyles';
 import { ShepherdPicker } from '@/features/admin/components/ShepherdPicker';
@@ -36,6 +37,7 @@ type AdminEntityFormScreenProps = {
   submitError: string | null;
   onSave: () => void;
   onDelete?: () => void;
+  stickySave?: boolean;
   children: ReactNode;
 };
 
@@ -63,6 +65,7 @@ export function AdminEntityFormScreen({
   submitError,
   onSave,
   onDelete,
+  stickySave = true,
   children,
 }: AdminEntityFormScreenProps) {
   if (isEdit && !formReady) {
@@ -73,8 +76,8 @@ export function AdminEntityFormScreen({
     );
   }
 
-  return (
-    <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={formTestId}>
+  const formBody = (
+    <>
       <Pressable onPress={onBack} style={styles.back}>
         <Feather name="chevron-left" size={24} color={colors.primary} />
       </Pressable>
@@ -92,9 +95,11 @@ export function AdminEntityFormScreen({
 
       {submitError ? <InlineError message={submitError} /> : null}
 
-      <Pressable style={styles.primary} disabled={saving} testID={saveTestId} onPress={onSave}>
-        <Text style={styles.primaryText}>{saving ? 'Saving…' : saveLabel}</Text>
-      </Pressable>
+      {!stickySave ? (
+        <Pressable style={styles.primary} disabled={saving} testID={saveTestId} onPress={onSave}>
+          <Text style={styles.primaryText}>{saving ? 'Saving…' : saveLabel}</Text>
+        </Pressable>
+      ) : null}
 
       {isEdit && onDelete ? (
         <Pressable
@@ -105,6 +110,38 @@ export function AdminEntityFormScreen({
           <Text style={styles.dangerText}>{deleteLabel}</Text>
         </Pressable>
       ) : null}
-    </FormScreen>
+    </>
+  );
+
+  if (!stickySave) {
+    return (
+      <FormScreen style={styles.screen} contentContainerStyle={styles.formContent} testID={formTestId}>
+        {formBody}
+      </FormScreen>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+    >
+      <ScrollView
+        testID={formTestId}
+        contentContainerStyle={styles.formContentSticky}
+        keyboardShouldPersistTaps="handled"
+      >
+        {formBody}
+      </ScrollView>
+      <StickyActionBar
+        label={saveLabel}
+        loadingLabel="Saving…"
+        loading={saving}
+        disabled={saving}
+        testID={saveTestId}
+        onPress={onSave}
+      />
+    </KeyboardAvoidingView>
   );
 }

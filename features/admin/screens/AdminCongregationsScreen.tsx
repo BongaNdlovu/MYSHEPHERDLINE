@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/ui/AppHeader';
+import { Card } from '@/components/ui/Card';
 import { FormField } from '@/components/ui/FormField';
 import { InlineError } from '@/components/ui/InlineError';
 import { QueryStateView } from '@/components/ui/QueryStateView';
 import { testIds } from '@/constants/testIds';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, radii, shadows, spacing } from '@/constants/theme';
 import { OwnerRoute } from '@/features/admin';
 import { useCongregation } from '@/features/members/hooks/useCongregation';
 import { getUserMessage, toAppError } from '@/lib/core/errors';
@@ -94,8 +95,12 @@ export default function AdminCongregationsScreen() {
           ))}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Add congregation (owner)</Text>
+        <Card
+          title="Add congregation"
+          badge="Owner only"
+          badgeTone="purple"
+          style={styles.addCard}
+        >
           <Text style={styles.help}>
             Creates a new congregation tenant in your district. Assign shepherds to it via Supabase Auth and Admin
             {' -> '}Users & Roles.
@@ -111,7 +116,7 @@ export default function AdminCongregationsScreen() {
           <Pressable style={styles.primary} disabled={saving} onPress={save}>
             <Text style={styles.primaryText}>{saving ? 'Creating...' : 'Create congregation'}</Text>
           </Pressable>
-        </View>
+        </Card>
       </ScrollView>
     </OwnerRoute>
   );
@@ -124,9 +129,13 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
   },
+  addCard: { marginTop: 0 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.primary, marginBottom: spacing.sm },
   body: { color: colors.text, lineHeight: 22 },
   help: { color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 20 },

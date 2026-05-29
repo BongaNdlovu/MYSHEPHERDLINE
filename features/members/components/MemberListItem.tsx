@@ -1,6 +1,8 @@
+import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from '@/constants/theme';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { colors, radii, spacing } from '@/constants/theme';
 import { getInitials } from '@/lib/core/names';
 import type { MemberListRow, RiskLevel } from '@/types/database';
 
@@ -8,6 +10,7 @@ type MemberListItemProps = {
   member: MemberListRow;
   onPress?: () => void;
   testID?: string;
+  needsAttention?: boolean;
 };
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -16,18 +19,22 @@ const riskLabels: Record<RiskLevel, string> = {
   low: 'LOW',
 };
 
-const riskStyles: Record<RiskLevel, { bg: string; color: string }> = {
-  high: { bg: colors.accentSoft, color: colors.accent },
-  medium: { bg: colors.warningSoft, color: '#b45309' },
-  low: { bg: colors.primaryPale, color: colors.primarySoft },
+const riskTones: Record<RiskLevel, 'urgent' | 'warning' | 'neutral'> = {
+  high: 'urgent',
+  medium: 'warning',
+  low: 'neutral',
 };
 
-export function MemberListItem({ member, onPress, testID }: MemberListItemProps) {
-  const risk = riskStyles[member.risk_level];
+export function MemberListItem({ member, onPress, testID, needsAttention }: MemberListItemProps) {
   const initials = getInitials(member.full_name);
 
   return (
-    <Pressable style={styles.item} onPress={onPress} testID={testID} accessibilityLabel={member.full_name}>
+    <Pressable
+      style={[styles.item, needsAttention && styles.itemAttention]}
+      onPress={onPress}
+      testID={testID}
+      accessibilityLabel={member.full_name}
+    >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials}</Text>
       </View>
@@ -41,9 +48,8 @@ export function MemberListItem({ member, onPress, testID }: MemberListItemProps)
             : 'No recent contact'}
         </Text>
       </View>
-      <View style={[styles.risk, { backgroundColor: risk.bg }]}>
-        <Text style={[styles.riskText, { color: risk.color }]}>{riskLabels[member.risk_level]}</Text>
-      </View>
+      <StatusBadge label={riskLabels[member.risk_level]} tone={riskTones[member.risk_level]} />
+      <Feather name="chevron-right" size={18} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -53,24 +59,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  itemAttention: {
+    borderColor: 'rgba(239,68,68,0.2)',
+    backgroundColor: colors.accentSoft,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primaryPale,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
   },
-  avatarText: { color: colors.primary, fontWeight: '700' },
+  avatarText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
   info: { flex: 1 },
   name: { fontSize: 15, fontWeight: '700', color: colors.primary },
-  meta: { fontSize: 13, color: colors.textSecondary, marginTop: 3 },
-  risk: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
-  riskText: { fontSize: 11, fontWeight: '800' },
+  meta: { fontSize: 12, color: colors.textSecondary, marginTop: 3, textTransform: 'capitalize' },
 });

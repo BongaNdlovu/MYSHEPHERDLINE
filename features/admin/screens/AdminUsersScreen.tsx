@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/ui/AppHeader';
 import { Card } from '@/components/ui/Card';
 import { PaginatedFlatList } from '@/components/ui/PaginatedFlatList';
 import { QueryStateView } from '@/components/ui/QueryStateView';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { testIds } from '@/constants/testIds';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useToast } from '@/lib/core/toast';
@@ -68,6 +69,12 @@ export default function AdminUsersScreen() {
   );
 }
 
+function roleTone(role: UserRole): 'purple' | 'success' | 'info' {
+  if (role === 'owner') return 'purple';
+  if (role === 'admin') return 'success';
+  return 'info';
+}
+
 function UserRow({
   profile,
   onRole,
@@ -83,9 +90,13 @@ function UserRow({
   return (
     <Card title={profile.display_name}>
       <Text style={styles.meta}>{profile.email}</Text>
-      <Text style={styles.meta}>
-        Role: {profile.role} | {profile.is_active ? 'Active' : 'Deactivated'}
-      </Text>
+      <View style={styles.badges}>
+        <StatusBadge label={profile.role} tone={roleTone(profile.role)} />
+        <StatusBadge
+          label={profile.is_active ? 'Active' : 'Deactivated'}
+          tone={profile.is_active ? 'success' : 'urgent'}
+        />
+      </View>
       <View style={styles.actions}>
         <Pressable style={styles.chip} disabled={isOwnerAccount} onPress={() => onRole(nextRole)}>
           <Text style={styles.chipText}>
@@ -115,8 +126,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   topBar: { paddingTop: spacing.md },
   back: { paddingLeft: spacing.lg, marginBottom: -spacing.md },
-  meta: { color: colors.textSecondary, fontSize: 13, marginBottom: 4 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  meta: { color: colors.textSecondary, fontSize: 13, marginBottom: spacing.sm },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   chip: {
     backgroundColor: colors.primary,
     borderRadius: radii.md,

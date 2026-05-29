@@ -1,12 +1,25 @@
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { ChoiceChips } from '@/components/ui/ChoiceChips';
+import { spacing } from '@/constants/theme';
+import type { ComponentProps } from 'react';
+
+type Tone = NonNullable<ComponentProps<typeof ChoiceChips>['options'][number]['tone']>;
 
 type FilterChipsProps<T extends string> = {
   options: { label: string; value: T }[];
   value: T;
   onChange: (value: T) => void;
   testIdForValue?: (value: T) => string;
+};
+
+const toneForValue = (value: string): Tone | undefined => {
+  if (value === 'urgent') return 'urgent';
+  if (value === 'new') return 'success';
+  if (value === 'bible_study') return 'purple';
+  if (value === 'baptism_interest') return 'teal';
+  if (value === 'my_people') return 'neutral';
+  return undefined;
 };
 
 export function FilterChips<T extends string>({
@@ -16,54 +29,24 @@ export function FilterChips<T extends string>({
   testIdForValue,
 }: FilterChipsProps<T>) {
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      keyboardShouldPersistTaps="handled"
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-    >
-      {options.map((option) => {
-        const active = option.value === value;
-        return (
-          <Pressable
-            key={option.value}
-            testID={testIdForValue?.(option.value)}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => onChange(option.value)}
-          >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.wrap}>
+      <ChoiceChips
+        horizontal
+        options={options.map((option) => ({
+          ...option,
+          tone: toneForValue(option.value),
+        }))}
+        value={value}
+        onChange={onChange}
+        testIdForValue={testIdForValue}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrap: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
     paddingBottom: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: colors.white,
   },
 });

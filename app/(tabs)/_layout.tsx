@@ -1,5 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { testIds } from '@/constants/testIds';
@@ -35,7 +36,7 @@ export default function TabLayout() {
         options={{
           title: 'Today',
           tabBarButtonTestID: testIds.tabs.today,
-          tabBarIcon: ({ color }) => <FontAwesome name="home" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="heartbeat" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -51,7 +52,11 @@ export default function TabLayout() {
         options={{
           title: 'Log Action',
           tabBarButtonTestID: testIds.tabs.logAction,
-          tabBarIcon: ({ color }) => <FontAwesome name="plus-circle" size={24} color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.logActionIcon, focused && styles.logActionIconActive]}>
+              <FontAwesome name="plus" size={20} color={colors.white} />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -67,7 +72,7 @@ export default function TabLayout() {
         options={{
           title: 'Me',
           tabBarButtonTestID: testIds.tabs.me,
-          tabBarIcon: ({ color }) => <FontAwesome name="ellipsis-h" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="user" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -79,3 +84,18 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  logActionIcon: {
+    width: 48,
+    height: 48,
+    marginTop: -18,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: colors.surface,
+  },
+  logActionIconActive: { backgroundColor: colors.primarySoft },
+});

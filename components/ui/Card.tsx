@@ -1,24 +1,28 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, radii, shadows, spacing } from '@/constants/theme';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import type { ComponentProps } from 'react';
 
 type CardProps = {
   title: string;
+  subtitle?: string;
   badge?: string;
+  badgeTone?: ComponentProps<typeof StatusBadge>['tone'];
   children: React.ReactNode;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function Card({ title, badge, children, onPress }: CardProps) {
+export function Card({ title, subtitle, badge, badgeTone, children, onPress, style }: CardProps) {
   const content = (
     <>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{title}</Text>
-        {badge ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
-        ) : null}
+        <View style={styles.titleWrap}>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
+        {badge ? <StatusBadge label={badge} tone={badgeTone ?? 'neutral'} /> : null}
       </View>
       {children}
     </>
@@ -26,13 +30,13 @@ export function Card({ title, badge, children, onPress }: CardProps) {
 
   if (onPress) {
     return (
-      <Pressable style={styles.card} onPress={onPress}>
+      <Pressable style={[styles.card, style]} onPress={onPress}>
         {content}
       </Pressable>
     );
   }
 
-  return <View style={styles.card}>{content}</View>;
+  return <View style={[styles.card, style]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -44,27 +48,25 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.lg,
+    gap: spacing.md,
   },
+  titleWrap: { flex: 1 },
   title: {
     fontSize: 17,
     fontWeight: '700',
     color: colors.primary,
   },
-  badge: {
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: radii.pill,
-  },
-  badgeText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '700',
+  subtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

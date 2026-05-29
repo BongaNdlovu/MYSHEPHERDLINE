@@ -9,10 +9,10 @@ import { testIds } from '@/constants/testIds';
 import { colors, gradients, radii, spacing } from '@/constants/theme';
 
 const features = [
-  { icon: 'users' as const, text: 'Track congregation members' },
-  { icon: 'check-square' as const, text: 'Manage shepherding tasks' },
-  { icon: 'bar-chart-2' as const, text: 'View activity reports' },
-  { icon: 'bell' as const, text: 'Get visit reminders' },
+  { icon: 'users' as const, text: 'People in Care' },
+  { icon: 'check-square' as const, text: 'Follow-up Tasks' },
+  { icon: 'bar-chart-2' as const, text: 'Care Reports' },
+  { icon: 'bell' as const, text: 'Visit Reminders' },
 ];
 
 export default function LandingScreen() {
@@ -25,7 +25,7 @@ export default function LandingScreen() {
           <LogoMark size={140} />
           <Text testID={testIds.landing.title} style={styles.title}>MyShepherdLine</Text>
           <Text style={styles.subtitle}>
-            Shepherd your congregation with clarity, compassion, and consistency.
+            Care for every soul with clarity, consistency, and compassion.
           </Text>
         </View>
 
@@ -46,7 +46,7 @@ export default function LandingScreen() {
           </Pressable>
         </Link>
         <Text style={styles.accessNote} testID={testIds.landing.accessNote}>
-          Access is managed by your congregation administrator. Contact them if you need an account.
+          Access is managed by your congregation administrator.
         </Text>
         <Link href="/legal/privacy" asChild>
           <Pressable testID={testIds.landing.privacy}>
