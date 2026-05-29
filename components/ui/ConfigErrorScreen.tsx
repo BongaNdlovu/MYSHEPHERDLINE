@@ -15,7 +15,10 @@ export function ConfigErrorScreen({ validation }: { validation: Extract<EnvValid
           • {item}
         </Text>
       ))}
-      <Text style={styles.footer}>Copy `.env.example` to `.env`, add your Supabase values, then restart the app.</Text>
+      <Text style={styles.footer}>
+        Local runs need a filled `.env`. Installed builds need the same `EXPO_PUBLIC_*` values set in the selected EAS
+        environment, then rebuilt and reinstalled.
+      </Text>
     </View>
   );
 }
