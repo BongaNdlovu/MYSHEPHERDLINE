@@ -13,7 +13,9 @@ export function StatusBadge({ label, tone = 'neutral' }: StatusBadgeProps) {
   const palette = toneColors[tone];
   return (
     <View style={[styles.badge, { backgroundColor: palette.bg, borderColor: palette.border }]}>
-      <Text style={[styles.text, { color: palette.text }]}>{label}</Text>
+      <Text style={[styles.text, { color: palette.text }]} numberOfLines={2}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -25,6 +27,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
+    maxWidth: '100%',
   },
-  text: { fontSize: 11, fontWeight: '800' },
+  text: { fontSize: 11, fontWeight: '800', lineHeight: 15, textAlign: 'center' },
 });

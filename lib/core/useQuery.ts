@@ -23,10 +23,19 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
 
   const requestIdRef = useRef(0);
+  const fetchRef = useRef(fetch);
+  const initialDataRef = useRef(initialData);
+  const dataLengthRef = useRef(dataLength);
+
+  useEffect(() => {
+    fetchRef.current = fetch;
+    initialDataRef.current = initialData;
+    dataLengthRef.current = dataLength;
+  }, [dataLength, fetch, initialData]);
 
   const refresh = useCallback(async () => {
     if (!enabled) {
-      setData(initialData);
+      setData(initialDataRef.current);
       setLoading(false);
       setError(null);
       return;
@@ -36,18 +45,20 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
     setLoading(true);
     setError(null);
     try {
-      const next = await fetch();
+      const next = await fetchRef.current();
       if (requestId !== requestIdRef.current) return;
       setData(next);
       setLastLoadedAt(Date.now());
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
       setError(toAppError(err, errorMessage));
-      setData((current) => retainQueryDataOnError(current, initialData, dataLength));
+      setData((current) =>
+        retainQueryDataOnError(current, initialDataRef.current, dataLengthRef.current),
+      );
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [dataLength, enabled, errorMessage, fetch, initialData]);
+  }, [enabled, errorMessage]);
 
   useEffect(() => {
     if (!enabled) {
@@ -63,7 +74,7 @@ export function useQuery<T>(options: UseQueryOptions<T>): QueryState<T> {
   }, [enabled, refresh, ...deps]);
 
   const displayedData = enabled ? data : initialData;
-  const displayedLoading = enabled ? loading || lastLoadedAt === null : false;
+  const displayedLoading = enabled ? loading : false;
   const displayedError = enabled ? error : null;
   const length = dataLength
     ? dataLength(displayedData)

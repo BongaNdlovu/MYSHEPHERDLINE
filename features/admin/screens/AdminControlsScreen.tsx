@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { OwnerRoute } from '@/features/admin';
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -21,21 +21,23 @@ const externalLinks: ExternalLink[] = [
 ];
 
 export default function AdminControlsScreen() {
+  const backButton = (
+    <Pressable
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/admin');
+      }}
+      style={styles.headerIcon}
+      accessibilityRole="button"
+    >
+      <Feather name="chevron-left" size={24} color={colors.white} />
+    </Pressable>
+  );
+
   return (
     <OwnerRoute>
       <ScrollView style={styles.screen} testID={testIds.admin.controls.screen}>
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace('/admin');
-            }}
-            style={styles.back}
-          >
-            <Feather name="chevron-left" size={24} color={colors.primary} />
-          </Pressable>
-          <AppHeader title="App Controls" subtitle="Compliance links and operator references" />
-        </View>
+        <AppHeader title="App Controls" subtitle="Compliance links and operator references" leftIcon={backButton} />
 
         <Card title="In-app">
           {inAppLinks.map((link) => (
@@ -69,8 +71,12 @@ export default function AdminControlsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: { paddingTop: spacing.md },
-  back: { paddingLeft: spacing.lg, marginBottom: -spacing.md },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

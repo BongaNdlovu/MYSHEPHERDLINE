@@ -17,7 +17,9 @@ export function QuickActionButton({
       style={[styles.button, disabled && styles.disabled, style as StyleProp<ViewStyle>]}
     >
       <Feather name={icon} size={17} color={disabled ? colors.textMuted : colors.primary} />
-      <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
+      <Text style={[styles.label, disabled && styles.labelDisabled]} numberOfLines={2}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -35,6 +37,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   disabled: { opacity: 0.5 },
-  label: { color: colors.primary, fontWeight: '800', fontSize: 12 },
+  label: { color: colors.primary, fontWeight: '800', fontSize: 12, lineHeight: 16, textAlign: 'center' },
   labelDisabled: { color: colors.textMuted },
 });

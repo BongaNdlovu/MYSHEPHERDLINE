@@ -180,4 +180,30 @@ describe('AccessRequestScreen', () => {
       expect(String(screen.getByTestId('query-state').props.children)).not.toContain('stale-result');
     });
   });
+
+  it('does not restart useQuery just because array initialData is recreated', async () => {
+    const fetch = jest.fn(async () => ['loaded']);
+    render(<QueryProbe enabled fetch={fetch} />);
+
+    await waitFor(() => {
+      expect(String(screen.getByTestId('query-state').props.children)).toContain('loaded');
+      expect(String(screen.getByTestId('query-state').props.children)).toContain('"loading":false');
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a useQuery error instead of staying on first-load loading', async () => {
+    const fetch = jest.fn(async () => {
+      throw new AppException(createAppError('server', 'Nope.'));
+    });
+
+    render(<QueryProbe enabled fetch={fetch} />);
+
+    await waitFor(() => {
+      const state = String(screen.getByTestId('query-state').props.children);
+      expect(state).toContain('"loading":false');
+      expect(state).toContain('"category":"server"');
+    });
+  });
 });

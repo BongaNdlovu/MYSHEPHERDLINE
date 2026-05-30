@@ -19,7 +19,7 @@ export function Button({ label, variant = 'primary', loadingLabel, loading, disa
       disabled={isDisabled}
       style={[styles.base, styles[variant], isDisabled && styles.disabled, style as StyleProp<ViewStyle>]}
     >
-      <Text style={[styles.text, variant !== 'primary' && styles.textDark]}>
+      <Text style={[styles.text, variant !== 'primary' && styles.textDark]} numberOfLines={2}>
         {loading ? (loadingLabel ?? label) : label}
       </Text>
     </Pressable>
@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
   outline: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   danger: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: 'rgba(239,68,68,0.18)' },
   disabled: { opacity: 0.55 },
-  text: { color: colors.white, fontWeight: '800', fontSize: 16 },
+  text: { color: colors.white, fontWeight: '800', fontSize: 16, lineHeight: 21, textAlign: 'center' },
   textDark: { color: colors.primary },
 });

@@ -19,6 +19,18 @@ export default function AdminUsersScreen() {
   const { data: profiles, loading, error, refresh, setRole, setAccess, loadMore, hasMore, loadingMore } =
     useAdminProfiles();
   const { showToast } = useToast();
+  const backButton = (
+    <Pressable
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/admin');
+      }}
+      style={styles.headerIcon}
+      accessibilityRole="button"
+    >
+      <Feather name="chevron-left" size={24} color={colors.white} />
+    </Pressable>
+  );
 
   return (
     <OwnerRoute>
@@ -31,18 +43,7 @@ export default function AdminUsersScreen() {
           onLoadMore={() => void loadMore()}
           ListHeaderComponent={
             <>
-              <View style={styles.topBar}>
-                <Pressable
-                  onPress={() => {
-                    if (router.canGoBack()) router.back();
-                    else router.replace('/admin');
-                  }}
-                  style={styles.back}
-                >
-                  <Feather name="chevron-left" size={24} color={colors.primary} />
-                </Pressable>
-                <AppHeader title="Users & Roles" subtitle="Approve access and assign roles" />
-              </View>
+              <AppHeader title="Users & Roles" subtitle="Approve access and assign roles" leftIcon={backButton} />
               <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
             </>
           }
@@ -124,8 +125,12 @@ function UserRow({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: { paddingTop: spacing.md },
-  back: { paddingLeft: spacing.lg, marginBottom: -spacing.md },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   meta: { color: colors.textSecondary, fontSize: 13, marginBottom: spacing.sm },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },

@@ -48,15 +48,19 @@ export default function AdminReportsScreen() {
       : workerHealthy
         ? 'success'
         : 'urgent';
+  const backButton = (
+    <Pressable onPress={() => router.back()} style={styles.headerIcon} accessibilityRole="button">
+      <Feather name="chevron-left" size={24} color={colors.white} />
+    </Pressable>
+  );
 
   return (
     <ScrollView style={styles.screen} testID={testIds.admin.reports.screen}>
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Feather name="chevron-left" size={24} color={colors.primary} />
-        </Pressable>
-        <AppHeader title="Reports & Ops" subtitle="Organization summaries and platform status" />
-      </View>
+      <AppHeader
+        title="Reports & Ops"
+        subtitle="Organization summaries and platform status"
+        leftIcon={backButton}
+      />
 
       <QueryStateView loading={loading} error={error} onRetry={() => void refresh()} />
 
@@ -89,8 +93,12 @@ export default function AdminReportsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: { paddingTop: spacing.md },
-  back: { paddingLeft: spacing.lg, marginBottom: -spacing.md },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stats: {
     flexDirection: 'row',
     flexWrap: 'wrap',

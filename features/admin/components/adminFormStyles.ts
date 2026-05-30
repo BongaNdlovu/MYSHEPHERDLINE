@@ -23,8 +23,12 @@ export const adminFormStyles = StyleSheet.create({
 
 export const adminListStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  topBar: { paddingTop: spacing.md },
-  back: { paddingLeft: spacing.lg, marginBottom: -spacing.md },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',

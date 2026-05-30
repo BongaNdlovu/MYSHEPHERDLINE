@@ -34,7 +34,9 @@ export function ChoiceChips<T extends string>({
           { borderColor: active ? tone.text : colors.border, backgroundColor: active ? tone.bg : colors.surface },
         ]}
       >
-        <Text style={[styles.chipText, { color: active ? tone.text : colors.textSecondary }]}>{option.label}</Text>
+        <Text style={[styles.chipText, { color: active ? tone.text : colors.textSecondary }]} numberOfLines={2}>
+          {option.label}
+        </Text>
       </Pressable>
     );
   });
@@ -62,6 +64,12 @@ const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.lg },
   label: { color: colors.textSecondary, fontWeight: '800', marginBottom: spacing.sm },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9 },
-  chipText: { fontWeight: '800', fontSize: 13 },
+  chip: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    maxWidth: 180,
+  },
+  chipText: { fontWeight: '800', fontSize: 13, lineHeight: 17, textAlign: 'center' },
 });

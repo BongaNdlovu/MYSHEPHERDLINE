@@ -47,6 +47,11 @@ export function AdminEntityListScreen<T extends { id: string }>({
 }: AdminEntityListScreenProps<T>) {
   const { data, loading, error, refresh, loadMore, hasMore, loadingMore } = query;
   const initialLoad = isInitialLoad(loading, data.length);
+  const backButton = (
+    <Pressable onPress={() => router.back()} style={styles.headerIcon} accessibilityRole="button">
+      <Feather name="chevron-left" size={24} color={colors.white} />
+    </Pressable>
+  );
 
   return (
     <View style={styles.screen} testID={screenTestId}>
@@ -58,12 +63,7 @@ export function AdminEntityListScreen<T extends { id: string }>({
         onLoadMore={() => void loadMore()}
         ListHeaderComponent={
           <>
-            <View style={styles.topBar}>
-              <Pressable onPress={() => router.back()} style={styles.back}>
-                <Feather name="chevron-left" size={24} color={colors.primary} />
-              </Pressable>
-              <AppHeader title={title} subtitle={subtitle} />
-            </View>
+            <AppHeader title={title} subtitle={subtitle} leftIcon={backButton} />
             <Pressable
               style={styles.addButton}
               testID={addTestId}

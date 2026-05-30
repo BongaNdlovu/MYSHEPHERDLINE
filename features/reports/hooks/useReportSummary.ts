@@ -48,7 +48,10 @@ export function useReportSummary(): ReportState {
     setError(null);
     setWorkerUnavailable(false);
 
-    const remote = await fetchReportSummary(accessToken);
+    const remote = await fetchReportSummary(accessToken).catch(() => ({
+      ok: false as const,
+      reason: 'network' as const,
+    }));
     if (requestId !== requestIdRef.current) return;
     if (remote.ok) {
       setSummary(remote.data);

@@ -58,7 +58,7 @@ if (!token || !projectRef) {
       'Set SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF (or EXPO_PUBLIC_SUPABASE_URL in .env).\n' +
       'Or run supabase/verify-required-migrations.sql in the Supabase SQL Editor.',
   );
-  process.exit(1);
+  process.exitCode = 1;
 }
 
 async function runQuery(query) {
@@ -97,7 +97,7 @@ async function applyMissingMigrations() {
   }
 }
 
-try {
+async function main() {
   let rows = await runQuery(VERIFY_QUERY);
   let row = rows[0] ?? {};
   let { ok, missing } = analyzeRow(row);
@@ -115,7 +115,7 @@ try {
     for (const key of REQUIRED_CHECKS) {
       console.log(`  + ${key}`);
     }
-    process.exit(0);
+    return 0;
   }
 
   console.error(`Required migrations are NOT fully applied on project ${projectRef}.`);
@@ -125,8 +125,14 @@ try {
   console.error('\nFix: run in Supabase SQL Editor (or re-run with --apply):');
   console.error('  1. supabase/care-reminders-migration.sql');
   console.error('  2. supabase/profile-preferences-migration.sql');
-  process.exit(1);
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+  return 1;
+}
+
+if (process.exitCode !== 1) {
+  try {
+    process.exitCode = await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }

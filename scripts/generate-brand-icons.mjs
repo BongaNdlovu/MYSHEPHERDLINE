@@ -11,6 +11,31 @@ const svgPath = path.join(root, 'assets', 'logo', 'myshepherdline-mark.svg');
 const imagesDir = path.join(root, 'assets', 'images');
 
 const BG = '#14532d';
+const SOURCE_WIDTH = 1280;
+const SOURCE_HEIGHT = 1024;
+
+function withoutSvgShell(svg) {
+  return svg
+    .replace(/<\?xml[^>]*>\s*/i, '')
+    .replace(/<!DOCTYPE[^>]*>\s*/i, '')
+    .replace(/<svg[^>]*>\s*/i, '')
+    .replace(/\s*<\/svg>\s*$/i, '');
+}
+
+function squareLogoSvg(svg, size, background) {
+  const logoWidth = Math.round(size * 0.72);
+  const logoHeight = Math.round((logoWidth * SOURCE_HEIGHT) / SOURCE_WIDTH);
+  const x = Math.round((size - logoWidth) / 2);
+  const y = Math.round((size - logoHeight) / 2);
+  const backgroundRect = background ? `<rect width="${size}" height="${size}" fill="${background}"/>` : '';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+${backgroundRect}
+<svg x="${x}" y="${y}" width="${logoWidth}" height="${logoHeight}" viewBox="0 0 ${SOURCE_WIDTH} ${SOURCE_HEIGHT}">
+${withoutSvgShell(svg)}
+</svg>
+</svg>`;
+}
 
 async function main() {
   let Resvg;
@@ -34,10 +59,9 @@ async function main() {
   };
 
   for (const [name, size] of Object.entries(sizes)) {
-    const resvg = new Resvg(svg, {
-      fitTo: { mode: 'width', value: Math.round(size * 0.72) },
-      background: name === 'android-icon-monochrome.png' ? 'transparent' : BG,
-    });
+    const background =
+      name === 'android-icon-foreground.png' || name === 'android-icon-monochrome.png' ? null : BG;
+    const resvg = new Resvg(squareLogoSvg(svg, size, background));
     const png = resvg.render().asPng();
     await writeFile(path.join(imagesDir, name), png);
     console.log(`Wrote ${name} (${size}px canvas)`);
